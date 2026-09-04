@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gens Ssshhh</string>
+    <string name="title_activity_main">Gens Ssshhh</string>
+    <string name="package_name">it.associazione.gens_ssshhh</string>
+    <string name="custom_url_scheme">it.associazione.gens_ssshhh</string>
+</resources>

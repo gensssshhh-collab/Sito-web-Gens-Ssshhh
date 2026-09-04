@@ -1,0 +1,1009 @@
+<style>
+    /* --- TEMA CORPORATE LIGHT --- */
+    :root {
+      --bg-body: #f8fafc;       /* Sfondo generale */
+      --bg-sidebar: #1e40af;    /* Blu intenso professionale */
+      --bg-surface: #ffffff;    /* Sfondo Card/Moduli */
+      
+      --text-main: #0f172a;     /* Testo scuro */
+      --text-muted: #64748b;    /* Testo secondario */
+      
+      --primary: #2563eb;       /* Blu Corporate */
+      --primary-hover: #1d4ed8;
+      --danger: #ef4444;
+      
+      --border: #e2e8f0;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      
+      --sidebar-width: 260px;
+    }
+
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; height: 100vh; display: flex; overflow: hidden; }
+
+    /* --- LAYOUT --- */
+    .app-container { display: flex; width: 100%; height: 100%; }
+
+
+    /* SIDEBAR BLU */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--bg-sidebar); /* Ora è blu */
+      color: white; /* Testo base bianco */
+      border-right: none; /* Niente bordo a destra, stacca meglio */
+      display: flex; flex-direction: column;
+      padding: 20px;
+      transition: transform 0.3s ease;
+      z-index: 50; flex-shrink: 0;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.05); /* Leggera ombra per staccare dal contenuto */
+    }
+    
+    .brand { 
+      font-size: 22px; 
+      font-weight: 800; 
+      color: white; /* Titolo bianco */
+      margin-bottom: 40px; 
+      letter-spacing: -0.5px; 
+      padding-left: 10px; 
+      display:flex; align-items:center; gap:10px;
+    }
+    .brand span { color: #93c5fd; } /* La scritta "Ssshhh" in azzurro chiaro */
+
+    .nav-links { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+    
+    .nav-item {
+      padding: 12px 15px; border-radius: 8px; cursor: pointer;
+      color: rgba(255,255,255,0.7); /* Bianco leggermente trasparente per voci inattive */
+      font-weight: 500; font-size: 14px;
+      display: flex; align-items: center; gap: 12px; transition: all 0.2s;
+    }
+    
+    /* Hover: diventa bianco pieno con sfondo semitrasparente */
+    .nav-item:hover { 
+      background: rgba(255,255,255,0.1); 
+      color: white; 
+    }
+    
+    /* Attivo: sfondo bianco e testo blu (effetto "pillola") */
+    .nav-item.active { 
+      background: white; 
+      color: var(--bg-sidebar); /* Il testo prende il colore dello sfondo blu */
+      font-weight: 700; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+   /* WIDGET TESSERA (Stile Originale Blu) */
+    .sidebar-widget {
+      margin-top: auto;
+      /* Torna allo sfondo semitrasparente sul blu */
+      background: rgba(0, 0, 0, 0.2); 
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 15px; color: white;
+      font-size: 12px; position: relative; overflow: hidden;
+      box-shadow: none; /* Rimuove ombre pesanti */
+      font-family: 'Inter', sans-serif; /* Torna al font di sistema */
+    }
+    
+    /* Rimuove la cornice dorata */
+    .sidebar-widget::after { content: none; }
+
+    .sw-title { 
+        font-size: 10px; text-transform: uppercase; opacity: 0.7; margin-bottom: 5px; letter-spacing: 1px; color: white; 
+    }
+    .sw-name { 
+        font-size: 14px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; text-shadow: none;
+    }
+
+    /* NUOVO STILE PER IL RUOLO */
+    .sw-role {
+        font-size: 11px; 
+        text-transform: uppercase; 
+        color: #93c5fd; /* Azzurro chiaro (Blue-300) */
+        font-weight: 600; 
+        letter-spacing: 0.5px;
+        margin-bottom: 5px; /* Spazio prima del codice tessera */
+    }
+
+    .sw-code { 
+        font-family: monospace; opacity: 0.8; margin-bottom: 10px; color: white; 
+    }
+    
+    /* Bottone originale */
+    .sw-btn { 
+        margin-top: 5px; width: 100%; padding: 8px; 
+        background: rgba(255,255,255,0.15); 
+        border: 1px solid rgba(255,255,255,0.2); 
+        border-radius: 6px; color: white; cursor: pointer; 
+        font-size: 11px; text-align: center; font-weight: 600; 
+        transition: background 0.2s;
+    }
+    .sw-btn:hover { background: rgba(255,255,255,0.25); }
+
+    /* AREA PRINCIPALE */
+    .main-area { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+    /* TOPBAR */
+    .topbar {
+      height: 60px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+      flex-shrink: 0;
+    }
+    .page-title { font-size: 16px; font-weight: 600; color: var(--text-main); }
+    .user-menu { display: flex; align-items: center; gap: 10px; cursor: pointer; position: relative; }
+    .user-avatar { width: 32px; height: 32px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text-muted); font-size: 13px;}
+    
+    .dropdown { position: absolute; top: 45px; right: 0; background: white; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); width: 160px; display: none; overflow: hidden; z-index: 100;}
+    .dropdown.show { display: block; }
+    .dd-item { padding: 10px 15px; font-size: 13px; color: var(--text-main); cursor: pointer; transition: background 0.2s; }
+    .dd-item:hover { background: #f8fafc; }
+    .dd-item.danger { color: var(--danger); border-top: 1px solid var(--border); }
+
+    /* CONTENUTO SCORREVOLE */
+    .content-scroll { padding: 30px; overflow-y: auto; height: 100%; }
+    .page-section { max-width: 900px; margin: 0 auto; display: none; } /* Nascosto di base */
+    .page-section.active { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- LOGIN & MODALI (Fullscreen) --- */
+    .fullscreen-view {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #f1f5f9; z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .auth-card {
+      width: 100%; max-width: 400px; background: white; padding: 40px;
+      border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center;
+    }
+    .auth-title { font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 5px; }
+    .auth-sub { color: #64748b; font-size: 14px; margin-bottom: 30px; }
+
+    /* INPUT STYLES */
+    .input-group { margin-bottom: 15px; text-align: left; position: relative; }
+    .form-input { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: all 0.2s; background: #fff; color: #0f172a;}
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .form-label { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 5px; display: block; }
+    
+    .btn-primary { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: white; border: 1px solid var(--border); color: var(--text-main); margin-top: 10px; width: 100%; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 13px;}
+    .btn-danger { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; width: auto; display: inline-block; padding: 10px 20px;}
+
+    .eye-icon { position: absolute; right: 15px; top: 13px; cursor: pointer; color: #94a3b8; }
+    .link-text { font-size: 12px; color: var(--primary); cursor: pointer; margin-top: 15px; display: inline-block; }
+
+    /* --- COMPONENTI SPECIFICI --- */
+    
+    /* DASHBOARD CARDS */
+    .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); cursor: pointer; transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-3px); border-color: var(--primary); }
+    .stat-val { font-size: 32px; font-weight: 700; color: #0f172a; margin: 10px 0; }
+    .stat-label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* VOTE OPTIONS */
+    .vote-option { display: flex; align-items: center; padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; background: white; }
+    .vote-option:hover { background: #f8fafc; border-color: var(--primary); }
+    .vote-option.selected { border-color: var(--primary); background: #eff6ff; }
+    .vote-option input { margin-right: 15px; transform: scale(1.2); accent-color: var(--primary); }
+
+    /* FILE GRID */
+    .docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 20px; }
+    .doc-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 15px; text-align: center; text-decoration: none; color: inherit; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; height: 100%;}
+    .doc-card:hover { border-color: var(--primary); box-shadow: var(--shadow); transform: translateY(-2px); }
+    .doc-icon { font-size: 28px; margin-bottom: 10px; }
+    .doc-name { font-size: 12px; font-weight: 500; line-height: 1.3; color: #334155; word-break: break-word;}
+
+    /* TABS */
+    .tabs-pills { display: flex; gap: 10px; margin-bottom: 20px; background: white; padding: 5px; border-radius: 10px; border: 1px solid var(--border); display: inline-flex; }
+    .pill { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-muted); }
+    .pill.active { background: var(--primary); color: white; }
+
+    /* UTILITY */
+    .hidden { display: none !important; }
+    .loader { width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    
+/* MOBILE */
+    .mobile-toggle { display: none; font-size: 24px; cursor: pointer; margin-right: 15px; }
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 40; display: none; }
+
+
+    @media (max-width: 768px) {
+      /* La sidebar diventa fissa e si nasconde a sinistra */
+      .sidebar { 
+        position: fixed;
+        left: -100%; 
+        height: 100%; 
+        box-shadow: var(--shadow); 
+      }
+      
+      /* Quando è aperta torna a sinistra 0 */
+      .sidebar.open { left: 0; }
+      
+      /* L'overlay appare */
+      .overlay.open { display: block; }
+      
+      /* Il bottone appare */
+      .mobile-toggle { display: block; }
+      
+      .topbar { padding: 0 15px; }
+      .content-scroll { padding: 20px 15px; }
+      :root { --sidebar-width: 80%; }
+      .dash-grid { grid-template-columns: 1fr; }
+    }
+
+
+
+/* --- NOTIFICHE TOAST --- */
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 280px;
+      max-width: 350px;
+      animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-left: 5px solid #64748b;
+      font-size: 13px;
+      font-weight: 500;
+      color: #334155;
+      pointer-events: auto;
+    }
+
+    .toast.success { border-left-color: #10b981; }
+    .toast.error   { border-left-color: #ef4444; }
+    .toast.info    { border-left-color: #3b82f6; }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateX(100%); }
+    }
+
+/* --- STILI FILTRI E CESTINO --- */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+.chip { 
+  padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 500; 
+  cursor: pointer; background: #f1f5f9; color: #64748b; border: 1px solid transparent; white-space: nowrap;
+}
+.chip:hover { background: #e2e8f0; }
+.chip.active { background: #eff6ff; color: var(--primary); border-color: #bfdbfe; font-weight: 600; }
+
+/* Icona Cestino/Ripristino sulla Card */
+.doc-card { position: relative; }
+.doc-action { 
+  position: absolute; top: 8px; right: 8px; 
+  width: 24px; height: 24px; border-radius: 50%; 
+  background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 12px; display: none; /* Nascosto di base */
+}
+.doc-card:hover .doc-action { display: flex; } /* Appare al passaggio del mouse */
+.doc-action:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
+.doc-action.restore:hover { background: #dcfce7; color: #10b981; border-color: #bbf7d0; }
+
+
+
+/* --- TESSERA WALLET STYLE (PREMIUM DARK & GOLD) --- */
+.wallet-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); /* Sfondo molto scuro */
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.wallet-modal.open { opacity: 1; pointer-events: auto; }
+
+.pass-card {
+    width: 320px; height: 520px; /* Verticale per il telefono */
+    /* SFONDO SCURO IDENTICO AL PDF */
+    background: linear-gradient(135deg, #2b2b2b 0%, #111111 100%);
+    border-radius: 20px;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); /* Ombra profonda */
+    color: white;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    border: 1px solid #333; /* Bordo sottile scuro */
+    transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.wallet-modal.open .pass-card { transform: scale(1); }
+
+/* BORDO ORO INTERNO (Decorativo come nel PDF) */
+.pass-inner-border {
+    position: absolute; top: 15px; left: 15px; right: 15px; bottom: 140px; /* Si ferma prima del footer bianco */
+    border: 1px solid #d4af37; /* ORO */
+    opacity: 0.4;
+    border-radius: 12px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Intestazione */
+.pass-header {
+    padding: 30px 25px 10px 25px;
+    display: flex; flex-direction: column; gap: 5px;
+    z-index: 2; position: relative;
+}
+
+.pass-org-label {
+    font-size: 10px; text-transform: uppercase; color: #f3e5ab; opacity: 0.6; letter-spacing: 2px;
+}
+
+.pass-logo { 
+    font-family: 'Georgia', serif; /* Font SERIF come il PDF */
+    font-weight: 700; 
+    font-size: 24px; 
+    color: #d4af37; /* ORO */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Corpo Tessera */
+.pass-body { padding: 25px; display: flex; flex-direction: column; gap: 25px; z-index: 2; position: relative; }
+
+.pass-row { display: flex; justify-content: space-between; }
+.pass-field { display: flex; flex-direction: column; }
+
+/* Etichette Oro */
+.pass-label { 
+    font-size: 9px; text-transform: uppercase; 
+    color: #d4af37; /* ORO */
+    font-weight: 600; letter-spacing: 1px; margin-bottom: 5px; opacity: 0.9;
+}
+
+/* Valori Bianchi */
+.pass-value { 
+    font-size: 16px; font-weight: 500; color: #ffffff; letter-spacing: 0.5px;
+}
+.pass-value.big { 
+    font-size: 26px; font-weight: 700; color: #ffffff;
+    font-family: 'Georgia', serif; /* Nome utente elegante */
+}
+
+/* Footer QR Code (Bianco per contrasto) */
+.pass-footer {
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    background: #ffffff; /* Bianco puro */
+    height: 120px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 30px;
+    color: #334155;
+    z-index: 2;
+}
+.pass-qrcode { width: 80px; height: 80px; mix-blend-mode: multiply; }
+.pass-number-box { text-align: right; }
+
+/* Tasto Chiudi */
+.close-wallet {
+    position: absolute; top: 20px; right: 20px;
+    width: 40px; height: 40px; background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 20px; transition: background 0.2s;
+}
+.close-wallet:hover { background: rgba(212, 175, 55, 0.3); color: #d4af37; border-color: #d4af37; }
+
+  
+/* ==========================================
+   BOTTOM NAVIGATION BAR (STILE APP MOBILE)
+   ========================================== */
+
+/* Di base, nascondiamo la barra in basso (se uno è su PC non deve vederla) */
+.bottom-nav {
+    display: none; 
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #0f172a; /* Il colore scuro del tuo menu laterale */
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.2);
+    z-index: 9999;
+    padding: 10px 0;
+    padding-bottom: env(safe-area-inset-bottom, 10px); /* Evita la barra dell'iPhone */
+}
+
+/* Stile per ogni singolo bottone della barra */
+.bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #64748b; /* Grigio sbiadito per le sezioni non attive */
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 600;
+    gap: 4px;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Quando l'utente ci clicca, si accende col tuo arancione */
+.bottom-nav-item.active,
+.bottom-nav-item:hover {
+    color: #f59e0b; 
+}
+
+.bottom-nav-icon {
+    font-size: 22px;
+}
+
+/* IL VIGILE URBANO: Regola per schermi piccoli (Smartphone) */
+@media (max-width: 768px) {
+    /* 2. Mostriamo la barra SOLO se ha la classe 'show-nav' */
+    .bottom-nav.show-nav {
+        display: flex !important;
+    }
+    
+    /* 2. Mostriamo la nostra nuova barra in basso */
+    .bottom-nav {
+        display: flex !important;
+    }
+    
+    /* 3. Diamo un po' di spazio in fondo alla pagina per non coprire il testo */
+    body {
+        padding-bottom: 80px; 
+    }
+}
+
+
+/* ==========================================
+   UX & UI UPGRADES (Skeletons, Empty States)
+   ========================================== */
+
+/* 1. SKELETON LOADING (Effetto caricamento moderno) */
+.skeleton-box {
+    padding: 15px; background: white; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 10px;
+}
+.skeleton {
+    background: #e2e8f0;
+    background: linear-gradient(110deg, #f1f5f9 8%, #e2e8f0 18%, #f1f5f9 33%);
+    background-size: 200% 100%;
+    animation: 1.5s shine linear infinite;
+    border-radius: 6px;
+}
+@keyframes shine { to { background-position-x: -200%; } }
+
+.sk-title { width: 40%; height: 18px; margin-bottom: 12px; }
+.sk-text { width: 80%; height: 12px; margin-bottom: 8px; }
+.sk-text.short { width: 60%; }
+.sk-avatar { width: 40px; height: 40px; border-radius: 50%; float: left; margin-right: 15px; }
+
+/* 2. BEAUTIFUL EMPTY STATES (Schermate vuote eleganti) */
+.empty-state {
+    text-align: center; padding: 40px 20px; background: white; 
+    border-radius: 12px; border: 1px dashed #cbd5e1; color: #64748b;
+}
+.empty-icon { font-size: 48px; margin-bottom: 15px; opacity: 0.5; filter: grayscale(100%); }
+.empty-title { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 5px; }
+.empty-sub { font-size: 13px; }
+
+/* 3. BOTTONI "SCATTANTI" (Feedback tattile al click) */
+.btn-primary:active, .btn-secondary:active, .btn-danger:active {
+    transform: scale(0.96);
+    transition: transform 0.1s;
+}
+
+/* 4. TRANSIZIONI PAGINA PIÙ FLUIDE */
+.page-section.active {
+    display: block;
+    animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ==========================================
+   STEP 1: UPGRADE ESTETICO PREMIUM (WOW EFFECT)
+   ========================================== */
+
+/* 1. Ombre globali più ampie e morbide */
+:root {
+  --shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
+  --bg-body: #f4f7f9; /* Sfondo appena più grigio per far risaltare il bianco */
+}
+
+/* 2. Sidebar con gradiente profondo */
+.sidebar {
+  background: linear-gradient(160deg, #0f172a 0%, #1e40af 100%);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  border-right: none;
+}
+
+/* 3. Tessera Digitale "Glassmorphism" (Effetto Vetro) */
+.sidebar-widget {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+}
+
+/* 4. Testo di benvenuto accattivante */
+#welcomeMsg {
+  background: linear-gradient(90deg, #1e3a8a, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  font-size: 28px;
+}
+
+/* 5. Card Statistiche con hover e riflesso di luce */
+.stat-card {
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 1);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sollevamento della card al passaggio del mouse */
+.stat-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 20px 40px -10px rgba(37, 99, 235, 0.15);
+  border-color: #bfdbfe;
+}
+
+/* Effetto "Shine" invisibile che passa sulla card */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+  transform: skewX(-20deg);
+  transition: all 0.6s ease;
+}
+.stat-card:hover::before {
+  left: 200%;
+}
+
+/* ==========================================
+   STEP 2: TIMELINE AVVISI RECENTI
+   ========================================== */
+
+/* Contenitore principale e linea verticale */
+.timeline-container {
+    position: relative;
+    padding-left: 24px;
+    margin-top: 15px;
+}
+.timeline-container::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 5px;
+    bottom: 0;
+    width: 2px;
+    background: #e2e8f0;
+    border-radius: 2px;
+}
+
+/* Singolo avviso a forma di Card */
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+}
+
+/* Effetto scorrimento al passaggio del mouse */
+.timeline-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
+}
+
+/* Il pallino blu sulla linea */
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -23px; /* Posizionato esattamente sopra la linea grigia */
+    top: 20px;
+    width: 12px;
+    height: 12px;
+    background: #3b82f6;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px #bfdbfe;
+    z-index: 1;
+}
+
+/* Testi della timeline */
+.timeline-date {
+    font-size: 11px;
+    font-weight: 700;
+    color: #3b82f6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    display: inline-block;
+    background: #eff6ff;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+.timeline-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+.timeline-content {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.6;
+}
+
+/* ==========================================
+   STEP 3: MENU LATERALE "FLOATING PILLS"
+   ========================================== */
+
+/* 1. Stacca i bottoni dai bordi e arrotonda gli angoli */
+.sidebar div[onclick^="nav("], 
+.sidebar .menu-item {
+    margin: 8px 16px !important; /* Margine laterale per farli "galleggiare" */
+    padding: 12px 20px !important;
+    border-radius: 12px !important; /* Angoli morbidi */
+    color: rgba(255, 255, 255, 0.7) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+/* 2. Effetto Hover: quando passi il mouse */
+.sidebar div[onclick^="nav("]:hover,
+.sidebar .menu-item:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    transform: translateX(4px); /* Leggero scivolamento a destra */
+}
+
+/* 3. Stato Attivo: la pagina in cui ti trovi attualmente */
+.sidebar div.active, 
+.sidebar .menu-item.active {
+    background: #ffffff !important;
+    color: #1e40af !important; /* Blu scuro del brand Gens */
+    font-weight: 700 !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important; /* Ombra di sollevamento */
+    transform: translateX(4px);
+}
+
+/* ==========================================
+   STEP 4: CAMPI DI TESTO E FOCUS RING
+   ========================================== */
+
+/* 1. Stile base per tutti i campi (Input, Select, Textarea) */
+.form-input, 
+input[type="text"], input[type="password"], input[type="email"], input[type="number"], 
+select, textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #cbd5e1; /* Grigio chiaro elegante */
+    border-radius: 10px; /* Angoli ben arrotondati */
+    background-color: #f8fafc; /* Grigio chiarissimo di fondo */
+    color: #0f172a;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+    outline: none !important; /* Rimuove il brutto bordo di default del browser */
+    -webkit-appearance: none; /* Rimuove gli stili predefiniti su Safari/iOS */
+}
+
+/* 2. Effetto Hover (quando passi col mouse senza cliccare) */
+.form-input:hover,
+input[type="text"]:hover, input[type="password"]:hover, input[type="email"]:hover, input[type="number"]:hover, 
+select:hover, textarea:hover {
+    border-color: #94a3b8; /* Bordo leggermente più scuro */
+    background-color: #f1f5f9;
+}
+
+/* 3. L'effetto WOW: Il Focus Ring (quando clicchi per scrivere) */
+.form-input:focus,
+input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, input[type="number"]:focus, 
+select:focus, textarea:focus {
+    border-color: #3b82f6; /* Bordo azzurro Gens */
+    background-color: #ffffff; /* Sfondo diventa bianco puro */
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); /* L'alone luminoso azzurro */
+}
+
+/* 4. Stile per le Etichette sopra ai campi */
+.form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.2px;
+}
+
+/* 5. Placeholder (il testo suggerito dentro il campo) */
+::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+/* ==========================================
+   STEP 5 (CORRETTO): EFFETTO HOVER SULLE TUE CARD
+   ========================================== */
+
+/* Quando passi il mouse sui documenti o sulle voci in lista */
+.doc-card {
+    transition: all 0.2s ease !important;
+    background: #ffffff;
+}
+
+.doc-card:hover {
+    background-color: #eff6ff !important; /* Diventa azzurrino luminoso */
+    border-color: #bfdbfe !important;
+    transform: translateY(-3px); /* Si solleva verso l'alto */
+    box-shadow: 0 8px 15px -3px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* ==========================================
+   STEP 6: TOAST NOTIFICATIONS (Stile iOS/Mac)
+   ========================================== */
+
+/* Contenitore invisibile che tiene i toast in basso al centro */
+#toast-container {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none; /* Permette di cliccare gli elementi dietro */
+}
+
+/* La pillola fluttuante */
+.toast-msg {
+    background: rgba(25, 28, 36, 0.85); /* Grigio scurissimo trasparente */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #ffffff;
+    padding: 14px 24px;
+    border-radius: 40px; /* Forma a pillola perfetta */
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* Animazione a "molla" per l'entrata */
+    animation: toastEnter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+/* Colori specifici (sovrascrivono il grigio scuro) */
+.toast-success { background: rgba(16, 185, 129, 0.9); } /* Verde smeraldo */
+.toast-error { background: rgba(239, 68, 68, 0.9); }    /* Rosso accesso */
+.toast-info { background: rgba(59, 130, 246, 0.9); }    /* Azzurro */
+
+/* Animazioni di entrata e uscita */
+@keyframes toastEnter {
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastLeave {
+    to { opacity: 0; transform: translateY(-20px) scale(0.9); }
+}
+
+/* ==========================================
+   STEP 7: BARRA SUPERIORE MODERNA (HEADER)
+   ========================================== */
+
+/* 1. Trasforma il blocco blu in vetro satinato */
+.header, #header, .top-bar {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important; /* Ombra impercettibile */
+    color: #0f172a !important; /* Testo scuro per contrasto */
+    transition: all 0.3s ease;
+}
+
+/* 2. Rende il titolo della sezione (es. "Dashboard") scuro e moderno */
+.header h1, .header h2, .header span, #headerTitle {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    letter-spacing: -0.3px;
+    margin: 0 !important;
+}
+
+/* 3. Il cerchietto dell'Avatar (la tua "L" a destra) */
+.user-avatar, .header-avatar, .avatar {
+    background: linear-gradient(135deg, #1e40af, #3b82f6) !important;
+    color: white !important;
+    font-weight: bold !important;
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3) !important;
+    border: 2px solid white !important;
+    transition: transform 0.2s ease;
+}
+
+.user-avatar:hover, .header-avatar:hover, .avatar:hover {
+    transform: scale(1.1);
+    cursor: pointer;
+}
+
+/* ==========================================
+   BARRA SUPERIORE "GLASSMORPHISM"
+   ========================================== */
+.glass-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+    background: rgba(255, 255, 255, 0.75) !important; /* Bianco semitrasparente */
+    backdrop-filter: blur(16px) !important; /* L'effetto vetro sfocato */
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03); /* Ombra leggerissima per staccare dal fondo */
+}
+
+/* Restyling dell'Avatar utente a destra */
+.glass-header .user-avatar {
+    background: linear-gradient(135deg, #1e40af, #3b82f6) !important;
+    color: white !important;
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3) !important;
+    border: 2px solid white !important;
+    transition: transform 0.2s ease !important;
+}
+
+.glass-header .user-avatar:hover {
+    transform: scale(1.1) !important;
+}
+
+/* ==========================================
+   SIDEBAR SNELLA E TESSERA COMPATTA
+   ========================================== */
+
+/* 1. Stringiamo la Sidebar */
+.sidebar {
+    width: 220px !important;
+}
+
+/* ==========================================
+   SOLUZIONE DEFINITIVA LAYOUT A 2 COLONNE
+   ========================================== */
+@media screen and (min-width: 769px) {
+    /* Forziamo il corpo o il contenitore padre a usare una griglia rigida */
+    body, .app-container {
+        display: grid !important;
+        grid-template-columns: 220px 1fr !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+    }
+
+    /* La sidebar si piazza fissa nella prima colonna */
+    .sidebar {
+        position: relative !important;
+        width: 220px !important;
+        height: 100vh !important;
+        left: auto !important;
+        top: auto !important;
+        box-sizing: border-box !important;
+    }
+
+    /* L'area principale occupa esattamente la seconda colonna, senza margini fantasma */
+    .main-area {
+        position: relative !important;
+        margin: 0 !important;
+        left: auto !important;
+        width: 100% !important;
+        height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Facciamo scorrere solo la parte interna della pagina, tenendo fissa la barra in alto */
+    .content-scroll {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        box-sizing: border-box !important;
+    }
+}
+
+/* 2. Rimpiccioliamo leggermente le "Pillole" del menu per farle stare nella nuova misura */
+.sidebar div[onclick^="nav("], 
+.sidebar .nav-item {
+    margin: 4px 12px !important;
+    padding: 10px 15px !important;
+    font-size: 13px !important;
+}
+
+/* 3. Compattiamo il box della Tessera Digitale */
+.sidebar-widget {
+    margin: 15px 12px !important;
+    padding: 12px !important; /* Ridotto per risparmiare spazio */
+    border-radius: 12px !important;
+}
+
+/* Riduciamo i testi della tessera */
+.sw-title { font-size: 9px !important; margin-bottom: 4px !important; }
+.sw-name { font-size: 13px !important; margin-bottom: 2px !important; }
+.sw-role, .sw-code { font-size: 10px !important; margin-bottom: 2px !important; }
+
+/* 4. Il trucco magico: Rimpiccioliamo il riquadro del QR Code sovrascrivendo l'HTML */
+.sidebar-widget div[style*="120px"] {
+    width: 80px !important;
+    height: 80px !important;
+    margin: 8px auto !important;
+    padding: 4px !important;
+    border-radius: 8px !important;
+}
+
+/* 5. Assottigliamo i pulsanti Scarica / Apri Card */
+.sw-btn {
+    padding: 6px 10px !important;
+    font-size: 10px !important;
+    border-radius: 8px !important;
+    margin-top: 4px !important;
+}
+
+/* ==========================================
+   STILI DASHBOARD INTERATTIVA
+   ========================================== */
+.modal-dashboard {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 9999; display: flex; justify-content: center; align-items: center;
+    opacity: 0; pointer-events: none; transition: all 0.3s ease;
+}
+.modal-dashboard.show {
+    opacity: 1; pointer-events: all;
+}
+.modal-content-dash {
+    background: #f8fafc; width: 95%; max-width: 1100px; max-height: 90vh;
+    border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; overflow: hidden;
+    transform: translateY(20px); transition: transform 0.3s ease;
+}
+.modal-dashboard.show .modal-content-dash {
+    transform: translateY(0);
+}
+
+
+</style>
