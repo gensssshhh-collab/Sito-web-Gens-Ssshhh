@@ -1,5 +1,4 @@
 
-<script>
 
   // Funzione comoda per generare l'effetto caricamento
 function getSkeletonLoader() {
@@ -4415,5 +4414,3 @@ function salvaMovimentoComposto() {
 }
 
 
-
-</script>
