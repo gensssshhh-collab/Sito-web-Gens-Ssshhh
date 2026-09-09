@@ -21,7 +21,7 @@
   <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiR2VucyBTc3NoaGgiLCJzaG9ydF9uYW1lIjoiR2VucyIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMWU0MGFmIiwidGhlbWVfY29sb3IiOiIjMWU0MGFmIiwiaWNvbnMiOlt7InNyYyI6Imh0dHBzOi8vaW1nLmljb25zOC5jb20vZmx1ZW5jeS81MTIvc2VjdXJpdHktY2hlY2tlZC5wbmciLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIn1dfQ==">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+  <link rel="stylesheet" href="style.css">
 
   
 
@@ -80,7 +80,7 @@
   <div id="viewResetFinale" class="fullscreen-view hidden">
     <div class="auth-card">
       <div class="auth-title">Nuova Password</div>
-      <input type="hidden" id="tokenReset" value="<?= serverToken ?>">
+      <input type="hidden" id="tokenReset" value="">
       
       <input type="password" id="newResetPass" class="form-input" style="margin-bottom:10px" placeholder="Nuova Password">
       <input type="password" id="newResetPassConfirm" class="form-input" placeholder="Conferma Password">
@@ -1400,7 +1400,7 @@
 </nav>
 
 <!-- MODALE DI CONFERMA ELEGANTE -->
-<div id="customConfirmModal" class="fullscreen-view hidden" style="background: rgba(15, 23, 42, 0.6); z-index: 9999; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+<div id="customConfirmModal" class="fullscreen-view hidden" style="background: rgba(15, 23, 42, 0.6); z-index: 9999; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
     <div style="background: white; padding: 25px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
         <div style="font-size: 40px; margin-bottom: 10px;">🤔</div>
         <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 18px;">Conferma Azione</h3>
@@ -1468,7 +1468,8 @@
     </div>
 </div>
 
-
+<!-- Collegamento Script App -->
+<script src="app.js"></script>
 
 </body>
 </html>
