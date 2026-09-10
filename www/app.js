@@ -288,15 +288,8 @@ async function faiLogin() {
 
 
 
-function initApp() {
-  // Mostra feedback che stiamo caricando
-  document.getElementById('welcomeMsg').innerText = "Caricamento in corso...";
-  
-    chiamaServer("getStartData", curEmail).then(function(data){
-        if(!data || !data.utente) {
-            mostraErroreCaricamentoHome();
-            return;
-        }
+function renderStartData(data, fromCache) {
+    if(!data || !data.utente) return;
     
     // =================================================================
     // NUOVO: ACCENDIAMO LA BOTTOM BAR SE L'UTENTE E' LOGGATO CON SUCCESSO
@@ -382,9 +375,33 @@ function initApp() {
         cardVoto.style.color="var(--primary)";
     }
 
+}
+
+function initApp() {
+    var cacheKey = 'gens_start_data_' + curEmail.toLowerCase();
+    var cachedData = localStorage.getItem(cacheKey);
+
+    if (cachedData) {
+        try {
+            renderStartData(JSON.parse(cachedData), true);
+        } catch (error) {
+            localStorage.removeItem(cacheKey);
+        }
+    } else {
+        document.getElementById('welcomeMsg').innerText = "Caricamento in corso...";
+    }
+
+    chiamaServer("getStartData", curEmail).then(function(data){
+        if(!data || !data.utente) {
+            if (!cachedData) mostraErroreCaricamentoHome();
+            return;
+        }
+
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+        renderStartData(data, false);
     }).catch(function() {
-        mostraErroreCaricamentoHome();
-    }); 
+        if (!cachedData) mostraErroreCaricamentoHome();
+    });
 }
 
 function mostraErroreCaricamentoHome() {
@@ -501,11 +518,26 @@ function cambiaModoDocs(mode, el) {
 
 function loadDocs(mode) {
     var div = document.getElementById('listaFiles');
-    div.innerHTML = getSkeletonLoader();
+    var cacheKey = 'gens_docs_' + mode.toLowerCase() + '_' + curEmail.toLowerCase();
+    var cachedDocs = localStorage.getItem(cacheKey);
+
+    if (cachedDocs) {
+        try {
+            cacheDocs = JSON.parse(cachedDocs);
+            renderDocs();
+        } catch (error) {
+            localStorage.removeItem(cacheKey);
+        }
+    } else {
+        div.innerHTML = getSkeletonLoader();
+    }
     
     chiamaServer("getListaDocumenti", [mode, curEmail]).then(function(files){
-        if(!files) return;
-        cacheDocs = files; // Salva in memoria
+        if(!Array.isArray(files)) return;
+        cacheDocs = files.filter(function(file) {
+            return file && file.url && file.nome;
+        });
+        localStorage.setItem(cacheKey, JSON.stringify(cacheDocs));
         renderDocs();      // Disegna a video
     });
 }
@@ -555,11 +587,13 @@ function renderDocs() {
             ? `<div class="doc-action restore" onclick="gestisciFile('${f.id}', 'restore', event)" title="Ripristina file">♻️</div>`
             : `<div class="doc-action" onclick="gestisciFile('${f.id}', 'delete', event)" title="Sposta nel cestino">🗑️</div>`;
 
-        html += `<a href="${f.url}" target="_blank" class="doc-card">
+        var safeName = String(f.nome || 'Documento');
+        var safeCategory = String(f.categoria || 'Altro');
+        html += `<a href="${f.url}" target="_blank" rel="noopener" class="doc-card">
             ${actionBtn}
-            <div class="doc-icon">📄</div>
-            <div class="doc-name">${f.nome}</div>
-            <div style="font-size:10px; color:#94a3b8; margin-top:8px; background:#f1f5f9; padding:2px 8px; border-radius:10px;">${f.categoria || 'Altro'}</div>
+            <div class="doc-card-top"><div class="doc-icon">PDF</div><span class="doc-open">Apri →</span></div>
+            <div class="doc-name">${safeName}</div>
+            <div class="doc-category">${safeCategory}</div>
         </a>`;
     });
     
@@ -704,8 +738,20 @@ function inviaCand() {
 }
 
 function caricaProfilo() {
+    var cacheKey = 'gens_profile_' + curEmail.toLowerCase();
+    var cachedProfile = localStorage.getItem(cacheKey);
+    if (cachedProfile) {
+        try { applicaDatiProfilo(JSON.parse(cachedProfile)); } catch (error) { localStorage.removeItem(cacheKey); }
+    }
+
   chiamaServer("getDatiUtente", curEmail).then(function(d){
     if(!d) return;
+        localStorage.setItem(cacheKey, JSON.stringify(d));
+        applicaDatiProfilo(d);
+    });
+}
+
+function applicaDatiProfilo(d) {
     document.getElementById('profNome').value = d.nome;
     document.getElementById('profCognome').value = d.cognome;
     document.getElementById('profEmail').value = d.email;
@@ -719,7 +765,6 @@ function caricaProfilo() {
     
     document.getElementById('profBadgeRuolo').innerText = d.ruolo;
     document.getElementById('profBadgeScad').innerText = d.scadenza;
-  });
 }
 
 
@@ -1062,13 +1107,15 @@ window.onload = function() {
       msg.innerText = "Accesso automatico in corso..."; 
       msg.style.color = "#2563eb"; // Blu corporate
 
+      // Riusa subito l'ultima sessione locale mentre il server verifica le credenziali.
+      curEmail = savedEmail;
+      curPass = savedPass;
+      document.getElementById('viewLogin').classList.add('hidden');
+      document.getElementById('appInterface').classList.remove('hidden');
+      initApp();
+
       chiamaServer("verificaLogin", {email: savedEmail, password: savedPass, info: navigator.userAgent}).then(function(res){
           if(res === "OK_LOGIN") {
-              // Se i dati salvati sono ancora validi, entra
-              curEmail = savedEmail;
-              curPass = savedPass;
-              document.getElementById('viewLogin').classList.add('hidden');
-              document.getElementById('appInterface').classList.remove('hidden');
               verificaConsenso();
           } else {
               // Se la password è cambiata nel frattempo, cancella la memoria vecchia
@@ -1082,6 +1129,10 @@ window.onload = function() {
 
 // Funzione di Logout (Pulisce la memoria e ricarica)
 function eseguiLogout(soloPulizia) {
+    if (curEmail) {
+        localStorage.removeItem('gens_start_data_' + curEmail.toLowerCase());
+        localStorage.removeItem('gens_profile_' + curEmail.toLowerCase());
+    }
     localStorage.removeItem('gens_email');
     localStorage.removeItem('gens_pass');
     curEmail = "";

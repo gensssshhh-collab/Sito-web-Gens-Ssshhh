@@ -1,0 +1,16 @@
+{
+  "name": "Gens Ssshhh",
+  "short_name": "Gens",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FCFBF8",
+  "theme_color": "#1A2945",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
