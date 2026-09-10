@@ -262,6 +262,13 @@ function inviaRichiestaDimissioni(dati) {
 
 
 function getStartData(email) {
+  var cache = CacheService.getScriptCache();
+  var cacheKey = "start_data_" + Utilities.base64EncodeWebSafe(String(email).toLowerCase()).slice(0, 180);
+  var cached = cache.get(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
   // Eseguiamo tutte le letture insieme lato server (molto più veloce)
   // Recupera i dati utente di base
   var user = getHomeSummary(email); 
@@ -275,10 +282,13 @@ function getStartData(email) {
   try { voto = checkStatoVoto(email); } catch(e) {}
   
   // Restituiamo un pacchetto unico al sito
-  return {
+  var result = {
     utente: user,
     avvisi: news,
     statoVoto: voto
   };
+
+  cache.put(cacheKey, JSON.stringify(result), 30);
+  return result;
 }
 

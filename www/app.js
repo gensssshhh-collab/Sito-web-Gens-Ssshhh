@@ -32,6 +32,7 @@ const APP_CONFIG = Object.freeze({
     apiUrl: "https://script.google.com/macros/s/AKfycbxjpLf3WOmooekqZkxvRRkhQriyFYxHMr0YB2kJJy46hmkAG9Nl4EW4HeXHYtbHib7a5Q/exec"
 });
 const urlWebAppData = APP_CONFIG.apiUrl;
+const REQUEST_TIMEOUT_MS = 20000;
 var curEmail = "";
 var curPass = "";
 var curDocMode = "PUBBLICO";
@@ -191,11 +192,14 @@ function togglePass(id) {
 }
 
 async function chiamaServer(nomeAzione, parametri = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     const response = await fetch(urlWebAppData, {
       method: "POST",
       body: JSON.stringify({ azione: nomeAzione, payload: parametri }),
-      headers: { "Content-Type": "text/plain" }
+            headers: { "Content-Type": "text/plain" },
+            signal: controller.signal
     });
     const risultato = await response.json();
     
@@ -206,8 +210,10 @@ async function chiamaServer(nomeAzione, parametri = {}) {
       return null;
     }
   } catch (err) {
-    console.error("Errore di rete:", err);
+        console.error("Errore di rete:", err.name === "AbortError" ? "Timeout" : err);
     return null;
+    } finally {
+        clearTimeout(timeoutId);
   }
 }
 
@@ -236,11 +242,15 @@ async function faiLogin() {
   };
 
   try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     const response = await fetch(urlWebAppData, {
       method: "POST",
       body: JSON.stringify(richiesta),
-      headers: { "Content-Type": "text/plain" } 
+            headers: { "Content-Type": "text/plain" },
+            signal: controller.signal
     });
+        clearTimeout(timeoutId);
     
     const risultato = await response.json();
     
@@ -264,7 +274,9 @@ async function faiLogin() {
     
   } catch (errore) {
     console.error(errore);
-    msg.innerText = "Errore di connessione al server."; 
+        msg.innerText = errore.name === "AbortError"
+            ? "Il server sta impiegando troppo tempo. Riprova."
+            : "Errore di connessione al server.";
     msg.style.color = "red";
     } finally {
         if (loginButton) {
@@ -280,8 +292,11 @@ function initApp() {
   // Mostra feedback che stiamo caricando
   document.getElementById('welcomeMsg').innerText = "Caricamento in corso...";
   
-  chiamaServer("getStartData", curEmail).then(function(data){
-    if(!data || !data.utente) return;
+    chiamaServer("getStartData", curEmail).then(function(data){
+        if(!data || !data.utente) {
+            mostraErroreCaricamentoHome();
+            return;
+        }
     
     // =================================================================
     // NUOVO: ACCENDIAMO LA BOTTOM BAR SE L'UTENTE E' LOGGATO CON SUCCESSO
@@ -367,7 +382,17 @@ function initApp() {
         cardVoto.style.color="var(--primary)";
     }
 
-  }); 
+    }).catch(function() {
+        mostraErroreCaricamentoHome();
+    }); 
+}
+
+function mostraErroreCaricamentoHome() {
+    var welcome = document.getElementById('welcomeMsg');
+    if (!welcome) return;
+    welcome.innerHTML = 'Impossibile caricare i dati <button class="retry-data-button" onclick="initApp()">Riprova</button>';
+    var news = document.getElementById('containerAvvisi');
+    if (news) news.innerHTML = '<p class="data-error-message">La connessione al server è lenta o momentaneamente non disponibile.</p>';
 }
 
 
@@ -1043,6 +1068,7 @@ window.onload = function() {
               curEmail = savedEmail;
               curPass = savedPass;
               document.getElementById('viewLogin').classList.add('hidden');
+              document.getElementById('appInterface').classList.remove('hidden');
               verificaConsenso();
           } else {
               // Se la password è cambiata nel frattempo, cancella la memoria vecchia

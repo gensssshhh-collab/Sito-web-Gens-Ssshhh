@@ -1083,6 +1083,26 @@ button, input, select, textarea {
   transform: translate(-50%, 0);
 }
 
+.retry-data-button {
+  border: 1px solid rgba(197,157,75,0.45);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--gold-soft);
+  color: var(--navy);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.data-error-message {
+  margin: 0;
+  color: #991b1b;
+  font-size: 13px;
+  text-align: center;
+}
+
 .link-text {
   display: inline-block;
   margin-top: 18px;
