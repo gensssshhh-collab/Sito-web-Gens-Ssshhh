@@ -27,7 +27,11 @@ var curSearchDocs = "";
 
 
 /* --- VARIABILI GLOBALI --- */
-const urlWebAppData = "https://script.google.com/macros/s/AKfycbxjpLf3WOmooekqZkxvRRkhQriyFYxHMr0YB2kJJy46hmkAG9Nl4EW4HeXHYtbHib7a5Q/exec";
+const APP_CONFIG = Object.freeze({
+    environment: "production",
+    apiUrl: "https://script.google.com/macros/s/AKfycbxjpLf3WOmooekqZkxvRRkhQriyFYxHMr0YB2kJJy46hmkAG9Nl4EW4HeXHYtbHib7a5Q/exec"
+});
+const urlWebAppData = APP_CONFIG.apiUrl;
 var curEmail = "";
 var curPass = "";
 var curDocMode = "PUBBLICO";
@@ -47,6 +51,7 @@ function showToast(messaggio, tipo = "info") {
     // 2. Crea il singolo toast
     let toast = document.createElement("div");
     toast.className = `toast-msg toast-${tipo}`;
+    toast.setAttribute("role", tipo === "error" ? "alert" : "status");
     
     // 3. Assegna l'emoji corretta in base al tipo
     let icona = "ℹ️";
@@ -65,6 +70,22 @@ function showToast(messaggio, tipo = "info") {
         setTimeout(() => { toast.remove(); }, 400); 
     }, 3500);
 }
+
+function aggiornaStatoRete() {
+    var status = document.getElementById("networkStatus");
+    if (!status) return;
+
+    if (navigator.onLine) {
+        status.classList.remove("visible", "offline");
+        status.innerText = "";
+    } else {
+        status.innerText = "Connessione assente. Alcune funzioni potrebbero non essere disponibili.";
+        status.classList.add("visible", "offline");
+    }
+}
+
+window.addEventListener("online", aggiornaStatoRete);
+window.addEventListener("offline", aggiornaStatoRete);
 
 
 /* --- NAVIGATION --- */
@@ -195,14 +216,18 @@ async function faiLogin() {
   var e = document.getElementById('logEmail').value;
   var p = document.getElementById('logPass').value;
   var msg = document.getElementById('loginMsg');
+    var loginButton = document.getElementById('loginButton');
   
   if(!e || !p) { msg.innerText = "Inserisci dati"; return; }
   
   msg.innerText = "Accesso in corso..."; 
   msg.style.color="blue";
-  
-  // URL DELLA TUA WEB APP GOOGLE (lo trovi cliccando su "Esegui il deployment")
-  const urlWebAppData = "https://script.google.com/macros/s/AKfycbxjpLf3WOmooekqZkxvRRkhQriyFYxHMr0YB2kJJy46hmkAG9Nl4EW4HeXHYtbHib7a5Q/exec"; 
+    if (loginButton) {
+        loginButton.disabled = true;
+        loginButton.classList.add('is-loading');
+    }
+
+    const urlWebAppData = APP_CONFIG.apiUrl;
   
   const richiesta = {
     azione: "login",
@@ -241,6 +266,11 @@ async function faiLogin() {
     console.error(errore);
     msg.innerText = "Errore di connessione al server."; 
     msg.style.color = "red";
+    } finally {
+        if (loginButton) {
+            loginButton.disabled = false;
+            loginButton.classList.remove('is-loading');
+        }
   }
 }
 
@@ -989,6 +1019,7 @@ function salvaModificheSocioAdmin() {
 
 /* --- AUTO START E GESTIONE SESSIONE --- */
 window.onload = function() {
+    aggiornaStatoRete();
   // 1. Controllo Token Reset Password (Se provieni da una mail)
   var token = document.getElementById('tokenReset').value;
   if(token && token !== "") {

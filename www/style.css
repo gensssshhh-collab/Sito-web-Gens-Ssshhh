@@ -78,6 +78,10 @@ button, input, select, textarea {
 .brand .logo-g { color: var(--gold-strong); }
 .brand .logo-s { color: var(--navy); margin-left: -8px; }
 
+.gs-logo-mark {
+  user-select: none;
+}
+
 .nav-links {
   display: flex;
   flex-direction: column;
@@ -1031,6 +1035,52 @@ button, input, select, textarea {
 .btn-secondary:active,
 .btn-danger:active {
   transform: scale(0.98);
+}
+
+.auth-login-btn.is-loading {
+  position: relative;
+  color: transparent !important;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.auth-login-btn.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid rgba(255,255,255,0.45);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.network-status {
+  position: fixed;
+  left: 50%;
+  top: 12px;
+  z-index: 3000;
+  max-width: min(92vw, 520px);
+  padding: 10px 16px;
+  border: 1px solid rgba(185,28,28,0.18);
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -12px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.network-status.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .link-text {

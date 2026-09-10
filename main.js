@@ -3,18 +3,8 @@
 // ==========================================
 
 function doGet(e) {
-  var template = HtmlService.createTemplateFromFile('index');
-  
-  // Controlla se c'è un "token" nel link
-  var token = (e && e.parameter && e.parameter.token) ? e.parameter.token : "";
-  
-  // Passa il token alla pagina HTML (se vuoto, entra normale)
-  template.serverToken = token;
-  
-  return template.evaluate()
-      .setTitle('Area Riservata Soci')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  // Il backend ora funge solo da API invisibile. Nessuna interfaccia HTML viene generata.
+  return ContentService.createTextOutput("Gens Ssshhh Backend API - Attivo e funzionante");
 }
 
 

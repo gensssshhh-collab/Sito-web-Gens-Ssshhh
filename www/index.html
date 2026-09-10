@@ -31,7 +31,8 @@
 </head>
 <body>
 
-<div id="toast-container"></div>
+<div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+<div id="networkStatus" class="network-status" role="status" aria-live="polite"></div>
 
   <div id="viewLogin" class="fullscreen-view">
     <div class="auth-card">
@@ -47,7 +48,7 @@
           <span class="eye-icon" onclick="togglePass('logPass')">👁️</span>
         </div>
 
-                <button class="btn-primary auth-login-btn" onclick="faiLogin()">ACCEDI</button>
+                <button id="loginButton" class="btn-primary auth-login-btn" onclick="faiLogin()">ACCEDI</button>
 
         <div id="loginMsg" style="margin-top:15px; font-size:13px; min-height:18px;"></div>
 
@@ -58,7 +59,7 @@
       </div>
 
       <div class="auth-right">
-                <div class="login-brand-mark" aria-label="Logo GS">
+                <div class="login-brand-mark gs-logo-mark" aria-label="Logo GS">
                     <span>G</span><span>S</span>
                 </div>
                 <div class="login-brand-caption">Gens Ssshhh</div>
@@ -104,7 +105,7 @@
     <div class="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
-    <div class="brand" aria-label="Logo GS"><span class="logo-g">G</span><span class="logo-s">S</span></div>
+    <div class="brand gs-logo-mark" aria-label="Logo GS"><span class="logo-g">G</span><span class="logo-s">S</span></div>
       
       <div class="nav-links">
         <div class="nav-item active" onclick="nav('viewDash', this)">Home page</div>
