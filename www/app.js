@@ -27,6 +27,7 @@ var curSearchDocs = "";
 
 
 /* --- VARIABILI GLOBALI --- */
+const urlWebAppData = "https://script.google.com/macros/s/AKfycbxjpLf3WOmooekqZkxvRRkhQriyFYxHMr0YB2kJJy46hmkAG9Nl4EW4HeXHYtbHib7a5Q/exec";
 var curEmail = "";
 var curPass = "";
 var curDocMode = "PUBBLICO";
@@ -117,7 +118,7 @@ function nav(viewId, el) {
       caricaVotiAmmissioni();
 
       // Carica i nomi dei soci per il menu a tendina "Sponsor 2"
-      google.script.run.withSuccessHandler(function(soci) {
+      chiamaServer("getListaSociPerSponsor").then(function(soci) {
           var sel = document.getElementById('candSponsor2');
           if (!sel) return;
           sel.innerHTML = "<option value=''>Seleziona un socio...</option>";
@@ -127,7 +128,7 @@ function nav(viewId, el) {
                   sel.innerHTML += `<option value="${s.email}">${s.nomeCompleto}</option>`;
               }
           });
-      }).getListaSociPerSponsor();
+      });
   }
   
   if(viewId === 'viewDocs') {
@@ -156,6 +157,26 @@ function togglePass(id) {
   x.type = (x.type === "password") ? "text" : "password";
 }
 
+async function chiamaServer(nomeAzione, parametri = {}) {
+  try {
+    const response = await fetch(urlWebAppData, {
+      method: "POST",
+      body: JSON.stringify({ azione: nomeAzione, payload: parametri }),
+      headers: { "Content-Type": "text/plain" }
+    });
+    const risultato = await response.json();
+    
+    if (risultato.status === "SUCCESS") {
+      return risultato.data;
+    } else {
+      console.error("Errore server:", risultato.messaggio);
+      return null;
+    }
+  } catch (err) {
+    console.error("Errore di rete:", err);
+    return null;
+  }
+}
 
 /* --- LOGIN LOGIC CON SALVATAGGIO SESSIONE --- */
 async function faiLogin() {
@@ -217,7 +238,7 @@ function initApp() {
   // Mostra feedback che stiamo caricando
   document.getElementById('welcomeMsg').innerText = "Caricamento in corso...";
   
-  google.script.run.withSuccessHandler(function(data){
+  chiamaServer("getStartData", curEmail).then(function(data){
     if(!data || !data.utente) return;
     
     // =================================================================
@@ -297,7 +318,7 @@ function initApp() {
         cardVoto.style.color="var(--primary)";
     }
 
-  }).getStartData(curEmail); // <--- ECCO IL SEGRETO: Chiamata unica!
+  }); 
 }
 
 
@@ -306,7 +327,7 @@ function initApp() {
 function caricaStatoVoto() {
   var div = document.getElementById('areaVotoContent');
   div.innerHTML = getSkeletonLoader();
-  google.script.run.withSuccessHandler(function(res){
+  chiamaServer("checkStatoVoto", curEmail).then(function(res){
     if(res === "CHIUSE") div.innerHTML = "<div style='text-align:center; color:#64748b'>⛔ Nessuna votazione attiva.</div>";
     else if(res === "GIA_VOTATO") div.innerHTML = "<div style='text-align:center; color:#10b981; font-weight:600'>✅ Hai già votato.</div>";
     else if(res.status === "PUO_VOTARE") {
@@ -328,7 +349,7 @@ html += `<p style="font-size: 11px; color: #64748b; text-align: center; margin-t
 html += `<button class="btn-primary" style="margin-top:10px; width: 100%; font-weight: bold; padding: 12px;" onclick="inviaVoto()">CONFERMA VOTO</button>`;
       div.innerHTML = html;
     }
-  }).checkStatoVoto(curEmail);
+  });
 }
 
 function handleVoteClick(el, type) {
@@ -360,16 +381,16 @@ function inviaVoto() {
   
   if(!confirm("Confermi il voto?")) return;
   
-  google.script.run.withSuccessHandler(function(r){
+  chiamaServer("riceviVoto", {email:curEmail, password: curPass, candidato:scelte}).then(function(r){
     // Vecchio: alert(r==="SUCCESS"?"Voto Registrato!":"Errore");
     if(r === "SUCCESS") {
-        showToast("Voto registrato correttamente!", "success"); // NUOVO
+        showToast("Voto registrato correttamente!", "success");
     } else {
-        showToast("Errore durante il voto: " + r, "error"); // NUOVO
+        showToast("Errore durante il voto: " + r, "error");
     }
     caricaStatoVoto();
     initApp();
-  }).riceviVoto({email:curEmail, password: curPass, candidato:scelte});
+  });
 }
 
 
@@ -408,10 +429,11 @@ function loadDocs(mode) {
     var div = document.getElementById('listaFiles');
     div.innerHTML = getSkeletonLoader();
     
-    google.script.run.withSuccessHandler(function(files){
+    chiamaServer("getListaDocumenti", [mode, curEmail]).then(function(files){
+        if(!files) return;
         cacheDocs = files; // Salva in memoria
         renderDocs();      // Disegna a video
-    }).getListaDocumenti(mode, curEmail);
+    });
 }
 
 function filtraCategoria(cat, el) {
@@ -491,14 +513,14 @@ function gestisciFile(id, azione, e) {
     // Animazione locale (nasconde subito la card)
     e.target.closest('.doc-card').style.opacity = "0.3";
 
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("spostaFileUtente", [id, azione, curEmail]).then(function(res){
         if(res === "OK") {
             showToast(azione === 'delete' ? "File spostato nel cestino" : "File ripristinato", "success");
             loadDocs(curDocMode); // Ricarica la vista
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).spostaFileUtente(id, azione, curEmail);
+    });
 }
 
 function uploadFile() {
@@ -523,7 +545,8 @@ function uploadFile() {
             r.onload = function(e) {
                 var raw = e.target.result.split(',')[1];
                 
-                google.script.run.withSuccessHandler(function(res){
+                var fileData = { content: raw, filename: file.name, mimeType: file.type, category: cat };
+                chiamaServer("uploadFile", [fileData, curDocMode, curEmail]).then(function(res){
                     if(res === "UPLOAD_OK") {
                         completed++;
                     } else {
@@ -531,7 +554,6 @@ function uploadFile() {
                         console.log("Errore upload: " + res);
                     }
                     
-                    // CONTROLLO FINALE: Se abbiamo processato tutti i file (con successo o errore)
                     if ((completed + errors) === total) {
                         if(errors === 0) {
                             showToast("✅ Tutti i " + total + " file caricati!", "success");
@@ -539,16 +561,10 @@ function uploadFile() {
                             showToast("⚠️ Finito con " + errors + " errori.", "error");
                         }
                         
-                        // Ricarica la lista e pulisce l'input
                         loadDocs(curDocMode);
                         document.getElementById('fileInput').value = ""; 
                     }
-                }).uploadFile({
-                    content: raw, 
-                    filename: file.name, 
-                    mimeType: file.type,
-                    category: cat 
-                }, curDocMode, curEmail);
+                });
             };
             
             r.readAsDataURL(file); // Legge il file e fa partire l'upload
@@ -564,7 +580,7 @@ function caricaCandidatura() {
     var div = document.getElementById('areaCandContent');
     div.innerHTML = getSkeletonLoader();
     
-    google.script.run.withSuccessHandler(function(elezioniAperte){
+    chiamaServer("getElezioniPerCandidatura", curEmail).then(function(elezioniAperte){
         // Se non c'è nulla di aperto in questo preciso momento
         if(!elezioniAperte || elezioniAperte.length === 0) {
             div.innerHTML = `
@@ -597,32 +613,25 @@ function caricaCandidatura() {
         
         div.innerHTML = html;
 
-    }).getElezioniPerCandidatura(curEmail);
+    });
 }
 
 // Invia la candidatura al database
 function inviaCand() {
     var idElezione = document.getElementById('selCandElezione').value;
     var testo = document.getElementById('txtCand').value;
-    
     if(!testo.trim()) return showToast("Scrivi una breve motivazione!", "error");
-    
     showToast("Invio candidatura in corso...", "info");
-    
-    google.script.run.withSuccessHandler(function(res){ 
-        if(res === "OK") {
-            showToast("✅ Candidatura inviata con successo!", "success"); 
-            caricaCandidatura(); // Ricarica la scheda per sicurezza
-        } else if (res === "GIA_FATTO") {
-            showToast("Ti sei già candidato per questa elezione!", "error");
-        } else {
-            showToast("Errore: " + res, "error");
-        }
-    }).inviaCandidatura({ email: curEmail, idElezione: idElezione, motivazione: testo });
+    chiamaServer("inviaCandidatura", { email: curEmail, idElezione: idElezione, motivazione: testo }).then(function(res){ 
+        if(res === "OK") { showToast("✅ Candidatura inviata con successo!", "success"); caricaCandidatura(); } 
+        else if (res === "GIA_FATTO") { showToast("Ti sei già candidato per questa elezione!", "error"); } 
+        else { showToast("Errore: " + res, "error"); }
+    });
 }
 
 function caricaProfilo() {
-  google.script.run.withSuccessHandler(function(d){
+  chiamaServer("getDatiUtente", curEmail).then(function(d){
+    if(!d) return;
     document.getElementById('profNome').value = d.nome;
     document.getElementById('profCognome').value = d.cognome;
     document.getElementById('profEmail').value = d.email;
@@ -630,19 +639,13 @@ function caricaProfilo() {
     document.getElementById('profInd').value = d.indirizzo;
     document.getElementById('profHash').innerText = d.hash;
 
-    // Badges (Stato Iscrizione)
     var statoEl = document.getElementById('profBadgeStato');
     statoEl.innerText = d.stato;
-    if(d.stato === 'ATTIVO') {
-        statoEl.style.color = "#10b981"; // Verde
-    } else {
-        statoEl.style.color = "#ef4444"; // Rosso
-    }
+    statoEl.style.color = d.stato === 'ATTIVO' ? "#10b981" : "#ef4444";
     
     document.getElementById('profBadgeRuolo').innerText = d.ruolo;
     document.getElementById('profBadgeScad').innerText = d.scadenza;
-
-  }).getDatiUtente(curEmail);
+  });
 }
 
 
@@ -658,49 +661,57 @@ function copiaHash() {
 
 function salvaProfilo() {
   var d = { email:curEmail, password:curPass, cognome:document.getElementById('profCognome').value, telefono:document.getElementById('profTel').value, indirizzo:document.getElementById('profInd').value };
-  google.script.run.withSuccessHandler(function(){ showToast("Profilo aggiornato con successo!", "success"); }).salvaDatiUtente(d);
+  chiamaServer("salvaDatiUtente", d).then(function(){ showToast("Profilo aggiornato con successo!", "success"); });
 }
 
 function richiediDimissioni() {
   if(confirm("Sei sicuro di voler richiedere le dimissioni?")) {
-    google.script.run.withSuccessHandler(function(){ alert("Richiesta inviata."); }).inviaRichiestaDimissioni({email:curEmail, password:curPass});
+    chiamaServer("inviaRichiestaDimissioni", {email:curEmail, password:curPass}).then(function(){ alert("Richiesta inviata."); });
   }
 }
 
-/* --- PDF & PASSWORD RESET --- */
 function scaricaTesseraPDF() {
   if(!confirm("Scaricare PDF?")) return;
-  google.script.run.withSuccessHandler(function(b64){
+  chiamaServer("generaTesseraPDF", curEmail).then(function(b64){
     if(b64.startsWith("ERRORE")) return alert("Errore");
     var a = document.createElement('a'); a.href=b64; a.download="Tessera.pdf"; 
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }).generaTesseraPDF(curEmail);
+  });
 }
 
 function recupera() {
   var e = document.getElementById('recEmail').value;
   if(!e) return alert("Inserisci email");
-  google.script.run.withSuccessHandler(function(r){
+  chiamaServer("inviaLinkReset", e).then(function(r){
     if(r==="LINK_INVIATO") { alert("Link inviato (se email esiste)."); toggleView('viewLogin'); }
     else alert("Errore");
-  }).inviaLinkReset(e);
+  });
 }
 
 function eseguiCambio() {
   var e=document.getElementById('cpEmail').value, o=document.getElementById('cpOld').value, n=document.getElementById('cpNew').value;
   if(!e||!o||!n) return alert("Compila tutto");
-  google.script.run.withSuccessHandler(function(r){
+  chiamaServer("cambiaPassword", {email:e, oldPass:o, newPass:n}).then(function(r){
     if(r==="CAMBIO_OK") { alert("Password cambiata!"); toggleView('viewLogin'); }
     else alert("Errore credenziali");
-  }).cambiaPassword({email:e, oldPass:o, newPass:n});
+  });
 }
+
 function salvaPassReset() {
   var t=document.getElementById('tokenReset').value, p1=document.getElementById('newResetPass').value, p2=document.getElementById('newResetPassConfirm').value;
   if(p1!==p2) return alert("Non coincidono");
-  google.script.run.withSuccessHandler(function(r){
+  chiamaServer("completaResetPassword", [t, p1]).then(function(r){
     if(r==="SUCCESS") { alert("Password aggiornata!"); window.location.href = window.location.href.split('?')[0]; }
     else alert("Link scaduto o errore");
-  }).completaResetPassword(t, p1);
+  });
+}
+
+function setVoto(nuovoStato) {
+    if(!confirm("Cambiare stato elezioni in: " + nuovoStato + "?")) return;
+    chiamaServer("adminCambiaStatoVoto", [curEmail, nuovoStato]).then(function(){
+        showToast("Stato elezioni aggiornato!", "success");
+        caricaDatiAdmin(); 
+    });
 }
 
 /* --- FUNZIONI ADMIN AGGIORNATE --- */
@@ -723,7 +734,7 @@ function switchAdminTab(tabId, el) {
 }
 
 function caricaDatiAdmin() {
-    google.script.run.withSuccessHandler(function(data){
+    chiamaServer("getDashboardAdmin", curEmail).then(function(data){
         if(!data) return alert("Errore caricamento o Accesso Negato");
         
         // A. STATISTICHE GENERALI (Con controlli di sicurezza se l'ID non c'è nella pagina)
@@ -746,7 +757,7 @@ function caricaDatiAdmin() {
 
         caricaContiDalNuovoFoglio();
 
-    }).getDashboardAdmin(curEmail);
+    });
 }
 
 
@@ -804,16 +815,14 @@ function rinnovoRapido(emailSocio, nomeSocio) {
     
     showToast(`⏳ Registrazione rinnovo in corso...`, "info");
     
-    google.script.run
-        .withSuccessHandler(function(res) {
+    chiamaServer("adminRegistraRinnovo", [curEmail, emailSocio, metodoPagamento]).then(function(res) {
             if(res === "OK") {
                 showToast("✅ Rinnovo registrato con successo!", "success");
                 caricaDatiAdmin(); // Ricarica tutta la pagina admin (Aggiorna le statisiche in cima e la tabella!)
             } else {
                 showToast("❌ Errore: " + res, "error");
             }
-        })
-        .adminRegistraRinnovo(curEmail, emailSocio, metodoPagamento);
+        });
 }
 
 function filtraSoci() {
@@ -850,7 +859,7 @@ function caricaGraficoElezioni() {
 
     div.innerHTML = getSkeletonLoader();
 
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("getRisultatiLive", curEmail).then(function(res){
         if(!res) return;
 
         // 1. BARRA QUORUM / AFFLUENZA
@@ -896,7 +905,7 @@ function caricaGraficoElezioni() {
             checkDiv.innerHTML = html;
         }
 
-    }).getRisultatiLive(curEmail);
+    });
 }
 
 // Funzione che apre la finestra
@@ -946,7 +955,7 @@ function salvaModificheSocioAdmin() {
     showCustomConfirm("Confermi le modifiche?", function() {
         showToast("Salvataggio in corso...", "info");
         
-        google.script.run.withSuccessHandler(function(res){
+        chiamaServer("adminUpdateSocio", dati).then(function(res){
             if(res === "OK") {
                 showToast("Dati socio salvati con successo!", "success");
                 chiudiModaleSocio();
@@ -954,16 +963,8 @@ function salvaModificheSocioAdmin() {
             } else {
                 showToast("Errore: " + res, "error");
             }
-        }).adminUpdateSocio(dati);
+        });
     });
-}
-
-function setVoto(nuovoStato) {
-    if(!confirm("Cambiare stato elezioni in: " + nuovoStato + "?")) return;
-    google.script.run.withSuccessHandler(function(){
-        showToast("Stato elezioni aggiornato!", "success");
-        caricaDatiAdmin(); 
-    }).adminCambiaStatoVoto(curEmail, nuovoStato);
 }
 
 
@@ -986,7 +987,7 @@ window.onload = function() {
       msg.innerText = "Accesso automatico in corso..."; 
       msg.style.color = "#2563eb"; // Blu corporate
 
-      google.script.run.withSuccessHandler(function(res){
+      chiamaServer("verificaLogin", {email: savedEmail, password: savedPass, info: navigator.userAgent}).then(function(res){
           if(res === "OK_LOGIN") {
               // Se i dati salvati sono ancora validi, entra
               curEmail = savedEmail;
@@ -999,7 +1000,7 @@ window.onload = function() {
               msg.innerText = "Sessione scaduta. Effettua di nuovo l'accesso.";
               msg.style.color = "#ef4444";
           }
-      }).verificaLogin({email: savedEmail, password: savedPass, info: navigator.userAgent});
+      });
   }
 };
 
@@ -1020,19 +1021,16 @@ function eseguiLogout(soloPulizia) {
 /* --- FUNZIONI TESORERIA --- */
 var cacheTeso = [];
 
-// Aggiorna la funzione caricaDatiAdmin esistente per includere la chiamata alla tesoreria
-// (Basta aggiungere caricaTesoreria() dove carichi le altre cose, o chiamarla al click del tab)
-
 
 
 function caricaTesoreria() {
     var div = document.getElementById('listaTesoreria');
     div.innerHTML = getSkeletonLoader();
 
-    google.script.run.withSuccessHandler(function(lista){
+    chiamaServer("adminGetListaPagamenti", curEmail).then(function(lista){
         cacheTeso = lista;
         renderTesoreria(lista);
-    }).adminGetListaPagamenti(curEmail);
+    });
 }
 
 function renderTesoreria(lista) {
@@ -1090,14 +1088,14 @@ function rinnovaSocio(targetEmail, metodo) {
     // Feedback visivo immediato (Skeleton loading sulla card specifica sarebbe top, ma usiamo toast)
     showToast("Elaborazione rinnovo...", "info");
 
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminRegistraRinnovo", [curEmail, targetEmail, metodo]).then(function(res){
         if(res === "OK") {
             showToast("✅ Rinnovo registrato!", "success");
             caricaTesoreria(); // Ricarica la lista
         } else {
             showToast("❌ Errore: " + res, "error");
         }
-    }).adminRegistraRinnovo(curEmail, targetEmail, metodo);
+    });
 }
 
 
@@ -1105,7 +1103,7 @@ function caricaGraficoBilancio() {
     var box = document.getElementById('chartBilancio');
     if(!box) return; // Se non trova il box, esce senza errori
 
-    google.script.run.withSuccessHandler(function(data){
+    chiamaServer("getDatiBilancio").then(function(data){
         // Se non ci sono dati validi
         if(!data || !data.labels || data.labels.length === 0) {
             box.innerHTML = "<p style='font-size:12px; color:#ccc'>Dati bilancio non disponibili</p>";
@@ -1143,7 +1141,7 @@ function caricaGraficoBilancio() {
         // Imposta altezza massima per non spaccare il layout
         box.innerHTML = `<img src="${url}" style="max-width:100%; height:auto; max-height:180px;">`;
         
-    }).getDatiBilancio();
+    });
 }
 
 
@@ -1154,7 +1152,7 @@ function aggiornaListaMovimenti() {
     var row = tab.insertRow(1);
     row.innerHTML = "<td colspan='3' style='text-align:center; padding:20px;'><div class='loader' style='width:20px; height:20px; margin:0 auto;'></div></td>";
 
-    google.script.run.withSuccessHandler(function(lista){
+    chiamaServer("adminGetUltimiMovimentiPD", curEmail).then(function(lista){
         tab.deleteRow(1); 
 
         if(lista.length === 0) {
@@ -1185,7 +1183,7 @@ function aggiornaListaMovimenti() {
                 <td style="padding:10px; text-align:right; color:${color}; font-weight:bold; font-size:14px;">${sign}${item.imp} €</td>
             `;
         });
-    }).adminGetUltimiMovimenti(curEmail);
+    });
 }
 
 
@@ -1197,7 +1195,7 @@ function caricaNewsDashboard() {
     // Non mettiamo il loader se c'è già contenuto, per non fare "flash"
     if(!div.innerHTML.includes('news-item')) div.innerHTML = "<div class='loader'></div>";
 
-    google.script.run.withSuccessHandler(function(avvisi){
+    chiamaServer("getAvvisiPubblici").then(function(avvisi){
         if(avvisi.length === 0) {
             div.innerHTML = "<p style='color:var(--text-muted); font-size:14px; font-style:italic;'>Nessun avviso recente.</p>";
             return;
@@ -1223,7 +1221,7 @@ document.getElementById('divDegliAvvisi').innerHTML = html;
         // Se siamo admin, aggiorniamo anche la lista per cancellare
         if(document.getElementById('listaNewsAdmin')) renderNewsAdmin(avvisi);
 
-    }).getAvvisiPubblici();
+    });
 }
 
 // 2. Pubblica una news (Admin)
@@ -1235,7 +1233,7 @@ function pubblicaAvviso() {
     
     showToast("Pubblicazione...", "info");
     
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminPubblicaNews", {email:curEmail, titolo:t, testo:m}).then(function(res){
         if(res === "OK") {
             showToast("✅ Avviso pubblicato!", "success");
             document.getElementById('newsTitolo').value = "";
@@ -1244,7 +1242,7 @@ function pubblicaAvviso() {
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).adminPubblicaNews({email:curEmail, titolo:t, testo:m});
+    });
 }
 
 // 3. Render lista Admin (con tasto cancella)
@@ -1268,10 +1266,10 @@ function renderNewsAdmin(avvisi) {
 
 function cancellaAvviso(id) {
     if(!confirm("Cancellare questo avviso?")) return;
-    google.script.run.withSuccessHandler(function(){
+    chiamaServer("adminCancellaNews", {email:curEmail, idNews:id}).then(function(){
         showToast("Avviso cancellato", "info");
         caricaNewsDashboard();
-    }).adminCancellaNews({email:curEmail, idNews:id});
+    });
 }
 
 
@@ -1332,7 +1330,7 @@ function caricaTabSpese() {
 
 // Funzione dedicata ESCLUSIVAMENTE al caricamento dei fornitori
 function caricaFornitoriDalNuovoFoglio() {
-    google.script.run.withSuccessHandler(function(fornitori) {
+    chiamaServer("getAnagrafeFornitoriDinamica").then(function(fornitori) {
         anagrafeFornitori = fornitori || [];
         var datalist = document.getElementById('listaFornitoriDatalist');
         if(!datalist) return;
@@ -1346,7 +1344,7 @@ function caricaFornitoriDalNuovoFoglio() {
             }
         }
         datalist.innerHTML = html;
-    }).getAnagrafeFornitoriDinamica();
+    });
 }
 
 // Compila automaticamente il campo CF/PIVA
@@ -1362,7 +1360,7 @@ function autocompilaCF(nomeInserito) {
 
 
 function aggiornaListaMovimentiPD() {
-    google.script.run.withSuccessHandler(function(lista){
+    chiamaServer("adminGetUltimiMovimentiPD", curEmail).then(function(lista){
         var t = document.getElementById('tabellaMovimentiPD');
         var html = `<tr style="background:#f8fafc; text-align:left; color:#64748b;">
             <th style="padding:8px;">Data</th>
@@ -1386,7 +1384,7 @@ function aggiornaListaMovimentiPD() {
             });
         }
         t.innerHTML = html;
-    }).adminGetUltimiMovimentiPD(curEmail);
+    });
 }
 
 function scaricaExcel() {
@@ -1395,13 +1393,13 @@ function scaricaExcel() {
     
     showToast("Generazione Excel in corso...", "info");
     
-    google.script.run.withSuccessHandler(function(base64){
+    chiamaServer("exportBilancioExcel", [curEmail, anno]).then(function(base64){
         var a = document.createElement('a'); 
         a.href = "data:text/csv;base64," + base64; 
         a.download = "Bilancio_Gens_" + anno + ".csv"; 
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         showToast("Download avviato!", "success");
-    }).exportBilancioExcel(curEmail, anno);
+    });
 }
 
 // Variabile globale per immagazzinare il piano dei conti
@@ -1409,7 +1407,8 @@ var htmlOpzioniConti = '<option value="">Caricamento conti in corso...</option>'
 
 // Chiamata al server per leggere dal nuovo foglio "conti"
 function caricaContiDalNuovoFoglio() {
-    google.script.run.withSuccessHandler(function(datiConti) {
+    chiamaServer("getPianoDeiContiDinamico").then(function(datiConti) {
+        if (!datiConti) return alert("Errore nel caricamento conti");
         var optGroups = {};
         for(var i = 1; i < datiConti.length; i++) {
             var cat = datiConti[i][0];
@@ -1436,11 +1435,7 @@ function caricaContiDalNuovoFoglio() {
             aggiungiRigaPD('DARE');
             aggiungiRigaPD('AVERE');
         }
-    })
-    .withFailureHandler(function(errore) {
-        alert("Errore nel caricamento conti: " + errore); // <--- QUESTA RIGA CATTURA L'ERRORE
-    })
-    .getPianoDeiContiDinamico(); 
+    });
 }
 
 function aggiungiRigaPD(sezioneDefault = 'DARE') {
@@ -1502,7 +1497,7 @@ function calcolaQuadratura() {
 /* --- GESTIONE CONSENSO --- */
 
 function verificaConsenso() {
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("checkAccettazioneRegolamento", curEmail).then(function(res){
         if(res.blocco === true) {
             // Mostra il blocco
             document.getElementById('modalConsenso').classList.remove('hidden');
@@ -1518,7 +1513,7 @@ function verificaConsenso() {
             document.getElementById('appInterface').classList.remove('hidden');
             initApp(); 
         }
-    }).checkAccettazioneRegolamento(curEmail);
+    });
 }
 
 function toggleBtnConsenso() {
@@ -1537,7 +1532,7 @@ function inviaAccettazione() {
     var btn = document.getElementById('btnAccettaDoc');
     btn.innerText = "Registrazione in corso...";
     
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("registraAccettazioneRegolamento", curEmail).then(function(res){
         if(res === "OK") {
             showToast("Accettazione registrata!", "success");
             document.getElementById('modalConsenso').classList.add('hidden');
@@ -1546,7 +1541,7 @@ function inviaAccettazione() {
         } else {
             alert("Errore di connessione. Riprova.");
         }
-    }).registraAccettazioneRegolamento(curEmail);
+    });
 }
 
 
@@ -1577,7 +1572,7 @@ function richiediOTP() {
 
     showToast("Invio codice in corso...", "info");
     
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("requestSignOTP", [curEmail, docIdDaFirmare]).then(function(res){
         
         // --- NUOVO: SBLOCCO DEL BOTTONE ---
         // Se c'è un errore o se l'utente annulla per riprovare, il bottone torna cliccabile
@@ -1594,7 +1589,7 @@ function richiediOTP() {
         } else {
             showToast("Errore invio: " + res, "error");
         }
-    }).requestSignOTP(curEmail, docIdDaFirmare);
+    });
 }
 
 
@@ -1606,7 +1601,7 @@ function caricaRichiesteFirma() {
     var div = document.getElementById('containerFirme');
     div.innerHTML = getSkeletonLoader();
 
-    google.script.run.withSuccessHandler(function(lista){
+    chiamaServer("getRichiesteFirmaUtente", curEmail).then(function(lista){
         if(lista.length === 0) {
             div.innerHTML = `
             <div style="text-align:center; padding:40px; background:white; border-radius:12px; border:1px solid #e2e8f0;">
@@ -1633,7 +1628,7 @@ function caricaRichiesteFirma() {
             </div>`;
         });
         div.innerHTML = html;
-    }).getRichiesteFirmaUtente(curEmail);
+    });
 }
 
 // Avvia il modale di firma (quello fatto nel passaggio precedente)
@@ -1672,7 +1667,7 @@ function confermaFirma() {
 
     showToast("Validazione in corso...", "info");
 
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("finalizzaFirmaRichiesta", [currentRichiestaId, otp, curEmail, info]).then(function(res){
         
         // --- NUOVO: SBLOCCO DEL BOTTONE ---
         // Qualsiasi cosa succeda (successo o errore), riattiviamo il bottone
@@ -1690,43 +1685,9 @@ function confermaFirma() {
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).finalizzaFirmaRichiesta(currentRichiestaId, otp, curEmail, info);
+    });
 }
 
-
-// Funzione Admin per inviare
-function adminInviaFirma() {
-    var fi = document.getElementById('signFileInput');
-    var target = document.getElementById('signTarget').value;
-    
-    if(fi.files.length === 0) return alert("Seleziona un PDF");
-    if(!confirm("Stai per inviare questo documento a TUTTI i soci attivi. Procedere?")) return;
-
-    var file = fi.files[0];
-    var reader = new FileReader();
-    
-    showToast("Caricamento e invio in corso (può richiedere tempo)...", "info");
-
-    reader.onload = function(e) {
-        var raw = e.target.result.split(',')[1];
-        var data = {
-            adminEmail: curEmail,
-            content: raw,
-            filename: file.name,
-            mimeType: file.type
-        };
-
-        google.script.run.withSuccessHandler(function(res){
-            if(res === "OK") {
-                showToast("Richieste inviate con successo!", "success");
-                fi.value = ""; // Reset
-            } else {
-                alert("Errore: " + res);
-            }
-        }).adminInviaDocumentoFirma(data, target);
-    };
-    reader.readAsDataURL(file);
-}
 
 
 /* --- GESTIONE CENTRO FIRME ADMIN (V2.0) --- */
@@ -1735,7 +1696,7 @@ function caricaStatsFirme() {
     var div = document.getElementById('containerStatsFirme');
     div.innerHTML = getSkeletonLoader();
 
-    google.script.run.withSuccessHandler(function(data){
+    chiamaServer("adminGetStatisticheFirme", curEmail).then(function(data){
         if(data.length === 0) {
             div.innerHTML = "<p style='color:#ccc; text-align:center;'>Nessun documento in corso.</p>";
             return;
@@ -1805,66 +1766,30 @@ function caricaStatsFirme() {
             </div>`;
         });
         div.innerHTML = html;
-    }).adminGetStatisticheFirme(curEmail);
+    });
 }
 
-
-
-function adminInviaFirma() {
-    var fi = document.getElementById('signFileInput');
-    var target = document.getElementById('signTarget').value;
-    var needCounter = document.getElementById('checkControfirma').checked;
-    
-    if(fi.files.length === 0) return alert("Seleziona un PDF");
-    if(!confirm("Invio documento a " + target + ". Confermi?")) return;
-
-    var file = fi.files[0];
-    var reader = new FileReader();
-    
-    showToast("Caricamento e invio...", "info");
-
-    reader.onload = function(e) {
-        var raw = e.target.result.split(',')[1];
-        var data = {
-            adminEmail: curEmail,
-            content: raw,
-            filename: file.name,
-            mimeType: file.type
-        };
-
-        google.script.run.withSuccessHandler(function(res){
-            if(res.startsWith("OK")) {
-                showToast("✅ Inviato con successo!", "success");
-                fi.value = "";
-                caricaStatsFirme(); // Aggiorna subito la dashboard
-            } else {
-                alert("Errore: " + res);
-            }
-        }).adminInviaDocumentoFirma(data, target, needCounter);
-    };
-    reader.readAsDataURL(file);
-}
 
 function lanciaSollecito(docName, list) {
     if(!confirm("Inviare una mail di sollecito a " + list.length + " soci?")) return;
     showToast("Invio solleciti in corso...", "info");
     
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminInviaSollecito", [docName, list]).then(function(res){
         showToast("Solleciti inviati!", "success");
-    }).adminInviaSollecito(docName, list);
+    });
 }
 
 function eseguiControfirma(idReq) {
     if(!confirm("Apporre la tua controfirma su questo documento?")) return;
     
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminEseguiControfirma", [idReq, curEmail]).then(function(res){
         if(res === "OK") {
             showToast("Documento validato!", "success");
             caricaStatsFirme(); // Ricarica la lista
         } else {
             alert("Errore");
         }
-    }).adminEseguiControfirma(idReq, curEmail);
+    });
 }
 
 
@@ -1934,8 +1859,7 @@ function toggleAllManual(master) {
     updateCountManual();
 }
 
-/* --- MODIFICA LA FUNZIONE DI INVIO --- */
-/* Sostituisci la tua funzione adminInviaFirma esistente con questa: */
+
 
 function adminInviaFirma() {
     var fi = document.getElementById('signFileInput');
@@ -1976,7 +1900,7 @@ function adminInviaFirma() {
             mimeType: file.type
         };
 
-        google.script.run.withSuccessHandler(function(res){
+        chiamaServer("adminInviaDocumentoFirma", [data, targetFinale, needCounter]).then(function(res){
             if(res.startsWith("OK")) {
                 showToast("✅ Inviato con successo!", "success");
                 fi.value = "";
@@ -1986,7 +1910,7 @@ function adminInviaFirma() {
             } else {
                 alert("Errore: " + res);
             }
-        }).adminInviaDocumentoFirma(data, targetFinale, needCounter);
+        });
     };
     reader.readAsDataURL(file);
 }
@@ -1998,14 +1922,14 @@ function eliminaGruppoRichieste(docName) {
     // Feedback visivo immediato (Opzionale: mette un'icona di caricamento)
     showToast("Eliminazione in corso...", "info");
 
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminEliminaGruppoRichieste", [docName, curEmail]).then(function(res){
         if(res === "OK") {
             showToast("Richiesta eliminata.", "success");
             caricaStatsFirme(); // Ricarica la lista per far sparire la riga
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).adminEliminaGruppoRichieste(docName, curEmail);
+    });
 }
 
 
@@ -2014,7 +1938,7 @@ function chiudiCampagnaFirme(docName) {
 
     showToast("Generazione registro in corso (può richiedere 10-15 sec)...", "info");
 
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminChiudiEGeneraRegistroFirme", [docName, curEmail]).then(function(res){
         if(res === "OK") {
             showToast("Registro PDF generato e salvato su Drive!", "success");
             caricaStatsFirme(); // Ricarica dashboard (il documento ora sparirà)
@@ -2022,7 +1946,7 @@ function chiudiCampagnaFirme(docName) {
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).adminChiudiEGeneraRegistroFirme(docName, curEmail);
+    });
 }
 
 
@@ -2048,7 +1972,7 @@ function caricaStoricoFirme() {
     var div = document.getElementById('containerStoricoFirme');
     div.innerHTML = getSkeletonLoader();
 
-    google.script.run.withSuccessHandler(function(lista){
+    chiamaServer("getStoricoFirmeUtente", curEmail).then(function(lista){
         if(lista.length === 0) {
             div.innerHTML = `<div style="text-align:center; padding:30px; color:#64748b; background:white; border-radius:12px; border:1px solid #e2e8f0;">Nessun documento firmato in precedenza.</div>`;
             return;
@@ -2083,7 +2007,7 @@ function caricaStoricoFirme() {
             </div>`;
         });
         div.innerHTML = html;
-    }).getStoricoFirmeUtente(curEmail);
+    });
 }
 
 function scaricaMioCertificato(txId) {
@@ -2091,7 +2015,7 @@ function scaricaMioCertificato(txId) {
     
     showToast("Generazione certificato in corso...", "info");
     
-    google.script.run.withSuccessHandler(function(base64Str){
+    chiamaServer("rigeneraCertificatoUtente", [txId, curEmail]).then(function(base64Str){
         if(base64Str === "ERR_NOT_FOUND") return showToast("Certificato non trovato negli archivi.", "error");
         
         // Crea il link invisibile e fa partire il download del PDF
@@ -2103,7 +2027,7 @@ function scaricaMioCertificato(txId) {
         document.body.removeChild(a);
         
         showToast("Download completato!", "success");
-    }).rigeneraCertificatoUtente(txId, curEmail);
+    });
 }
 
 
@@ -2111,8 +2035,8 @@ function scaricaMioCertificato(txId) {
 function creaEScaricaFattura(emailSocio, numFattura, importo, causale) {
     showToast("Generazione XML in corso...", "info");
     
-    google.script.run.withSuccessHandler(function(risposta) {
-        if(risposta.startsWith("ERRORE")) {
+    chiamaServer("generaFatturaXML", [emailSocio, numFattura, importo, causale]).then(function(risposta) {
+        if(risposta && risposta.startsWith && risposta.startsWith("ERRORE")) {
             showToast(risposta, "error");
             return;
         }
@@ -2126,8 +2050,7 @@ function creaEScaricaFattura(emailSocio, numFattura, importo, causale) {
         document.body.removeChild(a);
         
         showToast("File XML scaricato! Ora puoi caricarlo sull'AdE.", "success");
-        
-    }).generaFatturaXML(emailSocio, numFattura, importo, causale);
+    });
 }
 
 
@@ -2169,7 +2092,7 @@ function avviaCreazioneXML() {
     btn.disabled = true; btn.innerText = "Generazione in corso..."; btn.style.opacity = "0.7";
     showToast("Creazione XML e PDF in corso...", "info");
 
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("generaFatturaXML", payload).then(function(res) {
         btn.disabled = false; btn.innerText = "SCARICA FATTURA (XML + PDF)"; btn.style.opacity = "1";
 
         // Ora il server ci risponde con un oggetto strutturato, controlliamo se c'è un errore
@@ -2200,7 +2123,7 @@ function avviaCreazioneXML() {
             showToast("✅ Fattura ed XML generati con successo!", "success");
         }, 800);
 
-    }).generaFatturaXML(payload);
+    });
 }
 
 
@@ -2209,18 +2132,16 @@ var databaseAziende = [];
 
 // Carica i dati in background
 function caricaAziendeInMemoria() {
-    google.script.run.withSuccessHandler(function(dati) {
+    chiamaServer("getListaFornitori").then(function(dati) {
         databaseAziende = dati;
         var datalist = document.getElementById('listaAziendeDB');
-        datalist.innerHTML = ""; // Pulisce
-        
-        // Crea le opzioni per la barra di ricerca
+        datalist.innerHTML = "";
         dati.forEach(function(az) {
             var opt = document.createElement('option');
             opt.value = az.ragioneSociale;
             datalist.appendChild(opt);
         });
-    }).getListaFornitori();
+    });
 }
 
 // Scatta quando l'utente sceglie un'azienda dalla tendina
@@ -2288,7 +2209,7 @@ function registraFatturaRicevuta() {
 }
 
 function inviaSpesaBackend(payload, btn) {
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("salvaFatturaRicevuta", payload).then(function(res) {
         btn.disabled = false; btn.innerText = "💾 REGISTRA SPESA IN ARCHIVIO"; btn.style.opacity = "1";
         if(res === "OK") {
             showToast("✅ Spesa registrata con successo!", "success");
@@ -2300,7 +2221,7 @@ function inviaSpesaBackend(payload, btn) {
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).salvaFatturaRicevuta(payload);
+    });
 }
 
 
@@ -2397,7 +2318,7 @@ function salvaSpesa() {
     showToast("Registrazione in corso...", "info");
     
     // 6. Chiamata al server
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("aggiungiSpesaGruppo", dati).then(function(res) {
       if (res === "OK") {
         showToast("Spesa registrata correttamente", "success");
         
@@ -2415,14 +2336,14 @@ function salvaSpesa() {
       } else {
         showToast("Errore: " + res, "error");
       }
-    }).aggiungiSpesaGruppo(dati);
+    });
 }
 
 function aggiornaBilanci() {
   var contenitore = document.getElementById('listaBilanci');
   contenitore.innerHTML = "<div class='loader'></div>";
   
-  google.script.run.withSuccessHandler(function(saldi) {
+  chiamaServer("calcolaSaldiGruppo", gruppoAttivo).then(function(saldi) {
     if (saldi.length === 0) {
       contenitore.innerHTML = "<p style='color:#94a3b8; font-size:13px; text-align:center;'>Siete tutti pari!</p>";
       return;
@@ -2442,7 +2363,7 @@ function aggiornaBilanci() {
       </div>`;
     });
     contenitore.innerHTML = html;
-  }).calcolaSaldiGruppo(gruppoAttivo);
+  });
 }
 
 
@@ -2452,7 +2373,7 @@ function caricaChipsSoci() {
   
   box.innerHTML = "<div class='loader' style='width:15px; height:15px; border-width:2px; margin:0;'></div>";
   
-  google.script.run.withSuccessHandler(function(nomi) {
+  chiamaServer("getNomiSociAttivi").then(function(nomi) {
     if (nomi.length === 0) {
       box.innerHTML = "<span style='font-size:12px; color:#94a3b8;'>Nessun socio attivo trovato.</span>";
       selectChi.innerHTML = "<option value=''>Nessun socio attivo</option>";
@@ -2482,16 +2403,16 @@ function caricaChipsSoci() {
     selectChi.innerHTML = htmlSelect;
 
     // Imposta il tuo nome come default per chi ha pagato
-    google.script.run.withSuccessHandler(function(utente) {
+    chiamaServer("getDatiUtente", curEmail).then(function(utente) {
         if (utente && utente.nome) {
             selectChi.value = utente.nome; 
         }
-    }).getDatiUtente(curEmail);
+    });
 
     // --- NOVITÀ 3: Ricalcola subito la grafica per mostrare la lista sotto ---
     aggiornaUIQuote();
 
-  }).getNomiSociAttivi();
+  });
 }
 
 var modalitaDivisione = 'UGUALE';
@@ -2596,30 +2517,26 @@ function validaSomma() {
 function caricaListaGruppi() {
     document.getElementById('stepSelezioneGruppo').classList.remove('hidden');
     document.getElementById('stepDettaglioGruppo').classList.add('hidden');
-    
     var div = document.getElementById('listaGruppiSpese');
     div.innerHTML = getSkeletonLoader();
-    
-    google.script.run.withSuccessHandler(function(gruppi) {
+    chiamaServer("getGruppiSpese").then(function(gruppi) {
         var html = "";
         gruppi.forEach(g => {
-           // Crea un bel pulsante per ogni gruppo
            html += `<button class="btn-secondary" style="width:auto; padding:12px 24px; border-color:#3b82f6; color:#1e40af; font-weight:bold; font-size:14px; background:#eff6ff;" onclick="entraNelGruppo('${g.replace(/'/g, "\\'")}')">📁 ${g}</button>`;
         });
         div.innerHTML = html;
-    }).getGruppiSpese();
+    });
 }
 
 function creaNuovoGruppo() {
     var nome = document.getElementById('nuovoNomeGruppo').value;
     if(!nome) return showToast("Inserisci un nome per il gruppo", "error");
-    
     showToast("Creazione gruppo...", "info");
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("creaGruppoSpese", nome).then(function(res) {
         document.getElementById('nuovoNomeGruppo').value = "";
         showToast("Gruppo creato!", "success");
-        entraNelGruppo(nome); // Ti fa entrare direttamente nel nuovo gruppo
-    }).creaGruppoSpese(nome);
+        entraNelGruppo(nome);
+    });
 }
 
 function entraNelGruppo(nome) {
@@ -2662,18 +2579,18 @@ function inviaPropostaAmmissione() {
     
     showToast("Invio proposta in corso...", "info");
     
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("proponiNuovoSocio", dati).then(function(res) {
         if(res === "OK") {
             showToast("Proposta inviata! In attesa della conferma del Secondo Garante.", "success");
             document.getElementById('candNome').value = "";
             document.getElementById('candCognome').value = "";
             document.getElementById('candEmail').value = "";
         }
-    }).proponiNuovoSocio(dati);
+    });
 }
 
 function caricaAmmissioni() {
-    google.script.run.withSuccessHandler(function(dati) {
+    chiamaServer("getCandidatureAttive", curEmail).then(function(dati) {
         var boxSostieni = document.getElementById('boxSostieniCandidati');
         var listaDati = document.getElementById('listaDaSostenere');
         
@@ -2697,27 +2614,27 @@ function caricaAmmissioni() {
             boxSostieni.style.display = "none";
         }
         
-    }).getCandidatureAttive(curEmail);
+    });
 }
 
 function confermaSostegno(emailCandidato) {
     if(!confirm("Confermi di voler fare da secondo garante per l'ammissione di questo candidato in assemblea?")) return;
     
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("sostieniCandidato", [emailCandidato, curEmail]).then(function(res) {
         if(res === "OK") {
             showToast("Sostegno confermato! La candidatura passerà all'assemblea.", "success");
             caricaAmmissioni(); // Ricarica la vista
         } else {
             showToast("Errore di conferma", "error");
         }
-    }).sostieniCandidato(emailCandidato, curEmail);
+    });
 }
 
 function caricaVotiAmmissioni() {
     var box = document.getElementById('boxVotoAmmissioni');
     var lista = document.getElementById('listaAmmissioniDaVotare');
     
-    google.script.run.withSuccessHandler(function(candidati){
+    chiamaServer("getAmmissioniInVoto", curEmail).then(function(candidati){
         if(candidati.length > 0) {
             box.style.display = "block";
             var html = "";
@@ -2736,7 +2653,7 @@ function caricaVotiAmmissioni() {
         } else {
             box.style.display = "none";
         }
-    }).getAmmissioniInVoto(curEmail);
+    });
 }
 
 function esprimiVotoAmmissione(emailCand, voto) {
@@ -2745,7 +2662,7 @@ function esprimiVotoAmmissione(emailCand, voto) {
     showToast("Registrazione voto in corso...", "info");
     var dati = { email: curEmail, password: curPass, emailCandidato: emailCand, voto: voto };
     
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("votaAmmissioneSocio", dati).then(function(res){
         if(res === "OK") {
             showToast("Voto registrato in cassaforte!", "success");
             caricaVotiAmmissioni(); // Ricarica la scheda per far sparire il candidato votato
@@ -2754,23 +2671,23 @@ function esprimiVotoAmmissione(emailCand, voto) {
         } else {
             showToast("Errore di registrazione", "error");
         }
-    }).votaAmmissioneSocio(dati);
+    });
 }
 
 // Aggiungi questo al tuo blocco Javascript in fondo:
 function adminApriVotoAmmissione(emailCandidato) {
     if(!confirm("Vuoi sottoporre l'ammissione all'Assemblea aprendo le votazioni?")) return;
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminGestisciAmmissione", [curEmail, emailCandidato, "APRI_VOTO"]).then(function(res){
         showToast("Votazione aperta a tutti i soci!", "success");
         // Se avevi una funzione per ricaricare la tabella admin, chiamala qui
-    }).adminGestisciAmmissione(curEmail, emailCandidato, "APRI_VOTO");
+    });
 }
 
 function adminChiudiSpoglioAmmissione(emailCandidato) {
     if(!confirm("Chiudere le votazioni e avviare lo spoglio elettronico?")) return;
     
     showToast("Calcolo quorum in corso...", "info");
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminGestisciAmmissione", [curEmail, emailCandidato, "CHIUDI_VOTO"]).then(function(res){
         if(res.startsWith("OK_SPOGLIO")) {
             var pezzi = res.split("|"); // OK_SPOGLIO | ESITO | FAVOREVOLI | TOTALI | QUORUM
             var esito = pezzi[1];
@@ -2782,14 +2699,14 @@ function adminChiudiSpoglioAmmissione(emailCandidato) {
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).adminGestisciAmmissione(curEmail, emailCandidato, "CHIUDI_VOTO");
+    });
 }
 
 function caricaAmmissioniAdmin() {
     var box = document.getElementById('boxGestioneAmmissioni');
     var lista = document.getElementById('listaAmmissioniAdmin');
     
-    google.script.run.withSuccessHandler(function(dati) {
+    chiamaServer("getAmmissioniAdmin", curEmail).then(function(dati) {
         if(dati.length === 0) {
             box.style.display = "none";
             return;
@@ -2821,7 +2738,7 @@ function caricaAmmissioniAdmin() {
             </div>`;
         });
         lista.innerHTML = html;
-    }).getAmmissioniAdmin(curEmail);
+    });
 }
 
 function adminApriVotoAmmissione(emailCandidato) {
@@ -2829,14 +2746,14 @@ function adminApriVotoAmmissione(emailCandidato) {
     
     showToast("Apertura votazione in corso...", "info");
     
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminGestisciAmmissione", [curEmail, emailCandidato, "APRI_VOTO"]).then(function(res){
         if(res === "OK") {
             showToast("Votazione aperta a tutti i soci!", "success");
             caricaAmmissioniAdmin(); // Ricarica il pannello
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).adminGestisciAmmissione(curEmail, emailCandidato, "APRI_VOTO");
+    });
 }
 
 function adminChiudiSpoglioAmmissione(emailCandidato) {
@@ -2844,7 +2761,7 @@ function adminChiudiSpoglioAmmissione(emailCandidato) {
     
     showToast("Calcolo spoglio in corso...", "info");
     
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminGestisciAmmissione", [curEmail, emailCandidato, "CHIUDI_VOTO"]).then(function(res){
         if(res.startsWith("OK_SPOGLIO")) {
             var pezzi = res.split("|"); 
             var esito = pezzi[1]; // AMMESSO o RESPINTO
@@ -2865,7 +2782,7 @@ function adminChiudiSpoglioAmmissione(emailCandidato) {
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).adminGestisciAmmissione(curEmail, emailCandidato, "CHIUDI_VOTO");
+    });
 }
 
 // Funzione per leggere e analizzare il CSV caricato
@@ -2957,25 +2874,21 @@ function elaboraDatiSpese(csvText, nomeFile) {
 // Funzione che invia i dati al server
 function salvaReportDefinitivo(btnElement) {
     if (!reportTemporaneo) return;
-    
-    // Cambia il testo del bottone per far capire che sta caricando
     let testoOriginale = btnElement.innerHTML;
     btnElement.innerHTML = "⏳ Salvataggio in corso...";
     btnElement.disabled = true;
 
-    // Chiama la funzione su Codice.gs
-    google.script.run
-      .withSuccessHandler(function(risposta) {
+    chiamaServer("salvaReportArchivio", [reportTemporaneo.nome, JSON.stringify(reportTemporaneo)]).then(function(risposta) {
+        if(risposta) {
           showToast("Report salvato in Archivio!", "success");
           btnElement.innerHTML = "✅ Report Salvato";
-          btnElement.style.background = "#10b981"; // Diventa verde
-      })
-      .withFailureHandler(function(errore) {
+          btnElement.style.background = "#10b981";
+        } else {
           showToast("Errore durante il salvataggio", "error");
           btnElement.innerHTML = testoOriginale;
           btnElement.disabled = false;
-      })
-      .salvaReportArchivio(reportTemporaneo.nome, JSON.stringify(reportTemporaneo));
+        }
+    });
 }
 
 function disegnaDashboardAnalisi(dati) {
@@ -3043,72 +2956,52 @@ function caricaLibreriaReport() {
     let contenitore = document.getElementById("listaReportArchiviati");
     contenitore.innerHTML = '<div style="font-size: 13px; color: #64748b;">⏳ Caricamento archivio in corso...</div>';
 
-    google.script.run
-        .withSuccessHandler(function(reports) {
-            if (reports.length === 0) {
-                contenitore.innerHTML = '<div style="font-size: 13px; color: #64748b;">Nessun report salvato in archivio.</div>';
-                return;
-            }
-
-            contenitore.innerHTML = '';
-            window.archivioReportGlobale = reports; 
-            
-            reports.forEach(function(rep) {
-                let btn = document.createElement("div");
-                // Aggiunto "position: relative" per posizionare il cestino
-                btn.style.cssText = "position: relative; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 15px; cursor: pointer; min-width: 170px; flex-shrink: 0; transition: all 0.2s ease;";
-                
-                btn.onmouseover = function() { this.style.background = "#eff6ff"; this.style.borderColor = "#93c5fd"; };
-                btn.onmouseout = function() { this.style.background = "#f8fafc"; this.style.borderColor = "#cbd5e1"; };
-                
-                // HTML della cartellina con il cestino in alto a destra
-                btn.innerHTML = `
-                    <div style="font-weight: 600; font-size: 13px; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 20px;">📁 ${rep.nome}</div>
-                    <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Salvato il: ${rep.dataSalvataggio}</div>
-                    <div style="position: absolute; top: 8px; right: 8px; font-size: 12px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;" 
-                         onmouseover="this.style.opacity='1'" 
-                         onmouseout="this.style.opacity='0.6'"
-                         onclick="eliminaReportDallArchivio('${rep.nome}', event)" title="Elimina Report">🗑️</div>
-                `;
-                
-                btn.onclick = function(e) {
-                    // Se clicchiamo sul cestino, blocca l'apertura del report!
-                    if(e.target.innerText.includes('🗑️')) return; 
-                    
-                    let datiRik = JSON.parse(rep.jsonDati);
-                    disegnaDashboardAnalisi(datiRik, false); 
-                };
-                
-                contenitore.appendChild(btn);
-            });
-        })
-        .withFailureHandler(function(err) {
-            contenitore.innerHTML = '<div style="color: #ef4444; font-size: 13px;">Errore nel caricamento archivio.</div>';
-        })
-        .getReportStorici();
+    chiamaServer("getReportStorici").then(function(reports) {
+        if (!reports || reports.length === 0) {
+            contenitore.innerHTML = '<div style="font-size: 13px; color: #64748b;">Nessun report salvato in archivio.</div>';
+            return;
+        }
+        contenitore.innerHTML = '';
+        window.archivioReportGlobale = reports; 
+        reports.forEach(function(rep) {
+            let btn = document.createElement("div");
+            btn.style.cssText = "position: relative; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 15px; cursor: pointer; min-width: 170px; flex-shrink: 0; transition: all 0.2s ease;";
+            btn.onmouseover = function() { this.style.background = "#eff6ff"; this.style.borderColor = "#93c5fd"; };
+            btn.onmouseout = function() { this.style.background = "#f8fafc"; this.style.borderColor = "#cbd5e1"; };
+            btn.innerHTML = `
+                <div style="font-weight: 600; font-size: 13px; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 20px;">📁 ${rep.nome}</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Salvato il: ${rep.dataSalvataggio}</div>
+                <div style="position: absolute; top: 8px; right: 8px; font-size: 12px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;" 
+                     onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'"
+                     onclick="eliminaReportDallArchivio('${rep.nome}', event)" title="Elimina Report">🗑️</div>
+            `;
+            btn.onclick = function(e) {
+                if(e.target.innerText.includes('🗑️')) return; 
+                let datiRik = JSON.parse(rep.jsonDati);
+                disegnaDashboardAnalisi(datiRik, false); 
+            };
+            contenitore.appendChild(btn);
+        });
+    });
 }
 
 // Funzione che invia il comando di eliminazione
 function eliminaReportDallArchivio(nomeReport, event) {
-    event.stopPropagation(); // Evita che il click si propaghi e apra la dashboard visiva
-    
-    // Finestra di conferma nativa di sicurezza
+    event.stopPropagation();
     if(!confirm(`Sei sicuro di voler eliminare per sempre il report "${nomeReport}" dall'archivio?`)) return;
-    
     let contenitore = document.getElementById("listaReportArchiviati");
     contenitore.innerHTML = '<div style="font-size: 13px; color: #ef4444;">⏳ Eliminazione in corso...</div>';
     
-    google.script.run
-        .withSuccessHandler(function(risposta) {
+    chiamaServer("eliminaReportArchivio", nomeReport).then(function(risposta) {
+        if(risposta) {
             showToast("Report eliminato!", "success");
-            caricaLibreriaReport(); // Ricarica la lista per far sparire la cartellina
-            document.getElementById("analisiContenuto").innerHTML = ''; // Pulisce lo schermo sotto
-        })
-        .withFailureHandler(function(errore) {
+            caricaLibreriaReport();
+            document.getElementById("analisiContenuto").innerHTML = '';
+        } else {
             showToast("Errore durante l'eliminazione", "error");
             caricaLibreriaReport();
-        })
-        .eliminaReportArchivio(nomeReport);
+        }
+    });
 }
 
 
@@ -3190,43 +3083,26 @@ let chartCat = null;
 
 function apriDashboardInterattiva() {
     document.getElementById('modalDashboard').classList.add('show');
-    
-    // Mostra un loader al posto delle card mentre scarica i dati dal server
     document.getElementById('kpiDashboard').innerHTML = '<div style="padding: 20px; font-weight: bold; color: #3b82f6;">⏳ Sincronizzazione Gruppi Live e Archivio Storico in corso...</div>';
 
-    // Chiamiamo il server per avere le statistiche dei gruppi LIVE
-    google.script.run
-        .withSuccessHandler(function(gruppiLive) {
-            window.datiDashboardCombinati = [];
-
-            // 1. Inseriamo i gruppi LIVE "travestendoli" da JSON storici
-            if (gruppiLive && gruppiLive.length > 0) {
-                gruppiLive.forEach(g => {
-                    window.datiDashboardCombinati.push({
-                        // 👉 MODIFICA QUI: Incolliamo l'anno (es. 2026) nel nome così il filtro lo rileva!
-                        nome: "🟢 [LIVE] " + g.nome + " " + g.anno, 
-                        dataSalvataggio: "Oggi", 
-                        jsonDati: JSON.stringify(g)
-                    });
+    chiamaServer("getStatisticheGruppiLive").then(function(gruppiLive) {
+        window.datiDashboardCombinati = [];
+        if (gruppiLive && gruppiLive.length > 0) {
+            gruppiLive.forEach(g => {
+                window.datiDashboardCombinati.push({
+                    nome: "🟢 [LIVE] " + g.nome + " " + g.anno, 
+                    dataSalvataggio: "Oggi", 
+                    jsonDati: JSON.stringify(g)
                 });
-            }
-
-            // 2. Aggiungiamo i vecchi CSV storici (se esistono)
-            if (window.archivioReportGlobale) {
-                window.archivioReportGlobale.forEach(rep => {
-                    window.datiDashboardCombinati.push(rep);
-                });
-            }
-
-            // 3. Avvia il motore grafico con il pacchetto dati unito!
-            disegnaGraficiAvanzati();
-        })
-        .withFailureHandler(function(err) {
-            showToast("Impossibile caricare i gruppi live. Mostro solo l'archivio.", "error");
-            window.datiDashboardCombinati = window.archivioReportGlobale || [];
-            disegnaGraficiAvanzati();
-        })
-        .getStatisticheGruppiLive(); // La nuova funzione backend che creeremo
+            });
+        }
+        if (window.archivioReportGlobale) {
+            window.archivioReportGlobale.forEach(rep => {
+                window.datiDashboardCombinati.push(rep);
+            });
+        }
+        disegnaGraficiAvanzati();
+    });
 }
 
 function chiudiDashboard() {
@@ -3479,7 +3355,7 @@ function salvaNuovaElezione() {
 
     showToast("Creazione in corso...", "info");
 
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("adminCreaNuovaElezioneAvanzata", dati).then(function(res) {
         if(res === "OK") {
             showToast("Consultazione creata con successo!", "success");
             chiudiModaleCreaElezione();
@@ -3487,7 +3363,7 @@ function salvaNuovaElezione() {
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).adminCreaNuovaElezioneAvanzata(dati);
+    });
 }
 
 
@@ -3498,7 +3374,7 @@ function caricaCandidatureAdmin() {
     
     container.innerHTML = '<div class="loader"></div>';
 
-    google.script.run.withSuccessHandler(function(list) {
+    chiamaServer("adminGetCandidaturePendenti", curEmail).then(function(list) {
         if (!list || list.length === 0) {
             container.innerHTML = "<p style='color:#64748b; font-size:13px; padding:10px;'>Nessuna candidatura in attesa di approvazione.</p>";
             return;
@@ -3529,7 +3405,7 @@ function caricaCandidatureAdmin() {
         });
         
         container.innerHTML = html;
-    }).adminGetCandidaturePendenti(curEmail);
+    });
 }
 
 // ==========================================
@@ -3544,15 +3420,14 @@ function processaCandidaturaAdmin(rigaIndex, azione) {
         // Se l'utente clicca Conferma, parte il caricamento:
         showToast("Elaborazione in corso...", "info");
         
-        google.script.run.withSuccessHandler(function(res){
+        chiamaServer("adminProcessaCandidatura", [curEmail, rigaIndex, azione]).then(function(res){
             if(res === "OK") {
                 showToast("Candidatura " + (azione === 'APPROVA' ? 'approvata' : 'rifiutata') + " con successo!", "success");
                 caricaCandidatureAdmin(); // Ricarica la lista
             } else {
                 showToast("Errore: " + res, "error");
             }
-        }).adminProcessaCandidatura(curEmail, rigaIndex, azione);
-        
+        });
     });
 }
 
@@ -3562,7 +3437,7 @@ function caricaCampagneAdmin() {
     if (!container) return;
     container.innerHTML = '<div class="loader"></div>';
 
-    google.script.run.withSuccessHandler(function(lista) {
+    chiamaServer("adminGetListaElezioni", curEmail).then(function(lista) {
         if (!lista || lista.length === 0) {
             container.innerHTML = '<p style="color:#64748b; font-size:13px; padding:15px;">Nessuna consultazione presente.</p>';
             return;
@@ -3617,15 +3492,14 @@ function caricaCampagneAdmin() {
         if(countArchivio === 0) htmlArchivio += '<p style="font-size:12px; color:#94a3b8;">Nessuna consultazione archiviata.</p>';
 
         container.innerHTML = htmlAttive + htmlArchivio;
-    }).adminGetListaElezioni(curEmail);
+    });
 }
 
 // Cerca dinamicamente il verbale su Drive e lo apre
 function apriVerbale(idConsultazione) {
     showToast("Ricerca verbale in corso...", "info");
     
-    google.script.run
-      .withSuccessHandler(function(risultato) {
+    chiamaServer("ottieniUrlVerbale", idConsultazione).then(function(risultato) {
         if (risultato === "FILE_NON_TROVATO") {
           showToast("Nessun verbale trovato per questa consultazione.", "error");
         } else if (risultato === "CARTELLA_NON_TROVATA") {
@@ -3636,22 +3510,21 @@ function apriVerbale(idConsultazione) {
           showToast("Verbale trovato!", "success");
           window.open(risultato, '_blank');
         }
-      })
-      .ottieniUrlVerbale(idConsultazione); 
+      }); 
 }
 
 // Funzione che lancia la chiusura
 function chiudiEGeneraVerbale(idElezione) {
     showCustomConfirm("Sei sicuro di voler chiudere l'elezione e generare il verbale PDF definitivo? L'azione è irreversibile.", function() {
         showToast("Generazione PDF in corso...", "info");
-        google.script.run.withSuccessHandler(function(res) {
+        chiamaServer("adminChiudiEGeneraVerbale", [curEmail, idElezione]).then(function(res) {
             if(res === "OK") {
                 showToast("Elezione chiusa e verbale salvato!", "success");
                 caricaCampagneAdmin(); // Ricarica la lista per spostarla in archivio
             } else {
                 showToast(res, "error");
             }
-        }).adminChiudiEGeneraVerbale(curEmail, idElezione);
+        });
     });
 }
 
@@ -3659,14 +3532,14 @@ function chiudiEGeneraVerbale(idElezione) {
 function eliminaElezioneAdmin(idElezione) {
     if(!confirm("Sei sicuro di voler eliminare questa consultazione?")) return;
     showToast("Eliminazione in corso...", "info");
-    google.script.run.withSuccessHandler(function(res){
+    chiamaServer("adminEliminaElezione", [curEmail, idElezione]).then(function(res){
         if(res === "OK") {
             showToast("Consultazione eliminata.", "success");
             caricaCampagneAdmin();
         } else {
             showToast("Errore: " + res, "error");
         }
-    }).adminEliminaElezione(curEmail, idElezione);
+    });
 }
 
 // Carica la schermata del Centro Elettorale per il socio
@@ -3683,7 +3556,7 @@ function caricaCentroElettorale() {
     if (areaCand) areaCand.innerHTML = '<p style="color: #64748b; font-size: 13px; text-align: center; padding: 10px;">Caricamento candidature...</p>';
 
     // 1. Carica le consultazioni dal server
-    google.script.run.withSuccessHandler(function(lista) {
+    chiamaServer("getConsultazioniAttiveUtente", curEmail).then(function(lista) {
         
         var htmlAttive = '';
         var htmlProgrammate = '';
@@ -3770,10 +3643,10 @@ function caricaCentroElettorale() {
         if(divProgrammate) divProgrammate.innerHTML = htmlProgrammate;
         if(divArchivio) divArchivio.innerHTML = htmlArchivio;
 
-    }).getConsultazioniAttiveUtente(curEmail);
+    });
 
     // 2. Carica il box per inviare la propria candidatura (Invariato)
-    google.script.run.withSuccessHandler(function(elezioni) {
+    chiamaServer("getElezioniPerCandidatura", curEmail).then(function(elezioni) {
         if (!elezioni || elezioni.length === 0) {
             if(areaCand) areaCand.innerHTML = '<p style="color: #64748b; font-size: 13px; text-align: center; padding: 10px;">Nessuna candidatura aperta in questo momento.</p>';
             return;
@@ -3795,10 +3668,10 @@ function caricaCentroElettorale() {
             </div>
             <button class="btn-primary" onclick="inviaCandidaturaUtente()" style="width: 100%; margin-top: 5px;">INVIA CANDIDATURA</button>
         `;
-    }).getElezioniPerCandidatura(curEmail);
+    });
     
     // 3. Carica anche la lista dei soci per il blocco sponsor (Invariato)
-    google.script.run.withSuccessHandler(function(soci) {
+    chiamaServer("getListaSociPerSponsor").then(function(soci) {
         var select = document.getElementById('candSponsor2');
         if(!select) return;
         var opts = '<option value="">-- Seleziona socio garante --</option>';
@@ -3806,7 +3679,7 @@ function caricaCentroElettorale() {
             opts += `<option value="${s.email}">${s.nomeCompleto}</option>`;
         });
         select.innerHTML = opts;
-    }).getListaSociPerSponsor();
+    });
 }
 
 var elezioneCorrenteId = null;
@@ -3849,7 +3722,7 @@ function apriCabinaElettorale(idElezione, titolo) {
     document.getElementById('cabinaTitoloElezione').innerText = titolo;
     document.getElementById('cabinaContenutoDinamico').innerHTML = '<div class="loader"></div>';
 
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("checkStatoVotoCampagna", [curEmail, idElezione]).then(function(res) {
         if (typeof res === 'string') {
             showToast(res, "error"); // SOSTITUITO ALERT
             chiudiCabinaElettorale();
@@ -3901,7 +3774,7 @@ function apriCabinaElettorale(idElezione, titolo) {
         }
 
         container.innerHTML = html;
-    }).checkStatoVotoCampagna(curEmail, idElezione);
+    });
 }
 
 function chiudiCabinaElettorale() {
@@ -3942,7 +3815,7 @@ function confermaInvioVoto() {
         scelte: scelte
     };
 
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("riceviVotoCampagna", datiVoto).then(function(res) {
         if (res === "SUCCESS") {
             showToast("Voto registrato con successo!", "success"); // SOSTITUITO ALERT
             chiudiCabinaElettorale();
@@ -3952,7 +3825,7 @@ function confermaInvioVoto() {
         } else {
             showToast("Errore: " + res, "error"); // SOSTITUITO ALERT
         }
-    }).riceviVotoCampagna(datiVoto);
+    });
 }
 
 function inviaCandidaturaUtente() {
@@ -3969,7 +3842,7 @@ function inviaCandidaturaUtente() {
         return;
     }
 
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("inviaCandidatura", { email: curEmail, idElezione: idElezione, motivazione: motivazione }).then(function(res) {
         if (res === "OK") {
             showToast("Candidatura inviata in attesa di approvazione!", "success"); // SOSTITUITO ALERT
             motivazioneEl.value = '';
@@ -3979,10 +3852,6 @@ function inviaCandidaturaUtente() {
         } else {
             showToast("Errore: " + res, "error"); // SOSTITUITO ALERT
         }
-    }).inviaCandidatura({
-        email: curEmail,
-        idElezione: idElezione,
-        motivazione: motivazione
     });
 }
 
@@ -4014,12 +3883,12 @@ function caricaDatiGestioneSoci() {
     var tbody = document.getElementById('tabellaSociAdmin');
     if(tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;"><div class="loader"></div></td></tr>';
 
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("getDashboardAdmin", curEmail).then(function(res) {
         if (res && res.listaSoci) {
             listaSociGlobale = res.listaSoci; // Salva in memoria per la ricerca
             disegnaTabellaSoci(listaSociGlobale);
         }
-    }).getDashboardAdmin(curEmail);
+    });
 }
 
 // 2. Disegna la tabella fisicamente sullo schermo
@@ -4079,7 +3948,7 @@ function apriRisultatiLive(idElezione) {
     document.getElementById('risultatiTitolo').innerText = 'Recupero dati in corso...';
     document.getElementById('risultatiSottotitolo').innerText = '';
 
-    google.script.run.withSuccessHandler(function(data) {
+    chiamaServer("adminGetRisultatiLive", [curEmail, idElezione]).then(function(data) {
         if(typeof data === 'string') {
             showToast(data, "error");
             chiudiRisultatiLive();
@@ -4132,7 +4001,7 @@ function apriRisultatiLive(idElezione) {
         }
         document.getElementById('risultatiBars').innerHTML = htmlBars;
 
-    }).adminGetRisultatiLive(curEmail, idElezione);
+    });
 }
 
 function chiudiRisultatiLive() {
@@ -4171,14 +4040,14 @@ function inviaPropostaOdG() {
         dettaglioProposta: dettaglio
     };
     
-    google.script.run.withSuccessHandler(function(res) {
+    chiamaServer("utenteAggiungeOdG", dati).then(function(res) {
         if (res === "OK") {
             showToast("Proposta aggiunta all'Ordine del Giorno!", "success");
             chiudiModaleOdG();
         } else {
             showToast(res, "error");
         }
-    }).utenteAggiungeOdG(dati);
+    });
 }
 
 // --- NAVIGAZIONE CABINA ELETTORALE ---
@@ -4212,7 +4081,7 @@ function tornaAllaDashboard() {
 var cacheDatiBilancio = null; 
 
 function caricaGraficoOverview() {
-    google.script.run.withSuccessHandler(function(dati){
+    chiamaServer("getDatiBilancioCompleto").then(function(dati){
         if(!dati) {
             document.getElementById('boxOverviewBilancio').innerHTML = "<p style='font-size:12px; color:#94a3b8;'>Nessun dato registrato</p>";
             return;
@@ -4237,7 +4106,7 @@ function caricaGraficoOverview() {
         };
         var url = "https://quickchart.io/chart?c=" + encodeURIComponent(JSON.stringify(config)) + "&h=120";
         document.getElementById('boxOverviewBilancio').innerHTML = `<img src="${url}" style="width:100%; max-height:120px; object-fit:contain;">`;
-    }).getDatiBilancioCompleto();
+    });
 }
 
 // Funzione per APRIRE il dettaglio del bilancio
@@ -4392,25 +4261,15 @@ function salvaMovimentoComposto() {
     var btn = document.getElementById('btnSalvaPD');
     if(btn) { btn.disabled = true; btn.innerText = "Salvataggio in corso..."; }
 
-    google.script.run
-        .withSuccessHandler(function(risultato) {
+    chiamaServer("registraMovimentoCompostoServer", { data: data, doc: doc, tipoAtt: tipoAtt, desc: desc, controparte: controparte, piva: piva, righe: righe }).then(function(risultato) {
+        if(risultato) {
             alert("Registrazione completata con successo!");
             if(typeof aggiornaListaMovimentiPD === 'function') aggiornaListaMovimentiPD();
-            if(btn) { btn.disabled = false; btn.innerText = "Salva Movimento Quadrato"; }
-        })
-        .withFailureHandler(function(err) {
-            alert("Errore di salvataggio: " + err.message);
-            if(btn) { btn.disabled = false; btn.innerText = "Salva Movimento Quadrato"; }
-        })
-        .registraMovimentoCompostoServer({
-            data: data,
-            doc: doc,
-            tipoAtt: tipoAtt,
-            desc: desc,
-            controparte: controparte,
-            piva: piva,
-            righe: righe
-        });
+        } else {
+            alert("Errore di salvataggio");
+        }
+        if(btn) { btn.disabled = false; btn.innerText = "Salva Movimento Quadrato"; }
+    });
 }
 
 

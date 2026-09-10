@@ -48,51 +48,47 @@ function creaHash(input) {
 
 function doPost(e) {
   try {
-    // 1. Legge la richiesta in arrivo dall'app Android / Vercel
     var richiesta = JSON.parse(e.postData.contents);
     var azione = richiesta.azione;
-    
-    // 2. Smista la richiesta in base all'azione richiesta
-    switch (azione) {
-      
-      case "login":
-        var email = richiesta.email;
-        var password = richiesta.password;
-        var esito = verificaLogin({email: email, password: password, info: "Accesso da App Mobile"});
-        
-        if (esito === "OK_LOGIN") {
-          var utente = getDatiUtente(email);
-          return ContentService.createTextOutput(JSON.stringify({
-            status: "SUCCESS",
-            messaggio: "Login effettuato",
-            dati: utente
-          })).setMimeType(ContentService.MimeType.JSON);
-        } else {
-          return ContentService.createTextOutput(JSON.stringify({
-            status: "ERROR",
-            messaggio: "Credenziali errate o account bloccato."
-          })).setMimeType(ContentService.MimeType.JSON);
-        }
-        
-      // Aggiungi le prossime azioni qui sotto (es. recuperare i dati del profilo, le consultazioni, ecc.)
-      /*
-      case "getConsultazioni":
-        // Logica per le consultazioni...
-      */
 
-      default:
-        // Se l'app invia un'azione che non esiste
-        return ContentService.createTextOutput(JSON.stringify({
-          status: "ERROR",
-          messaggio: "Azione non riconosciuta dal server."
-        })).setMimeType(ContentService.MimeType.JSON);
+    // 1. GESTIONE LOGIN (Esistente)
+    if (azione === "login") {
+       var esito = verificaLogin({email: richiesta.email, password: richiesta.password, info: "Accesso Mobile"});
+       if (esito === "OK_LOGIN") {
+         return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", dati: getDatiUtente(richiesta.email) })).setMimeType(ContentService.MimeType.JSON);
+       } else {
+         return ContentService.createTextOutput(JSON.stringify({ status: "ERROR", messaggio: "Credenziali errate." })).setMimeType(ContentService.MimeType.JSON);
+       }
     }
 
-  } catch (err) {
-    // Rete di sicurezza globale esattamente come l'avevi impostata tu
+    // 2. PONTE UNIVERSALE DINAMICO
+    // Cerca una funzione nel backend che si chiami esattamente come l'azione richiesta
+    if (typeof this[azione] === 'function') {
+       // Estrae i parametri in modo flessibile a seconda di come li invia l'app
+       var param = richiesta.payload !== undefined ? richiesta.payload :
+                   richiesta.email !== undefined ? richiesta.email :
+                   richiesta.dati !== undefined ? richiesta.dati : richiesta;
+
+       var risultato;
+           if (Array.isArray(param)) {
+               risultato = this[azione].apply(this, param); // Spacchetta l'array nei vari argomenti
+           } else {
+               risultato = this[azione](param);
+           }
+
+       return ContentService.createTextOutput(JSON.stringify({
+         status: "SUCCESS",
+         data: risultato
+       })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 3. SE LA FUNZIONE NON ESISTE
     return ContentService.createTextOutput(JSON.stringify({
-      status: "FATAL_ERROR", 
-      error: err.toString()
+      status: "ERROR",
+      messaggio: "Azione (" + azione + ") non trovata sul server."
     })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "FATAL_ERROR", error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
   }
 }
