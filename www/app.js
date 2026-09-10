@@ -75,14 +75,26 @@ function toggleView(viewId) {
 
 function nav(viewId, el) {
   // 1. GESTIONE PAGINE (Nascondi tutte, mostra quella giusta)
-  document.querySelectorAll('.page-section').forEach(x => x.classList.remove('active'));
-  document.getElementById(viewId).classList.add('active');
+    document.querySelectorAll('.page-section').forEach(x => {
+        x.classList.remove('active', 'hidden');
+    });
+    var requestedView = document.getElementById(viewId);
+    if (!requestedView) return;
+    requestedView.classList.add('active');
+
+    // Le finestre secondarie non devono sopravvivere al cambio di sezione.
+    var walletModal = document.getElementById('walletModal');
+    var dashboardModal = document.getElementById('modalDashboard');
+    if (walletModal) walletModal.classList.remove('open');
+    if (dashboardModal) dashboardModal.classList.remove('show');
   
   // 2. TITOLI
   var titles = {
       'viewDash': 'Dashboard', 
       'viewElezioni': 'Centro Elettorale', 
       'viewDocs': 'Archivio Documenti', 
+    'viewFirma': 'Firma Digitale',
+    'viewSpese': 'Spese Condivise',
       'viewProf': 'Profilo Utente',
       'viewAdmin': 'Amministrazione'
   };
@@ -257,14 +269,21 @@ function initApp() {
     document.getElementById('sumFiles').innerText = u.numFiles;
     document.getElementById('userInitials').innerText = u.nome.charAt(0);
     
-    document.getElementById('swName').innerText = u.nome + " " + u.cognome;
-    document.getElementById('swRole').innerText = u.ruolo || "Socio";
-    document.getElementById('swCode').innerText = u.tessera;
-    
     // QR Code (Generazione rapida)
     var qrData = "GENS-CARD:" + u.tessera + "|" + u.scadenza;
     var qrUrl = "https://quickchart.io/chart?chs=150x150&cht=qr&chl=" + encodeURIComponent(qrData);
-    document.getElementById('sidebarQr').src = qrUrl;
+    var walletName = document.getElementById('walletProfileName');
+    var walletRole = document.getElementById('walletProfileRole');
+    var walletCode = document.getElementById('walletProfileCode');
+    var walletScadenza = document.getElementById('walletProfileScadenza');
+    var walletQr = document.getElementById('walletProfileQr');
+    var walletAvatar = document.getElementById('walletProfileAvatar');
+    if (walletName) walletName.innerText = u.nome + " " + (u.cognome || "");
+    if (walletRole) walletRole.innerText = u.ruolo || "Socio";
+    if (walletCode) walletCode.innerText = u.tessera;
+    if (walletScadenza) walletScadenza.innerText = u.scadenza || "-";
+    if (walletQr) walletQr.src = qrUrl;
+    if (walletAvatar) walletAvatar.innerText = (u.nome || "U").charAt(0).toUpperCase();
 
     // Gestione Menu Admin (se l'utente è admin)
     if (u.isAdmin === true) {
@@ -1216,7 +1235,7 @@ avvisi.forEach(function(n) {
 html += '</div>'; // Chiude il contenitore della timeline
 
 // Metti l'HTML nel div della dashboard
-document.getElementById('divDegliAvvisi').innerHTML = html;
+div.innerHTML = html;
         
         // Se siamo admin, aggiorniamo anche la lista per cancellare
         if(document.getElementById('listaNewsAdmin')) renderNewsAdmin(avvisi);
@@ -1285,15 +1304,29 @@ function toggleInfoHash() {
 
 function openWallet() {
     // 1. Prendi i dati che abbiamo già in memoria (dalla Dashboard)
-    var nome = document.getElementById('swName').innerText;
-    var ruolo = document.getElementById('swRole').innerText;
-    var code = document.getElementById('swCode').innerText;
-    var qrSrc = document.getElementById('sidebarQr').src;
-    
-    // Per la scadenza e lo stato, dobbiamo leggerli dal Profilo se sono caricati, 
-    // altrimenti usiamo un valore di default o facciamo una chiamata rapida.
-    // TRUCCO: Usiamo i dati della sidebar widget che sono già lì!
-    // (Per la scadenza precisa, facciamo una chiamata rapida se serve, ma per ora usiamo l'anno corrente)
+    var nome = document.getElementById('walletProfileName').innerText;
+    var ruolo = document.getElementById('walletProfileRole').innerText;
+    var code = document.getElementById('walletProfileCode').innerText;
+    var qrSrc = document.getElementById('walletProfileQr').src;
+
+    const walletName = document.getElementById('walletProfileName');
+    const walletRole = document.getElementById('walletProfileRole');
+    const walletCode = document.getElementById('walletProfileCode');
+    const walletStatus = document.getElementById('walletProfileStatus');
+    const walletScadenza = document.getElementById('walletProfileScadenza');
+    const walletQr = document.getElementById('walletProfileQr');
+    const walletAvatar = document.getElementById('walletProfileAvatar');
+
+    if (walletName) walletName.innerText = nome;
+    if (walletRole) walletRole.innerText = ruolo;
+    if (walletCode) walletCode.innerText = code;
+    if (walletQr) walletQr.src = qrSrc;
+    if (walletStatus) walletStatus.innerText = 'ATTIVO';
+    if (walletScadenza && walletScadenza.innerText === '-') walletScadenza.innerText = '-';
+    if (walletAvatar && nome && nome !== '-') {
+        const initial = nome.trim().charAt(0).toUpperCase();
+        walletAvatar.innerText = initial;
+    }
     
     document.getElementById('passNome').innerText = nome;
     document.getElementById('passRuolo').innerText = ruolo;
@@ -4113,6 +4146,7 @@ function caricaGraficoOverview() {
 function apriDettaglioBilancio() {
     // Nasconde tutte le sezioni
     document.querySelectorAll('.page-section').forEach(function(sez) {
+        sez.classList.remove('active');
         sez.classList.add('hidden');
     });
 
@@ -4120,6 +4154,7 @@ function apriDettaglioBilancio() {
     var dettaglio = document.getElementById('viewBilancioDettaglio');
     if (dettaglio) {
         dettaglio.classList.remove('hidden');
+        dettaglio.classList.add('active');
     }
 
     // Spegne il colore "active" dal menu laterale
@@ -4145,6 +4180,7 @@ function chiudiDettaglioBilancio() {
     var dash = document.getElementById('viewDash');
     if (dash) {
         dash.classList.remove('hidden');
+        dash.classList.add('active');
     }
 
     // Riaccende il colore "active" sul primo tasto del menu laterale (Home)

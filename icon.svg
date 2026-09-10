@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Sfondo Avorio Premium -->
+  <rect width="1024" height="1024" fill="#FCFBF8" />
+  
+  <!-- Gruppo Testo Centrato -->
+  <g font-family="Georgia, Times New Roman, serif" font-weight="bold">
+    <!-- Lettera G (Oro) -->
+    <text x="420" y="600" font-size="520" fill="#D4AF37" text-anchor="middle">G</text>
+    
+    <!-- Lettera S (Navy) sfalsata in basso a destra -->
+    <text x="640" y="720" font-size="520" fill="#111827" text-anchor="middle">S</text>
+  </g>
+</svg>

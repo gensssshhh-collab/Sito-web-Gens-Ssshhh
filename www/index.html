@@ -35,23 +35,33 @@
 
   <div id="viewLogin" class="fullscreen-view">
     <div class="auth-card">
-      <div class="auth-title">Gens Ssshhh</div>
-      <div class="auth-sub">Portale Soci</div>
-      
-      <div class="input-group">
-        <input type="email" id="logEmail" class="form-input" placeholder="Email">
-      </div>
-      <div class="input-group">
-        <input type="password" id="logPass" class="form-input" placeholder="Password">
-        <span class="eye-icon" onclick="togglePass('logPass')">👁️</span>
-      </div>
-      
-      <button class="btn-primary" onclick="faiLogin()">ACCEDI</button>
-      <div id="loginMsg" style="margin-top:15px; font-size:13px; min-height:18px;"></div>
+      <div class="auth-left">
+        <div class="auth-title">Gens Ssshhh</div>
+        <div class="auth-sub">Portale Soci</div>
 
-      <div style="margin-top: 20px; display: flex; justify-content: space-between;">
-        <span class="link-text" onclick="toggleView('viewRecupero')">Recupera Password</span>
-        <span class="link-text" onclick="toggleView('viewCambio')">Cambia Password</span>
+        <div class="input-group">
+          <input type="email" id="logEmail" class="form-input" placeholder="Email">
+        </div>
+        <div class="input-group">
+          <input type="password" id="logPass" class="form-input" placeholder="Password">
+          <span class="eye-icon" onclick="togglePass('logPass')">👁️</span>
+        </div>
+
+                <button class="btn-primary auth-login-btn" onclick="faiLogin()">ACCEDI</button>
+
+        <div id="loginMsg" style="margin-top:15px; font-size:13px; min-height:18px;"></div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+          <span class="link-text" onclick="toggleView('viewRecupero')">Recupera Password</span>
+          <span class="link-text" onclick="toggleView('viewCambio')">Cambia Password</span>
+        </div>
+      </div>
+
+      <div class="auth-right">
+                <div class="login-brand-mark" aria-label="Logo GS">
+                    <span>G</span><span>S</span>
+                </div>
+                <div class="login-brand-caption">Gens Ssshhh</div>
       </div>
     </div>
   </div>
@@ -94,7 +104,7 @@
     <div class="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
-      <div class="brand">Gens <span>Ssshhh</span></div>
+    <div class="brand" aria-label="Logo GS"><span class="logo-g">G</span><span class="logo-s">S</span></div>
       
       <div class="nav-links">
         <div class="nav-item active" onclick="nav('viewDash', this)">Home page</div>
@@ -105,18 +115,6 @@
         <div class="nav-item" onclick="nav('viewProf', this)">Profilo</div>
       </div>
 
-      <div class="sidebar-widget">
-        <div class="sw-title">Tessera Digitale</div>
-        <div class="sw-name" id="swName">...</div>
-        <div class="sw-role" id="swRole">...</div>
-        <div class="sw-code" id="swCode">...</div>
-        
-        <div style="background: white; padding: 5px; border-radius: 8px; margin: 10px auto; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center;">
-             <img id="sidebarQr" src="" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">
-        </div>
-        <button class="sw-btn" onclick="scaricaTesseraPDF()">SCARICA PDF</button>
-        <button class="sw-btn" style="margin-top:5px; background:rgba(16, 185, 129, 0.2); border-color:rgba(16, 185, 129, 0.4); color:#6ee7b7;" onclick="openWallet()">📱 APRI CARD</button>
-      </div>
     </div>
 
     <div class="main-area">
@@ -156,10 +154,10 @@
 
 
 
-          <div style="background:white; padding:25px; border-radius:12px; border:1px solid var(--border); min-height:120px;">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <div class="dashboard-panel panel-news">
+  <div class="panel-heading-row">
      <h3 style="margin:0; font-size:16px;">📢 Avvisi Recenti</h3>
-     <span style="font-size:11px; color:var(--primary); cursor:pointer;" onclick="caricaNewsDashboard()">Aggiorna</span>
+      <button class="compact-action" onclick="caricaNewsDashboard()">Aggiorna</button>
   </div>
   <div id="containerAvvisi">
       <div class="loader"></div>
@@ -168,13 +166,13 @@
 
 
 <!-- 1. CARD IN HOME PAGE -->
-        <div style="background:white; padding:20px; border-radius:12px; border:1px solid var(--border); margin-top:20px; cursor:pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);" onclick="apriDettaglioBilancio()">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div class="dashboard-panel panel-balance" onclick="apriDettaglioBilancio()">
+            <div class="balance-panel-heading">
                 <div>
                     <h3 style="margin:0; font-size:16px; color:#0f172a;">📊 Bilancio Sociale</h3>
                     <span style="font-size:12px; color:#64748b;">Clicca per visualizzare la composizione</span>
                 </div>
-                <div style="background:#f8fafc; color:#2563eb; padding:6px 12px; border-radius:20px; font-size:11px; font-weight:bold; border: 1px solid #e2e8f0;">APRI DETTAGLIO ➔</div>
+                <button class="balance-detail-action" onclick="event.stopPropagation(); apriDettaglioBilancio()">Apri dettaglio <span aria-hidden="true">→</span></button>
             </div>
             <!-- Grafico a Barre -->
             <div id="boxOverviewBilancio" style="text-align:center; min-height:100px; display:flex; align-items:center; justify-content:center;">
@@ -392,7 +390,7 @@
               </p>
           </div>
 
-          <div class="tabs-pills">
+          <div class="tabs-pills section-tabs">
              <div class="pill active" onclick="cambiaModoDocs('PUBBLICO', this)">Pubblici</div>
              <div class="pill" onclick="cambiaModoDocs('PRIVATO', this)">Personali</div>
              <div class="pill" onclick="cambiaModoDocs('CESTINO', this)">🗑️ Cestino</div>
@@ -438,7 +436,7 @@
 <div id="viewFirma" class="page-section">
     <h2 style="margin-top:0; color:#0f172a;">Firma Digitale</h2>
     
-    <div class="tabs-pills" style="margin-bottom:20px;">
+    <div class="tabs-pills section-tabs" style="margin-bottom:20px;">
         <div class="pill active" onclick="switchFirmaTab('DA_FIRMARE', this)">Da Firmare</div>
         <div class="pill" onclick="switchFirmaTab('STORICO', this)">Storico Firme</div>
     </div>
@@ -724,6 +722,49 @@
       </div>
   </div>
 
+  <div id="walletProfileCard" class="wallet-profile-card">
+      <div class="wallet-profile-header">
+          <div>
+              <div class="wallet-profile-label">Tessera digitale</div>
+              <div class="wallet-profile-title">Gens Ssshhh</div>
+          </div>
+          <div class="wallet-profile-actions">
+              <button class="wallet-profile-btn" onclick="openWallet()">Apri card</button>
+              <button class="wallet-profile-btn wallet-download-btn" onclick="scaricaTesseraPDF()">Scarica tessera</button>
+          </div>
+      </div>
+
+      <div class="wallet-profile-body">
+          <div class="wallet-profile-identity">
+              <div class="wallet-profile-avatar" id="walletProfileAvatar">U</div>
+              <div>
+                  <div class="wallet-profile-name" id="walletProfileName">-</div>
+                  <div class="wallet-profile-role" id="walletProfileRole">-</div>
+              </div>
+          </div>
+
+          <div class="wallet-profile-meta">
+              <div>
+                  <span>Stato</span>
+                  <strong id="walletProfileStatus">ATTIVO</strong>
+              </div>
+              <div>
+                  <span>Scadenza</span>
+                  <strong id="walletProfileScadenza">-</strong>
+              </div>
+              <div>
+                  <span>Tessera</span>
+                  <strong id="walletProfileCode">000000</strong>
+              </div>
+          </div>
+      </div>
+
+      <div class="wallet-profile-footer">
+          <span class="wallet-profile-note">Identità digitale verificabile</span>
+          <img id="walletProfileQr" src="" alt="QR" />
+      </div>
+  </div>
+
 </div>
 
         <div id="viewAdmin" class="page-section">
@@ -733,7 +774,7 @@
             <span style="font-size:12px; background:#fee2e2; color:#ef4444; padding:5px 10px; border-radius:15px; font-weight:bold;">Area Riservata</span>
           </div>
 
-          <div class="tabs-pills">
+          <div class="tabs-pills section-tabs admin-tabs">
              <div class="pill active" onclick="switchAdminTab('tabDash', this)">📊 Panoramica</div>
              <div class="pill" onclick="switchAdminTab('tabSoci', this)">👥 Gestione Soci</div>
              <div class="pill" onclick="switchAdminTab('tabFirmaAdmin', this)">✒️ Centro Firme</div>
