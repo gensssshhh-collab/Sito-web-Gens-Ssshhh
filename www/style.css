@@ -1179,14 +1179,15 @@ button, input, select, textarea {
 
 @media (max-width: 768px) {
   body {
-    overflow: auto;
+    overflow: hidden;
     background: linear-gradient(180deg, #d9d0c6 0%, #efe7de 18%, #f7f4f0 100%);
   }
 
   .app-container {
     display: block;
     width: min(100%, 430px);
-    height: calc(100vh - 18px);
+    height: 100dvh;
+    min-height: 100dvh;
     margin: 9px auto;
     border: 1px solid rgba(26, 41, 69, 0.08);
     border-radius: 28px;
@@ -1213,7 +1214,8 @@ button, input, select, textarea {
   }
 
   .main-area {
-    min-height: 100vh;
+    height: 100%;
+    min-height: 0;
     background: linear-gradient(180deg, rgba(248,245,240,0.95), rgba(244,239,232,0.95));
   }
 
@@ -1314,7 +1316,19 @@ button, input, select, textarea {
   }
 
   .content-scroll {
+    height: calc(100% - 70px);
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding: 18px 14px 82px;
+  }
+
+  .content-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   #viewDash {

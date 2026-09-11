@@ -126,6 +126,8 @@ function nav(viewId, el) {
   if(el) {
     document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
+        document.querySelectorAll('.bottom-nav-item').forEach(x => x.classList.remove('active'));
+        if (el.classList.contains('bottom-nav-item')) el.classList.add('active');
   } else {
     var mapping = { 'viewDash': 0, 'viewElezioni': 1, 'viewDocs': 2, 'viewProf': 3 };
     var items = document.querySelectorAll('.nav-item');
@@ -133,6 +135,19 @@ function nav(viewId, el) {
     
     if(mapping[viewId] !== undefined && items[mapping[viewId]]) {
         items[mapping[viewId]].classList.add('active');
+    }
+
+    var bottomMapping = {
+        'viewDash': 0,
+        'viewElezioni': 1,
+        'viewFirma': 2,
+        'viewDocs': 3,
+        'viewProf': 4
+    };
+    document.querySelectorAll('.bottom-nav-item').forEach(x => x.classList.remove('active'));
+    if (bottomMapping[viewId] !== undefined) {
+        var bottomItem = document.querySelectorAll('.bottom-nav-item')[bottomMapping[viewId]];
+        if (bottomItem) bottomItem.classList.add('active');
     }
   }
   
