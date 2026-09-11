@@ -48,17 +48,20 @@ function getHashUnivoco(email) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("soci");
   var dati = sheet.getDataRange().getValues();
+  var intestazioni = dati.length ? dati[0].map(function(value) { return String(value).trim().toLowerCase(); }) : [];
+  var indiceUuid = intestazioni.indexOf("id univoco");
+  if (indiceUuid < 0) indiceUuid = 18;
   var target = email.trim().toLowerCase();
   
   for (var i = 1; i < dati.length; i++) {
     // Colonna C (indice 2) è l'email
     if (dati[i][2].toString().trim().toLowerCase() === target) {
-      var uuid = dati[i][14]; // Colonna O (indice 14) è ID_Univoco
+      var uuid = dati[i][indiceUuid];
       
       // SICUREZZA: Se per caso manca l'UUID (nuovo socio inserito a mano male), lo creiamo al volo
       if (!uuid || uuid === "") {
         uuid = Utilities.getUuid();
-        sheet.getRange(i + 1, 15).setValue(uuid); // Lo salviamo per il futuro
+        sheet.getRange(i + 1, indiceUuid + 1).setValue(uuid); // Lo salviamo per il futuro
       }
       
       // L'Hash ora si basa sull'UUID, non sull'email!
@@ -185,17 +188,29 @@ function getDatiUtente(email) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioSoci = ss.getSheetByName("soci");
   var dati = foglioSoci.getDataRange().getValues();
+  var intestazioni = dati.length ? dati[0].map(function(value) { return String(value).trim().toLowerCase(); }) : [];
+  function colonna(nome, fallback) {
+    var indice = intestazioni.indexOf(nome.toLowerCase());
+    return indice >= 0 ? indice : fallback;
+  }
+  function valore(riga, nome, fallback) {
+    return riga[colonna(nome, fallback)];
+  }
+  function dataFormattata(value) {
+    if (value instanceof Date) return Utilities.formatDate(value, "Europe/Rome", "dd/MM/yyyy");
+    return value ? String(value) : "";
+  }
   var target = email.trim().toLowerCase();
   
   for (var i = 1; i < dati.length; i++) {
     // Colonna C (Indice 2) contiene l'email
-    if (dati[i][2].toString().trim().toLowerCase() === target) {
+    if (String(valore(dati[i], "Email", 2)).trim().toLowerCase() === target) {
       
       // --- RECUPERO DATI ---
-      var rawTessera = dati[i][9];   // Colonna J
-      var rawScadenza = dati[i][10]; // Colonna K
-      var rawStato = dati[i][11];    // Colonna L
-      var rawCarica = dati[i][12];   // Colonna M (Carica Sociale) [CITE: image_dd1145.jpg]
+      var rawTessera = valore(dati[i], "Numero Tessera", 9);
+      var rawScadenza = valore(dati[i], "Data Scadenza", 10);
+      var rawStato = valore(dati[i], "Stato Socio", 11);
+      var rawCarica = valore(dati[i], "Carica sociale", 12);
 
       // Formatta la data
       var scadenzaFmt = "";
@@ -209,11 +224,19 @@ function getDatiUtente(email) {
       var mioHash = getHashUnivoco(target);
 
       return {
-        nome: dati[i][0],      
-        cognome: dati[i][4],   
-        email: dati[i][2],
-        telefono: dati[i][5],  
-        indirizzo: dati[i][6], 
+        nome: valore(dati[i], "Nome", 0),
+        cognome: valore(dati[i], "Cognome", 4),
+        email: valore(dati[i], "Email", 2),
+        telefono: valore(dati[i], "Telefono", 5),
+        indirizzo: valore(dati[i], "Indirizzo", 6),
+        sesso: valore(dati[i], "Sesso", 13) || "",
+        codiceFiscale: valore(dati[i], "Codice fiscale", 14) || "",
+        dataNascita: dataFormattata(valore(dati[i], "Data nascita", 15)),
+        comuneNascita: valore(dati[i], "Comune nascita", 16) || "",
+        versioneAccettata: valore(dati[i], "Versione Accettata", 17) || "",
+        idUnivoco: valore(dati[i], "ID Univoco", 18) || "",
+        capResidenza: valore(dati[i], "CAP res", 19) || "",
+        comuneResidenza: valore(dati[i], "Comune res", 20) || "",
         tessera: rawTessera ? rawTessera.toString() : "N/D",
         scadenza: scadenzaFmt,
         stato: rawStato ? rawStato.toString().toUpperCase() : "NON ATTIVO",
@@ -231,13 +254,20 @@ function salvaDatiUtente(datiForm) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioSoci = ss.getSheetByName("soci");
   var dati = foglioSoci.getDataRange().getValues();
+  var intestazioni = dati[0].map(function(value) { return String(value).trim().toLowerCase(); });
+  function indice(nome, fallback) {
+    var trovato = intestazioni.indexOf(nome.toLowerCase());
+    return trovato >= 0 ? trovato : fallback;
+  }
   var target = datiForm.email.trim().toLowerCase();
   
   for (var i = 1; i < dati.length; i++) {
     if (dati[i][2].toString().trim().toLowerCase() === target) {
-      foglioSoci.getRange(i+1, 5).setValue(datiForm.cognome);
-      foglioSoci.getRange(i+1, 6).setValue(datiForm.telefono);
-      foglioSoci.getRange(i+1, 7).setValue(datiForm.indirizzo);
+      foglioSoci.getRange(i+1, indice("Cognome", 4) + 1).setValue(datiForm.cognome);
+      foglioSoci.getRange(i+1, indice("Telefono", 5) + 1).setValue(datiForm.telefono);
+      foglioSoci.getRange(i+1, indice("Indirizzo", 6) + 1).setValue(datiForm.indirizzo);
+      foglioSoci.getRange(i+1, indice("CAP res", 19) + 1).setValue(datiForm.capResidenza || "");
+      foglioSoci.getRange(i+1, indice("Comune res", 20) + 1).setValue(datiForm.comuneResidenza || "");
       scriviLog(target, "PROFILO_AGGIORNATO");
       return "SALVATAGGIO_OK";
     }
@@ -262,6 +292,67 @@ function inviaRichiestaDimissioni(dati) {
 
 
 function getStartData(email) {
+
+  function getNotificheUtente(email) {
+    var notifiche = [];
+    var utente = getDatiUtente(email);
+    if (!utente) return notifiche;
+
+    var scadenza = parseDataNotifica(utente.scadenza);
+    if (scadenza) {
+      var giorni = Math.ceil((scadenza.getTime() - new Date().getTime()) / 86400000);
+      if (giorni < 0) {
+        notifiche.push({tipo: "error", titolo: "Tessera scaduta", testo: "La tessera è scaduta. Versa la quota associativa di 10 euro per rinnovarla."});
+      } else if (giorni <= 30) {
+        notifiche.push({tipo: "warning", titolo: "Tessera in scadenza", testo: "La tessera scade tra " + giorni + " giorni. Quota associativa da versare: 10 euro."});
+      }
+    }
+
+    try {
+      getAvvisiPubblici().slice(0, 5).forEach(function(avviso) {
+        notifiche.push({tipo: "info", titolo: avviso.titolo, testo: avviso.testo, data: avviso.data});
+      });
+    } catch(e) {}
+
+    try {
+      if (typeof getRichiesteFirmaUtente === "function") {
+        var firme = getRichiesteFirmaUtente(email) || [];
+        firme.filter(function(firma) { return String(firma.stato || "").toUpperCase().indexOf("FIRM") < 0; }).slice(0, 5).forEach(function(firma) {
+          notifiche.push({tipo: "action", titolo: "Documento da firmare", testo: firma.nomeFile || "Hai un documento in attesa di firma."});
+        });
+      }
+    } catch(e) {}
+
+    try {
+      if (typeof getConsultazioniAttiveUtente === "function") {
+        var consultazioni = getConsultazioniAttiveUtente(email) || [];
+        consultazioni.slice(0, 5).forEach(function(consultazione) {
+          notifiche.push({tipo: "action", titolo: "Consultazione aperta", testo: consultazione.titolo || "Hai una consultazione a cui partecipare."});
+        });
+      }
+    } catch(e) {}
+
+    try {
+      if (typeof getElezioniPerCandidatura === "function") {
+        var candidature = getElezioniPerCandidatura(email) || [];
+        candidature.slice(0, 5).forEach(function(candidatura) {
+          notifiche.push({tipo: "action", titolo: "Candidature aperte", testo: candidatura.titolo || "È possibile presentare una candidatura."});
+        });
+      }
+    } catch(e) {}
+
+    return notifiche;
+  }
+
+  function parseDataNotifica(valore) {
+    if (!valore) return null;
+    if (valore instanceof Date) return valore;
+    var testo = String(valore).trim();
+    var parti = testo.split('/');
+    if (parti.length === 3) return new Date(Number(parti[2]), Number(parti[1]) - 1, Number(parti[0]));
+    var data = new Date(testo);
+    return isNaN(data.getTime()) ? null : data;
+  }
   var cache = CacheService.getScriptCache();
   var cacheKey = "start_data_" + Utilities.base64EncodeWebSafe(String(email).toLowerCase()).slice(0, 180);
   var cached = cache.get(cacheKey);

@@ -103,6 +103,8 @@ function nav(viewId, el) {
     var requestedView = document.getElementById(viewId);
     if (!requestedView) return;
     requestedView.classList.add('active');
+    var contentScroll = document.querySelector('.content-scroll');
+    if (contentScroll) contentScroll.scrollTop = 0;
 
     // Le finestre secondarie non devono sopravvivere al cambio di sezione.
     var walletModal = document.getElementById('walletModal');
@@ -399,6 +401,7 @@ function initApp() {
     if (cachedData) {
         try {
             renderStartData(JSON.parse(cachedData), true);
+            caricaNotifiche();
         } catch (error) {
             localStorage.removeItem(cacheKey);
         }
@@ -414,6 +417,7 @@ function initApp() {
 
         localStorage.setItem(cacheKey, JSON.stringify(data));
         renderStartData(data, false);
+        caricaNotifiche();
     }).catch(function() {
         if (!cachedData) mostraErroreCaricamentoHome();
     });
@@ -425,6 +429,37 @@ function mostraErroreCaricamentoHome() {
     welcome.innerHTML = 'Impossibile caricare i dati <button class="retry-data-button" onclick="initApp()">Riprova</button>';
     var news = document.getElementById('containerAvvisi');
     if (news) news.innerHTML = '<p class="data-error-message">La connessione al server è lenta o momentaneamente non disponibile.</p>';
+}
+
+function caricaNotifiche() {
+    chiamaServer("getNotificheUtente", curEmail).then(function(notifiche) {
+        renderNotifiche(Array.isArray(notifiche) ? notifiche : []);
+    });
+}
+
+function renderNotifiche(notifiche) {
+    var lista = document.getElementById('notificationList');
+    var count = document.getElementById('notificationCount');
+    if (!lista || !count) return;
+    count.innerText = notifiche.length;
+    count.classList.toggle('hidden', notifiche.length === 0);
+    if (!notifiche.length) {
+        lista.innerHTML = '<p class="notification-empty">Nessuna notifica.</p>';
+        return;
+    }
+    lista.innerHTML = notifiche.map(function(notifica) {
+        return `<article class="notification-item notification-${notifica.tipo || 'info'}"><strong>${notifica.titolo}</strong><p>${notifica.testo}</p></article>`;
+    }).join('');
+}
+
+function toggleNotifiche(event) {
+    event.stopPropagation();
+    document.getElementById('notificationPanel').classList.toggle('hidden');
+}
+
+function chiudiNotifiche(event) {
+    event.stopPropagation();
+    document.getElementById('notificationPanel').classList.add('hidden');
 }
 
 
@@ -657,6 +692,11 @@ function uploadFile() {
     var total = files.length;
     var completed = 0;
     var errors = 0;
+    var progress = document.getElementById('uploadProgress');
+    if (progress) {
+        progress.classList.remove('hidden');
+        progress.querySelector('span').style.width = '4%';
+    }
 
     showToast("Caricamento di " + total + " file in corso...", "info");
 
@@ -686,6 +726,9 @@ function uploadFile() {
                         
                         loadDocs(curDocMode);
                         document.getElementById('fileInput').value = ""; 
+                        if (progress) progress.classList.add('hidden');
+                    } else if (progress) {
+                        progress.querySelector('span').style.width = Math.round(((completed + errors) / total) * 100) + '%';
                     }
                 });
             };
@@ -772,6 +815,13 @@ function applicaDatiProfilo(d) {
     document.getElementById('profEmail').value = d.email;
     document.getElementById('profTel').value = d.telefono;
     document.getElementById('profInd').value = d.indirizzo;
+    document.getElementById('profSesso').value = d.sesso || '-';
+    document.getElementById('profCodiceFiscale').value = d.codiceFiscale || '-';
+    document.getElementById('profDataNascita').value = d.dataNascita || '-';
+    document.getElementById('profComuneNascita').value = d.comuneNascita || '-';
+    document.getElementById('profCap').value = d.capResidenza || '';
+    document.getElementById('profComuneResidenza').value = d.comuneResidenza || '';
+    document.getElementById('profVersioneAccettata').value = d.versioneAccettata || '-';
     document.getElementById('profHash').innerText = d.hash;
 
     var statoEl = document.getElementById('profBadgeStato');
@@ -794,7 +844,7 @@ function copiaHash() {
 }
 
 function salvaProfilo() {
-  var d = { email:curEmail, password:curPass, cognome:document.getElementById('profCognome').value, telefono:document.getElementById('profTel').value, indirizzo:document.getElementById('profInd').value };
+    var d = { email:curEmail, password:curPass, cognome:document.getElementById('profCognome').value, telefono:document.getElementById('profTel').value, indirizzo:document.getElementById('profInd').value, capResidenza:document.getElementById('profCap').value, comuneResidenza:document.getElementById('profComuneResidenza').value };
   chiamaServer("salvaDatiUtente", d).then(function(){ showToast("Profilo aggiornato con successo!", "success"); });
 }
 

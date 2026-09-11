@@ -132,6 +132,13 @@
       <div class="dd-item danger" onclick="eseguiLogout()">Esci</div>
     </div>
   </div>
+    <button class="notification-button" aria-label="Apri notifiche" onclick="toggleNotifiche(event)">
+        <span aria-hidden="true">♢</span><span id="notificationCount" class="notification-count hidden">0</span>
+    </button>
+    <div id="notificationPanel" class="notification-panel hidden">
+        <div class="notification-panel-header"><strong>Notifiche</strong><button onclick="chiudiNotifiche(event)">×</button></div>
+        <div id="notificationList"><p class="notification-empty">Nessuna notifica.</p></div>
+    </div>
 </div>
 
 
@@ -418,18 +425,21 @@
           <h3 id="docTitle" style="margin-top:5px;">Documenti</h3>
           <div id="listaFiles" class="docs-grid" aria-live="polite"><div class="loader"></div></div>
           
-          <div id="uploadArea" style="margin-top:40px; padding:20px; border:2px dashed var(--border); border-radius:12px; text-align:center;">
-             <p style="font-size:13px; color:var(--text-muted); margin-bottom:10px;">Carica un nuovo documento</p>
-             <div style="display:flex; gap:10px; justify-content:center; margin-bottom:10px;">
-                 <select id="uploadCat" class="form-input" style="width:auto; padding:8px;">
+          <div id="uploadArea" class="upload-area">
+             <div class="upload-icon">↑</div>
+             <p class="upload-title">Carica un nuovo documento</p>
+             <p class="upload-subtitle">PDF e documenti associativi, direttamente nel tuo archivio.</p>
+             <div class="upload-controls">
+                 <select id="uploadCat" class="form-input">
                      <option value="Altro">Categoria...</option>
                      <option value="Verbale">Verbale</option>
                      <option value="Bilancio">Bilancio</option>
                      <option value="Regolamento">Regolamento</option>
                  </select>
-                 <input type="file" id="fileInput" multiple style="font-size:12px; width:auto;">
+                 <label class="file-picker">Scegli file<input type="file" id="fileInput" multiple></label>
              </div>
-             <button class="btn-primary" onclick="uploadFile()" style="width:auto; padding:8px 20px;">Carica File</button>
+             <button class="btn-primary upload-submit" onclick="uploadFile()">Carica file</button>
+             <div id="uploadProgress" class="upload-progress hidden"><span></span></div>
           </div>
         </div>
 
@@ -694,6 +704,22 @@
           <label class="form-label">Cognome</label>
           <input id="profCognome" class="form-input" disabled style="background:#f8fafc; color:#64748b; cursor:not-allowed;">
           </div>
+             <div class="input-group">
+                 <label class="form-label">Sesso</label>
+                 <input id="profSesso" class="form-input" disabled style="background:#f8fafc; color:#64748b; cursor:not-allowed;">
+             </div>
+             <div class="input-group">
+                 <label class="form-label">Codice fiscale</label>
+                 <input id="profCodiceFiscale" class="form-input" disabled style="background:#f8fafc; color:#64748b; cursor:not-allowed;">
+             </div>
+             <div class="input-group">
+                 <label class="form-label">Data di nascita</label>
+                 <input id="profDataNascita" class="form-input" disabled style="background:#f8fafc; color:#64748b; cursor:not-allowed;">
+             </div>
+             <div class="input-group">
+                 <label class="form-label">Comune di nascita</label>
+                 <input id="profComuneNascita" class="form-input" disabled style="background:#f8fafc; color:#64748b; cursor:not-allowed;">
+             </div>
           </div>
 
       <div style="background:white; padding:25px; border-radius:12px; border:1px solid var(--border);">
@@ -711,6 +737,18 @@
              <label class="form-label">Indirizzo</label>
              <input id="profInd" class="form-input">
           </div>
+             <div class="input-group">
+                 <label class="form-label">CAP</label>
+                 <input id="profCap" class="form-input" inputmode="numeric" maxlength="5">
+             </div>
+             <div class="input-group">
+                 <label class="form-label">Comune di residenza</label>
+                 <input id="profComuneResidenza" class="form-input">
+             </div>
+             <div class="input-group">
+                 <label class="form-label">Versione regolamento accettata</label>
+                 <input id="profVersioneAccettata" class="form-input" disabled style="background:#f8fafc; color:#64748b; cursor:not-allowed;">
+             </div>
       </div>
 
   </div>

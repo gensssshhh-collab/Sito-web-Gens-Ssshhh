@@ -28,6 +28,19 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Write release metadata
+        run: |
+          RELEASE_DATE=$(date -u +%Y-%m-%d)
+          RELEASE_ID=$(date -u +%Y%m%d)
+          cat > ./www/release.json <<EOF
+          {
+            "app": "Gens Ssshhh",
+            "version": "1.0.0",
+            "releaseDate": "${RELEASE_DATE}",
+            "releaseId": "${RELEASE_ID}"
+          }
+          EOF
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
