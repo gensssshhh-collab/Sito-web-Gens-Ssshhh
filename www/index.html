@@ -146,6 +146,46 @@
         
         <div id="viewDash" class="page-section active">
           <h2 id="welcomeMsg" style="margin-top:0; margin-bottom:20px;">Benvenuto</h2>
+
+          <div id="walletHomeCard" class="wallet-profile-card home-wallet-card">
+              <div class="wallet-profile-header">
+                  <div>
+                      <div class="wallet-profile-label">Tessera digitale</div>
+                      <div class="wallet-profile-title">Gens Ssshhh</div>
+                  </div>
+                  <button class="wallet-profile-btn" onclick="openWallet()">Apri card</button>
+              </div>
+
+              <div class="wallet-profile-body">
+                  <div class="wallet-profile-identity">
+                      <div class="wallet-profile-avatar" id="walletProfileAvatar">U</div>
+                      <div>
+                          <div class="wallet-profile-name" id="walletProfileName">-</div>
+                          <div class="wallet-profile-role" id="walletProfileRole">-</div>
+                      </div>
+                  </div>
+
+                  <div class="wallet-profile-meta">
+                      <div>
+                          <span>Stato</span>
+                          <strong id="walletProfileStatus">ATTIVO</strong>
+                      </div>
+                      <div>
+                          <span>Scadenza</span>
+                          <strong id="walletProfileScadenza">-</strong>
+                      </div>
+                      <div>
+                          <span>Tessera</span>
+                          <strong id="walletProfileCode">000000</strong>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="wallet-profile-footer">
+                  <span class="wallet-profile-note">Identità digitale verificabile</span>
+                  <img id="walletProfileQr" src="" alt="QR" />
+              </div>
+          </div>
           
           <div class="dash-grid">
             <div class="stat-card" onclick="nav('viewElezioni')">
@@ -758,49 +798,6 @@
       
       <div style="text-align:right;">
           <span style="font-size:13px; color:#ef4444; cursor:pointer; text-decoration:underline;" onclick="richiediDimissioni()">Richiedi Dimissioni</span>
-      </div>
-  </div>
-
-  <div id="walletProfileCard" class="wallet-profile-card">
-      <div class="wallet-profile-header">
-          <div>
-              <div class="wallet-profile-label">Tessera digitale</div>
-              <div class="wallet-profile-title">Gens Ssshhh</div>
-          </div>
-          <div class="wallet-profile-actions">
-              <button class="wallet-profile-btn" onclick="openWallet()">Apri card</button>
-              <button class="wallet-profile-btn wallet-download-btn" onclick="scaricaTesseraPDF()">Scarica tessera</button>
-          </div>
-      </div>
-
-      <div class="wallet-profile-body">
-          <div class="wallet-profile-identity">
-              <div class="wallet-profile-avatar" id="walletProfileAvatar">U</div>
-              <div>
-                  <div class="wallet-profile-name" id="walletProfileName">-</div>
-                  <div class="wallet-profile-role" id="walletProfileRole">-</div>
-              </div>
-          </div>
-
-          <div class="wallet-profile-meta">
-              <div>
-                  <span>Stato</span>
-                  <strong id="walletProfileStatus">ATTIVO</strong>
-              </div>
-              <div>
-                  <span>Scadenza</span>
-                  <strong id="walletProfileScadenza">-</strong>
-              </div>
-              <div>
-                  <span>Tessera</span>
-                  <strong id="walletProfileCode">000000</strong>
-              </div>
-          </div>
-      </div>
-
-      <div class="wallet-profile-footer">
-          <span class="wallet-profile-note">Identità digitale verificabile</span>
-          <img id="walletProfileQr" src="" alt="QR" />
       </div>
   </div>
 

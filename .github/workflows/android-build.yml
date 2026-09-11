@@ -21,6 +21,10 @@ jobs:
       - name: Sincronizzazione Capacitor
         run: npx cap sync android
 
+      - name: Definizione data release
+        id: release
+        run: echo "release_date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
@@ -31,10 +35,13 @@ jobs:
         working-directory: ./android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          RELEASE_DATE=${{ steps.release.outputs.release_date }}
+          RELEASE_ID=${RELEASE_DATE//-/}
+          ./gradlew assembleDebug -PreleaseDate=$RELEASE_ID
+          mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Gens-Ssshhh-App-${RELEASE_DATE}.apk
 
       - name: Salvataggio APK
         uses: actions/upload-artifact@v4
         with:
-          name: Gens-Ssshhh-App
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Gens-Ssshhh-App-${{ steps.release.outputs.release_date }}
+          path: android/app/build/outputs/apk/debug/Gens-Ssshhh-App-*.apk
