@@ -303,6 +303,12 @@ async function faiLogin() {
             signal: controller.signal
     });
         clearTimeout(timeoutId);
+
+    if (!response.ok) {
+        const erroreHttp = new Error("HTTP " + response.status);
+        erroreHttp.status = response.status;
+        throw erroreHttp;
+    }
     
     const risultato = await response.json();
     
@@ -326,9 +332,13 @@ async function faiLogin() {
     
   } catch (errore) {
     console.error(errore);
-        msg.innerText = errore.name === "AbortError"
-            ? "Il server sta impiegando troppo tempo. Riprova."
-            : "Errore di connessione al server.";
+        if (errore.name === "AbortError") {
+            msg.innerText = "Il server sta impiegando troppo tempo. Riprova.";
+        } else if (errore.status === 403) {
+            msg.innerText = "Servizio di login non autorizzato. Ripubblica il Web App Apps Script.";
+        } else {
+            msg.innerText = "Errore di connessione al server.";
+        }
     msg.style.color = "red";
     } finally {
         if (loginButton) {
