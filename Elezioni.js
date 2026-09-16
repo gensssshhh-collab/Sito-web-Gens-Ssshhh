@@ -679,6 +679,28 @@ function adminChiudiEGeneraVerbale(adminEmail, idElezione) {
   }
 }
 
+function adminRigeneraVerbale(adminEmail, idElezione) {
+  var user = getDatiUtente(adminEmail);
+  var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE", "VICEPRESIDENTE"];
+  if (!user || ruoliAdmin.indexOf(user.ruolo.toUpperCase()) === -1) return "NO_AUTH";
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var foglioDb = ss.getSheetByName("Database_Elezioni");
+  if (!foglioDb) return "ERRORE: Database elezioni non trovato.";
+  var datiDb = foglioDb.getDataRange().getValues();
+  var trovata = false;
+  for (var i = 1; i < datiDb.length; i++) {
+    if (datiDb[i][0] === idElezione) {
+      trovata = true;
+      break;
+    }
+  }
+  if (!trovata) return "ERRORE: Consultazione non trovata.";
+
+  // Riusa la stessa generazione ufficiale: i voti e gli hash restano invariati.
+  return adminChiudiEGeneraVerbale(adminEmail, idElezione);
+}
+
 function ottieniUrlVerbale(identificativoConsultazione) {
   try {
     // Cerca la cartella (puoi cambiare la logica di ricerca a seconda di come si chiamano le tue cartelle)

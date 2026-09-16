@@ -322,6 +322,75 @@ function getStatisticheGruppiLive() {
   return risultatoFinale;
 }
 
+function normalizzaNomeViaggioDashboard(nome) {
+  return String(nome || "")
+    .toLowerCase()
+    .replace(/\.csv$/i, "")
+    .replace(/^esportazione splitwise per\s*/i, "")
+    .replace(/mallorca/g, "maiorca")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
+}
+
+function getCostiVacanzeDashboard() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var foglio = ss.getSheetByName("costi vacanze");
+  if (!foglio || foglio.getLastColumn() < 2 || foglio.getLastRow() < 2) return [];
+
+  var valori = foglio.getDataRange().getValues();
+  var viaggi = [];
+
+  function testo(valore) {
+    return String(valore == null ? "" : valore).trim();
+  }
+
+  function numero(valore) {
+    if (typeof valore === "number") return isFinite(valore) ? valore : 0;
+    var testoNumero = testo(valore).replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+    var risultato = parseFloat(testoNumero);
+    return isFinite(risultato) ? risultato : 0;
+  }
+
+  for (var colonna = 1; colonna < valori[0].length; colonna++) {
+    var nome = testo(valori[0][colonna]);
+    if (!nome) continue;
+
+    var indiceFisse = -1;
+    var viaggio = {
+      nome: nome,
+      chiave: normalizzaNomeViaggioDashboard(nome),
+      anno: (nome.match(/\d{4}/) || [""])[0] || "",
+      speseFisse: 0,
+      speseVariabili: 0,
+      totale: 0,
+      numPersone: 1,
+      categorie: {}
+    };
+
+    for (var riga = 1; riga < valori.length; riga++) {
+      var etichetta = testo(valori[riga][0]);
+      var etichettaNormalizzata = etichetta.toLowerCase();
+      var importo = numero(valori[riga][colonna]);
+      if (etichettaNormalizzata.indexOf("partecipant") === 0 && importo > 0) {
+        viaggio.numPersone = Math.round(importo);
+        continue;
+      }
+      if (etichettaNormalizzata.indexOf("totale spese fisse") !== -1) {
+        indiceFisse = riga;
+        viaggio.speseFisse = importo;
+        continue;
+      }
+      if (indiceFisse < 0 && etichetta && importo) viaggio.speseFisse += importo;
+    }
+
+    if (indiceFisse < 0) continue;
+    viaggio.speseFisse = Math.round(viaggio.speseFisse * 100) / 100;
+    viaggio.totale = Math.round(viaggio.speseFisse * viaggio.numPersone * 100) / 100;
+    if (viaggio.totale > 0) viaggi.push(viaggio);
+  }
+  return viaggi;
+}
+
 function generaFatturaXML(datiInput) {
   
   // --- LE TUE CONNESSIONI ---
@@ -713,6 +782,7 @@ function getReportStorici() {
     reports.push({
       dataSalvataggio: Utilities.formatDate(new Date(dati[i][0]), "GMT+1", "dd/MM/yyyy HH:mm"),
       nome: dati[i][1],
+      chiave: normalizzaNomeViaggioDashboard(dati[i][1]),
       jsonDati: dati[i][2] // Il pacchetto JSON completo
     });
   }

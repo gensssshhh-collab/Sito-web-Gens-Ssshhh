@@ -243,7 +243,7 @@ function togglePass(id) {
   x.type = (x.type === "password") ? "text" : "password";
 }
 
-async function chiamaServer(nomeAzione, parametri = {}) {
+async function chiamaServer(nomeAzione, parametri = {}, propagaErrore = false) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -253,17 +253,22 @@ async function chiamaServer(nomeAzione, parametri = {}) {
             headers: { "Content-Type": "text/plain" },
             signal: controller.signal
     });
+    if (!response.ok) {
+        throw new Error("HTTP " + response.status);
+    }
     const risultato = await response.json();
     
     if (risultato.status === "SUCCESS") {
       return risultato.data;
     } else {
       console.error("Errore server:", risultato.messaggio);
-      return null;
+            if (propagaErrore) throw new Error(risultato.messaggio || "Errore del server");
+            return null;
     }
   } catch (err) {
         console.error("Errore di rete:", err.name === "AbortError" ? "Timeout" : err);
-    return null;
+        if (propagaErrore) throw err;
+        return null;
     } finally {
         clearTimeout(timeoutId);
   }
@@ -952,11 +957,33 @@ function richiediDimissioni() {
 
 function scaricaTesseraPDF() {
   if(!confirm("Scaricare PDF?")) return;
-  chiamaServer("generaTesseraPDF", curEmail).then(function(b64){
-    if(b64.startsWith("ERRORE")) return alert("Errore");
-    var a = document.createElement('a'); a.href=b64; a.download="Tessera.pdf"; 
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  });
+    var emailDownload = curEmail || localStorage.getItem('gens_email') || '';
+    chiamaServer("generaTesseraPDF", emailDownload, true).then(function(dataUrl){
+        if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:application/pdf;base64,")) {
+            return alert(typeof dataUrl === "string" && dataUrl.startsWith("ERRORE") ? dataUrl : "Impossibile generare il PDF.");
+        }
+
+        try {
+            var base64 = dataUrl.split(",")[1];
+            var binary = atob(base64);
+            var bytes = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            var pdfUrl = URL.createObjectURL(new Blob([bytes], {type: "application/pdf"}));
+            var a = document.createElement("a");
+            a.href = pdfUrl;
+            a.download = "Tessera.pdf";
+            a.target = "_blank";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function() { URL.revokeObjectURL(pdfUrl); }, 1000);
+        } catch (error) {
+            window.open(dataUrl, "_blank");
+        }
+    }).catch(function(error) {
+        console.error("Download tessera fallito:", error);
+        alert("Download non disponibile: " + (error.message || "errore di connessione al server."));
+    });
 }
 
 function recupera() {
@@ -3386,27 +3413,88 @@ function disegnaDashboardAnalisi(dati, mostratastoSalva = true) {
 let chartTrend = null;
 let chartCat = null;
 
+function normalizzaNomeViaggio(nome) {
+    return String(nome || "")
+        .toLowerCase()
+        .replace(/\.csv$/i, "")
+        .replace(/^esportazione splitwise per\s*/i, "")
+        .replace(/mallorca/g, "maiorca")
+        .replace(/[^a-z0-9]+/g, "")
+        .trim();
+}
+
+function unisciCostiVacanze(costiFissi, reportCsv) {
+    var fissi = Array.isArray(costiFissi) ? costiFissi : [];
+    var csv = Array.isArray(reportCsv) ? reportCsv : [];
+    var chiaviAbbinate = {};
+
+    var risultato = fissi.map(function(fisso) {
+        var chiaveFissa = fisso.chiave || normalizzaNomeViaggio(fisso.nome);
+        var report = csv.find(function(item) {
+            var chiaveCsv = item.chiave || normalizzaNomeViaggio(item.nome);
+            return chiaveCsv === chiaveFissa;
+        });
+
+        var datiVariabili = null;
+        try {
+            datiVariabili = report && report.jsonDati ? JSON.parse(report.jsonDati) : null;
+        } catch (error) {
+            console.warn("Report CSV non valido:", report && report.nome, error);
+        }
+        if (report) chiaviAbbinate[report.chiave || normalizzaNomeViaggio(report.nome)] = true;
+        var variabili = datiVariabili ? Number(datiVariabili.totale) || 0 : 0;
+        var persone = Number(fisso.numPersone) || (datiVariabili && datiVariabili.saldi ? Object.keys(datiVariabili.saldi).length : 1);
+        persone = persone || 1;
+
+        return {
+            nome: fisso.nome,
+            chiave: chiaveFissa,
+            anno: fisso.anno || ((fisso.nome.match(/\d{4}/) || [""])[0]),
+            speseFisse: Number(fisso.speseFisse) || 0,
+            speseVariabili: variabili,
+            totale: ((Number(fisso.speseFisse) || 0) * persone) + variabili,
+            numPersone: persone,
+            categorie: datiVariabili && datiVariabili.categorie ? datiVariabili.categorie : {}
+        };
+    });
+
+    csv.forEach(function(report) {
+        var chiaveCsv = report.chiave || normalizzaNomeViaggio(report.nome);
+        if (!chiaveCsv || chiaviAbbinate[chiaveCsv]) return;
+        var datiVariabili = null;
+        try {
+            datiVariabili = report.jsonDati ? JSON.parse(report.jsonDati) : null;
+        } catch (error) {
+            return;
+        }
+        if (!datiVariabili) return;
+        risultato.push({
+            nome: report.nome,
+            chiave: chiaveCsv,
+            anno: ((report.nome.match(/\d{4}/) || [""])[0]),
+            speseFisse: 0,
+            speseVariabili: Number(datiVariabili.totale) || 0,
+            totale: Number(datiVariabili.totale) || 0,
+            numPersone: datiVariabili.saldi ? Object.keys(datiVariabili.saldi).length || 1 : 1,
+            categorie: datiVariabili.categorie || {}
+        });
+    });
+
+    return risultato;
+}
+
 function apriDashboardInterattiva() {
     document.getElementById('modalDashboard').classList.add('show');
-    document.getElementById('kpiDashboard').innerHTML = '<div style="padding: 20px; font-weight: bold; color: #3b82f6;">⏳ Sincronizzazione Gruppi Live e Archivio Storico in corso...</div>';
-
-    chiamaServer("getStatisticheGruppiLive").then(function(gruppiLive) {
-        window.datiDashboardCombinati = [];
-        if (gruppiLive && gruppiLive.length > 0) {
-            gruppiLive.forEach(g => {
-                window.datiDashboardCombinati.push({
-                    nome: "🟢 [LIVE] " + g.nome + " " + g.anno, 
-                    dataSalvataggio: "Oggi", 
-                    jsonDati: JSON.stringify(g)
-                });
-            });
-        }
-        if (window.archivioReportGlobale) {
-            window.archivioReportGlobale.forEach(rep => {
-                window.datiDashboardCombinati.push(rep);
-            });
-        }
+    document.getElementById('kpiDashboard').innerHTML = '<div class="dashboard-loading">Sincronizzazione costi vacanze...</div>';
+    Promise.all([
+        chiamaServer("getCostiVacanzeDashboard"),
+        chiamaServer("getReportStorici")
+    ]).then(function(risultati) {
+        window.datiDashboardVacanze = unisciCostiVacanze(risultati[0], risultati[1]);
         disegnaGraficiAvanzati();
+    }).catch(function(error) {
+        console.error("Errore caricamento costi dashboard:", error);
+        document.getElementById('kpiDashboard').innerHTML = '<div class="dashboard-loading">Impossibile caricare i costi.</div>';
     });
 }
 
@@ -3417,38 +3505,39 @@ function chiudiDashboard() {
 function disegnaGraficiAvanzati() {
     const filtroAnno = document.getElementById('filtroAnnoDash').value;
     const isProCapite = document.getElementById('toggleProCapite').checked;
-    const reports = window.datiDashboardCombinati || [];
+    const reports = window.datiDashboardVacanze || [];
     
     let eventiFiltrati = [];
     let categorieSommate = {};
     let spesaTotaleGlobale = 0;
 
-    // 1. Estrazione dati e calcolo (Totale vs Pro Capite)
+    // 1. Estrazione dati dal foglio costi vacanze.
     reports.forEach(rep => {
-        let matchAnno = rep.nome.match(/\d{4}/);
-        let annoRep = matchAnno ? parseInt(matchAnno[0]) : 0; // Trasformato in numero per ordinamento
+        let annoRep = Number(rep.anno) || ((rep.nome.match(/\d{4}/) || [0])[0] * 1);
         
         if (filtroAnno === 'ALL' || filtroAnno === annoRep.toString()) {
-            let datiJson = JSON.parse(rep.jsonDati);
-            let nomeClean = datiJson.nome.replace('Esportazione Splitwise per ', '').replace('.csv', '');
-            
-            // Conta quanti partecipanti c'erano in QUESTO viaggio
-            let numPersone = Object.keys(datiJson.saldi).length || 1;
-            
-            // Se la levetta è attiva, divide il costo del viaggio per i partecipanti
-            let costoDaMostrare = isProCapite ? (datiJson.totale / numPersone) : datiJson.totale;
+            let numPersone = Number(rep.numPersone) || 1;
+            let costoFisso = Number(rep.speseFisse) || 0;
+            let costoVariabile = Number(rep.speseVariabili) || 0;
+            let divisore = isProCapite ? numPersone : 1;
+            let fissoDaMostrare = isProCapite ? costoFisso : costoFisso * numPersone;
+            let variabileDaMostrare = costoVariabile / divisore;
+            let costoDaMostrare = fissoDaMostrare + variabileDaMostrare;
+            let nomeClean = rep.nome || "Viaggio";
 
             eventiFiltrati.push({
                 nome: nomeClean,
                 anno: annoRep,
                 totale: costoDaMostrare,
-                categorie: datiJson.categorie,
+                categorie: rep.categorie || {},
+                fisse: fissoDaMostrare,
+                variabili: variabileDaMostrare,
                 numPersone: numPersone
             });
 
             spesaTotaleGlobale += costoDaMostrare;
 
-            for (let [cat, importo] of Object.entries(datiJson.categorie)) {
+            for (let [cat, importo] of Object.entries(rep.categorie || {})) {
                 let importoCat = isProCapite ? (importo / numPersone) : importo;
                 if (!categorieSommate[cat]) categorieSommate[cat] = 0;
                 categorieSommate[cat] += importoCat;
@@ -3504,7 +3593,8 @@ function disegnaGraficiAvanzati() {
 
     // --- Preparazione array per Chart.js ---
     let etichetteEventi = eventiFiltrati.map(e => e.nome);
-    let costiTotaliEventi = eventiFiltrati.map(e => e.totale);
+    let costiFissiEventi = eventiFiltrati.map(e => e.fisse);
+    let costiVariabiliEventi = eventiFiltrati.map(e => e.variabili);
     let etichetteCat = Object.keys(categorieRaggruppate);
     let datiCat = Object.values(categorieRaggruppate);
 
@@ -3518,13 +3608,18 @@ function disegnaGraficiAvanzati() {
         data: {
             labels: etichetteEventi,
             datasets: [{
-                label: `Costo ${isProCapite ? 'Pro Capite' : 'Totale'} (€)`,
-                data: costiTotaliEventi,
-                backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                label: 'Spese Fisse (€)',
+                data: costiFissiEventi,
+                backgroundColor: '#6366f1',
                 borderRadius: 6,
+            }, {
+                label: 'Spese Variabili (€)',
+                data: costiVariabiliEventi,
+                backgroundColor: '#10b981',
+                borderRadius: 6
             }]
         },
-        options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
+        options: { responsive: true, plugins: { legend: { display: true } }, scales: { x: { stacked: true, ticks: { maxRotation: 45, minRotation: 45 } }, y: { stacked: true, beginAtZero: true } } }
     });
 
     const ctxCat = document.getElementById('chartCategorieGlobali').getContext('2d');
@@ -3563,11 +3658,13 @@ function disegnaGraficiAvanzati() {
                     chartTrend.data.datasets[0].data = costiFiltrati;
                     chartTrend.data.datasets[0].label = `Spesa: ${categoriaCliccata} (€)`;
                     chartTrend.data.datasets[0].backgroundColor = coloreFetta;
+                    chartTrend.data.datasets[1].data = eventiFiltrati.map(() => 0);
                     chartTrend.update();
                 } else {
-                    chartTrend.data.datasets[0].data = costiTotaliEventi;
-                    chartTrend.data.datasets[0].label = `Costo ${isProCapite ? 'Pro Capite' : 'Totale'} (€)`;
-                    chartTrend.data.datasets[0].backgroundColor = 'rgba(99, 102, 241, 0.8)';
+                    chartTrend.data.datasets[0].data = costiFissiEventi;
+                    chartTrend.data.datasets[0].label = 'Spese Fisse (€)';
+                    chartTrend.data.datasets[0].backgroundColor = '#6366f1';
+                    chartTrend.data.datasets[1].data = costiVariabiliEventi;
                     chartTrend.update();
                 }
             }
@@ -3787,6 +3884,7 @@ function caricaCampagneAdmin() {
                 } else {
                     card += `<span style="font-size: 11px; color: #ef4444;">Verbale non disponibile</span>`;
                 }
+                card += `<button class="btn-secondary" style="width:auto; padding:6px 10px; font-size:11px;" onclick="rigeneraVerbale('${c.id}')">♻ Rigenera</button>`;
                 
                 htmlArchivio += card + `</div></div>`;
                 countArchivio++;
@@ -3826,6 +3924,20 @@ function chiudiEGeneraVerbale(idElezione) {
             if(res === "OK") {
                 showToast("Elezione chiusa e verbale salvato!", "success");
                 caricaCampagneAdmin(); // Ricarica la lista per spostarla in archivio
+            } else {
+                showToast(res, "error");
+            }
+        });
+    });
+}
+
+function rigeneraVerbale(idElezione) {
+    showCustomConfirm("Rigenerare il verbale usando i voti e gli hash registrati? Il verbale precedente resterà in Drive come copia storica.", function() {
+        showToast("Rigenerazione verbale in corso...", "info");
+        chiamaServer("adminRigeneraVerbale", [curEmail, idElezione]).then(function(res) {
+            if (res === "OK") {
+                showToast("Verbale rigenerato e collegamento aggiornato.", "success");
+                caricaCampagneAdmin();
             } else {
                 showToast(res, "error");
             }

@@ -7,6 +7,12 @@ function doGet(e) {
   return ContentService.createTextOutput("Gens Ssshhh Backend API - Attivo e funzionante");
 }
 
+function autorizzaDriveVerbali() {
+  var folderId = "1B40jXYlF9nXvR7rKGtIjpWYl4SMgGrXH";
+  var folder = DriveApp.getFolderById(folderId);
+  return "DRIVE_OK: " + folder.getName();
+}
+
 
 var SECRET_SALT = "INCULATI-BRUTTO-GAYNEU37Y"; 
 

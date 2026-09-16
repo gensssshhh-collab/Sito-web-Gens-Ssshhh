@@ -148,15 +148,11 @@
           <h2 id="welcomeMsg" style="margin-top:0; margin-bottom:20px;">Benvenuto</h2>
           <div id="membershipExpiryAlert" class="membership-expiry-alert hidden" role="alert"></div>
 
-          <div id="walletHomeCard" class="wallet-profile-card home-wallet-card">
+          <div id="walletHomeCard" class="wallet-profile-card home-wallet-card" role="button" tabindex="0" aria-label="Apri tessera digitale" onclick="openWallet()" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openWallet(); }">
               <div class="wallet-profile-header">
                   <div>
                       <div class="wallet-profile-label">Tessera digitale</div>
                       <div class="wallet-profile-title">Gens Ssshhh</div>
-                  </div>
-                  <div class="wallet-profile-actions">
-                      <button class="wallet-profile-btn" onclick="openWallet()">Apri card</button>
-                      <button class="wallet-profile-btn wallet-download-btn" onclick="scaricaTesseraPDF()">Download PDF</button>
                   </div>
               </div>
 
@@ -534,8 +530,11 @@
           
           <div style="background:#f8fafc; padding:20px; border-radius:8px; border:1px dashed #cbd5e1;">
               <h4 style="margin-top:0; color:#0f172a;">Nuovo Gruppo</h4>
-              <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                  <input type="text" id="nuovoNomeGruppo" class="form-input" placeholder="Es. Vacanza Maiorca 2026" style="flex:1; min-width:200px;">
+              <div class="new-group-row">
+                  <div class="new-group-input-wrap">
+                    <span class="new-group-input-icon" aria-hidden="true">✦</span>
+                    <input type="text" id="nuovoNomeGruppo" class="form-input new-group-input" placeholder="Es. Vacanza Maiorca 2026">
+                  </div>
                   <button class="btn-primary" style="width:auto; padding:10px 20px; background:#10b981;" onclick="creaNuovoGruppo()">CREA E ENTRA</button>
               </div>
           </div>
@@ -648,20 +647,20 @@
   
   <!-- ================= NUOVA SEZIONE: ANALISI E REPORT STORICI ================= -->
   <div id="viewAnalisiSpese" style="margin-top: 30px; background: white; padding: 25px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+    <div class="reports-header">
           <div>
               <h3 style="margin: 0; font-size: 18px; color: #0f172a;">📈 Analisi & Report Storici</h3>
               <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Archivio dei bilanci passati. Selezionane uno o caricane uno nuovo.</p>
           </div>
-          <div style="display: flex; gap: 10px; align-items: center;">
-    <button class="btn-primary" style="background: #6366f1; border-color: #4f46e5; padding: 8px 16px; font-size: 13px;" onclick="apriDashboardInterattiva()">
+          <div class="reports-actions">
+    <button class="btn-primary reports-action-main" onclick="apriDashboardInterattiva()">
         📊 APRI DASHBOARD
     </button>
-    <button class="btn-secondary" onclick="caricaLibreriaReport()" style="padding: 8px 16px; font-size: 13px;">
+    <button class="btn-secondary report-action-secondary" onclick="caricaLibreriaReport()">
         🔄 Aggiorna Archivio
     </button>
     <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="gestisciCaricamentoCSV(event)">
-    <button class="btn-primary" onclick="document.getElementById('csvFileInput').click()" style="padding: 8px 16px; font-size: 13px;">
+    <button class="btn-primary report-action-secondary" onclick="document.getElementById('csvFileInput').click()">
         ➕ Nuovo da CSV
     </button>
 </div>
@@ -1405,11 +1404,11 @@
     <div class="modal-content-dash" id="areaDaEsportare">
         
         <!-- INTESTAZIONE CORRETTA E COMPATTA -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; border-bottom: 1px solid #e2e8f0; background: #ffffff; flex-wrap: wrap; gap: 15px;">
+        <div class="dashboard-modal-header">
             
             <h2 style="margin: 0; color: #0f172a; font-size: 18px;">📈 Dashboard Analitica Globale</h2>
             
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div class="dashboard-modal-controls">
                 
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; background: #f1f5f9; padding: 0 12px; border-radius: 8px; margin: 0; height: 36px; box-sizing: border-box;">
                     <input type="checkbox" id="toggleProCapite" onchange="disegnaGraficiAvanzati()" style="margin: 0;"> Quota Pro Capite
@@ -1423,9 +1422,8 @@
                     <option value="2024">2024</option>
                 </select>
 
-                <button class="btn-primary" style="padding: 0 15px; font-size: 13px; background: #10b981; border: none; width: auto !important; height: 36px; margin: 0; display: flex; align-items: center;" onclick="esportaDashboard(this)">📸 Salva PNG</button>
-                
-                <button class="btn-secondary" style="padding: 0 15px; font-size: 13px; color: #ef4444; border-color: #fecaca; background: #fef2f2; width: auto !important; height: 36px; margin: 0; display: flex; align-items: center;" onclick="chiudiDashboard()">Chiudi ✖</button>
+                <button class="btn-primary dashboard-save-button" onclick="esportaDashboard(this)">📸 Salva PNG</button>
+                <button class="dashboard-close-button" aria-label="Chiudi dashboard" onclick="chiudiDashboard()">×</button>
                 
             </div>
         </div>
@@ -1433,17 +1431,17 @@
         <div style="padding: 25px; overflow-y: auto; background: #f8fafc;">
 
             <!-- CARD DI SINTESI (KPI) -->
-            <div id="kpiDashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+            <div id="kpiDashboard" class="dashboard-kpi-grid">
                 <!-- Generate dal Javascript -->
             </div>
 
             <!-- GRAFICI -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px;">
-                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+            <div class="dashboard-charts-grid">
+                <div class="dashboard-chart-card">
                     <h3 style="margin: 0 0 15px 0; font-size: 15px; color: #334155;">Confronto Costo Eventi (Trend)</h3>
                     <canvas id="chartTrendEventi"></canvas>
                 </div>
-                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                <div class="dashboard-chart-card">
                     <h3 style="margin: 0 0 15px 0; font-size: 15px; color: #334155;">Distribuzione Categorie</h3>
                     <div style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
                         <canvas id="chartCategorieGlobali"></canvas>

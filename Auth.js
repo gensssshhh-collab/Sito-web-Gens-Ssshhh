@@ -289,6 +289,106 @@ function inviaRichiestaDimissioni(dati) {
   } catch(e) { return "ERRORE_MAIL"; }
 }
 
+function inviaAvvisiScadenzaTessere() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var foglioSoci = ss.getSheetByName("soci");
+  if (!foglioSoci || foglioSoci.getLastRow() < 2) return "NESSUN_SOCIO";
+
+  var dati = foglioSoci.getDataRange().getValues();
+  var intestazioni = dati[0].map(function(value) { return String(value).trim().toLowerCase(); });
+  var indice = function(nome, fallback) {
+    var trovato = intestazioni.indexOf(nome.toLowerCase());
+    return trovato >= 0 ? trovato : fallback;
+  };
+  var idxEmail = indice("Email", 2);
+  var idxNome = indice("Nome", 0);
+  var idxCognome = indice("Cognome", 4);
+  var idxScadenza = indice("Data Scadenza", 10);
+  var idxStato = indice("Stato Socio", 11);
+  var oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
+  var proprieta = PropertiesService.getScriptProperties();
+  var risultati = { inviati: 0, saltati: 0, errori: 0 };
+  var tesoriere = trovaTesorierePerEmail_(dati, intestazioni, indice);
+  var urlWebApp = "https://sites.google.com/view/gens-ssshhhh/area-riservata";
+
+  for (var i = 1; i < dati.length; i++) {
+    var stato = String(dati[i][idxStato] || "").trim().toLowerCase();
+    if (stato !== "attivo") continue;
+    var email = String(dati[i][idxEmail] || "").trim().toLowerCase();
+    if (!email || email.indexOf("@") < 1) continue;
+    var scadenza = parseDataNotificaGlobale_(dati[i][idxScadenza]);
+    if (!scadenza) continue;
+    scadenza.setHours(0, 0, 0, 0);
+    var giorni = Math.ceil((scadenza.getTime() - oggi.getTime()) / 86400000);
+    var tipo = giorni < 0 ? "SCADUTA" : giorni === 30 ? "PRE_SCADENZA" : "";
+    if (!tipo) continue;
+
+    var chiave = "AVVISO_TESSERA|" + tipo + "|" + email + "|" + scadenza.getTime();
+    if (proprieta.getProperty(chiave)) {
+      risultati.saltati++;
+      continue;
+    }
+
+    var nome = String(dati[i][idxNome] || "").trim();
+    var cognome = String(dati[i][idxCognome] || "").trim();
+    var dataFormattata = Utilities.formatDate(scadenza, "Europe/Rome", "dd/MM/yyyy");
+    var oggetto = tipo === "SCADUTA" ? "Tessera associativa scaduta" : "La tua tessera scade tra 30 giorni";
+    var testo = tipo === "SCADUTA"
+      ? "La tua tessera associativa è scaduta il " + dataFormattata + ".\n\nPer regolarizzare la tua posizione, accedi all'Area Riservata e apri la sezione Profilo.\n\nLa quota associativa è di 10 euro e va versata al Tesoriere attuale: " + tesoriere.nome + (tesoriere.email ? " (" + tesoriere.email + ")" : ".")
+      : "La tua tessera associativa scadrà il " + dataFormattata + ".\n\nPer rinnovarla, accedi all'Area Riservata e apri la sezione Profilo.\n\nLa quota associativa è di 10 euro e va versata al Tesoriere attuale: " + tesoriere.nome + (tesoriere.email ? " (" + tesoriere.email + ")" : ".");
+    testo += "\n\nArea Riservata: " + urlWebApp + "\n\nQuesta è l'unica comunicazione email automatica prevista per questo evento.";
+
+    try {
+      MailApp.sendEmail(email, oggetto, "Ciao " + (nome || cognome || "Socio") + ",\n\n" + testo);
+      proprieta.setProperty(chiave, new Date().toISOString());
+      scriviLog(email, "EMAIL_TESSERA_" + tipo, "Scadenza " + dataFormattata);
+      risultati.inviati++;
+    } catch (errore) {
+      console.log("Errore email scadenza " + email + ": " + errore);
+      risultati.errori++;
+    }
+  }
+  return risultati;
+}
+
+function parseDataNotificaGlobale_(valore) {
+  if (!valore) return null;
+  if (valore instanceof Date) return isNaN(valore.getTime()) ? null : new Date(valore.getTime());
+  var testo = String(valore).trim();
+  var parti = testo.split(/[\/\-.]/);
+  if (parti.length === 3) {
+    if (parti[0].length === 4) return new Date(Number(parti[0]), Number(parti[1]) - 1, Number(parti[2]));
+    return new Date(Number(parti[2]), Number(parti[1]) - 1, Number(parti[0]));
+  }
+  var data = new Date(testo);
+  return isNaN(data.getTime()) ? null : data;
+}
+
+function trovaTesorierePerEmail_(dati, intestazioni, indice) {
+  var idxNome = indice("Nome", 0);
+  var idxCognome = indice("Cognome", 4);
+  var idxEmail = indice("Email", 2);
+  var idxRuolo = indice("Carica sociale", 12);
+  for (var i = 1; i < dati.length; i++) {
+    if (String(dati[i][idxRuolo] || "").trim().toUpperCase() === "TESORIERE") {
+      return {
+        nome: (String(dati[i][idxNome] || "") + " " + String(dati[i][idxCognome] || "")).trim() || "il Tesoriere",
+        email: String(dati[i][idxEmail] || "").trim()
+      };
+    }
+  }
+  return { nome: "il Tesoriere", email: "" };
+}
+
+function configuraTriggerAvvisiScadenzaTessere() {
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === "inviaAvvisiScadenzaTessere") ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger("inviaAvvisiScadenzaTessere").timeBased().everyDays(1).atHour(8).create();
+  return "TRIGGER_CONFIGURATO";
+}
+
 
 
 function getStartData(email) {
