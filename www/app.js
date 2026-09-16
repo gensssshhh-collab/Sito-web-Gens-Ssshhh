@@ -37,6 +37,41 @@ var curEmail = "";
 var curPass = "";
 var curDocMode = "PUBBLICO";
 var configVoto = { mode: "", max: 1 };
+var pushNotificationsInitialized = false;
+
+function inizializzaNotifichePush() {
+    if (pushNotificationsInitialized || !window.Capacitor || !window.Capacitor.Plugins) return;
+
+    var PushNotifications = window.Capacitor.Plugins.PushNotifications;
+    if (!PushNotifications || !curEmail) return;
+    pushNotificationsInitialized = true;
+
+    PushNotifications.addListener('registration', function(token) {
+        chiamaServer('registraTokenPush', {
+            email: curEmail,
+            token: token.value,
+            piattaforma: 'android'
+        });
+    });
+
+    PushNotifications.addListener('registrationError', function(error) {
+        console.error('Registrazione notifiche push fallita:', error);
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', function(action) {
+        var data = action && action.notification && action.notification.data;
+        if (data && data.viewId) nav(data.viewId);
+    });
+
+    PushNotifications.requestPermissions().then(function(permission) {
+        if (permission.receive === 'granted') {
+            return PushNotifications.register();
+        }
+        console.warn('Permesso notifiche non concesso.');
+    }).catch(function(error) {
+        console.error('Impossibile richiedere il permesso notifiche:', error);
+    });
+}
 
 
 // Funzione per mostrare notifiche fluttuanti (Stile iOS)
@@ -307,6 +342,8 @@ async function faiLogin() {
 
 function renderStartData(data, fromCache) {
     if(!data || !data.utente) return;
+
+    inizializzaNotifichePush();
     
     // =================================================================
     // NUOVO: ACCENDIAMO LA BOTTOM BAR SE L'UTENTE E' LOGGATO CON SUCCESSO
@@ -339,6 +376,7 @@ function renderStartData(data, fromCache) {
     if (walletScadenza) walletScadenza.innerText = u.scadenza || "-";
     if (walletQr) walletQr.src = qrUrl;
     if (walletAvatar) walletAvatar.innerText = (u.nome || "U").charAt(0).toUpperCase();
+    aggiornaAvvisoScadenza(u.scadenza);
 
     // Gestione Menu Admin (se l'utente è admin)
     if (u.isAdmin === true) {
@@ -363,11 +401,12 @@ function renderStartData(data, fromCache) {
 
     // 2. POPOLA NEWS (Senza fare un'altra chiamata!)
     var divNews = document.getElementById('containerAvvisi');
-    if(!data.avvisi || data.avvisi.length === 0) {
+    var avvisiRecenti = filtraAvvisiRecenti(data.avvisi || []);
+    if(avvisiRecenti.length === 0) {
         divNews.innerHTML = "<p style='color:var(--text-muted); font-size:14px; font-style:italic;'>Nessun avviso recente.</p>";
     } else {
         var htmlNews = "";
-        data.avvisi.forEach(a => {
+        avvisiRecenti.forEach(a => {
             htmlNews += `<div class="news-item" style="border-bottom:1px solid #f1f5f9; padding-bottom:10px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div style="font-weight:bold; color:#0f172a; font-size:14px;">${a.titolo}</div>
@@ -392,6 +431,53 @@ function renderStartData(data, fromCache) {
         cardVoto.style.color="var(--primary)";
     }
 
+}
+
+function parseDataUtente(valore) {
+    if (!valore) return null;
+    if (valore instanceof Date) return isNaN(valore.getTime()) ? null : new Date(valore.getTime());
+    var testo = String(valore).trim();
+    var parti = testo.split(/[\/\-.]/);
+    if (parti.length === 3) {
+        if (parti[0].length === 4) return new Date(Number(parti[0]), Number(parti[1]) - 1, Number(parti[2]));
+        return new Date(Number(parti[2]), Number(parti[1]) - 1, Number(parti[0]));
+    }
+    var data = new Date(testo);
+    return isNaN(data.getTime()) ? null : data;
+}
+
+function aggiornaAvvisoScadenza(valore) {
+    var alertBox = document.getElementById('membershipExpiryAlert');
+    if (!alertBox) return;
+    var scadenza = parseDataUtente(valore);
+    if (!scadenza) {
+        alertBox.className = 'membership-expiry-alert hidden';
+        return;
+    }
+    var oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    scadenza.setHours(0, 0, 0, 0);
+    var giorni = Math.ceil((scadenza.getTime() - oggi.getTime()) / 86400000);
+    if (giorni < 0) {
+        alertBox.className = 'membership-expiry-alert is-expired';
+        alertBox.innerHTML = '<strong>Tessera scaduta</strong><span>Versa la quota associativa di 10 euro per rinnovarla.</span>';
+    } else if (giorni <= 30) {
+        alertBox.className = 'membership-expiry-alert is-warning';
+        alertBox.innerHTML = '<strong>Tessera in scadenza</strong><span>Scade tra ' + giorni + ' giorni. Quota associativa: 10 euro.</span>';
+    } else {
+        alertBox.className = 'membership-expiry-alert hidden';
+    }
+}
+
+function filtraAvvisiRecenti(avvisi, giorniMassimi) {
+    var soglia = giorniMassimi || 30;
+    var limite = new Date();
+    limite.setHours(0, 0, 0, 0);
+    limite.setDate(limite.getDate() - soglia);
+    return (Array.isArray(avvisi) ? avvisi : []).filter(function(avviso) {
+        var data = parseDataUtente(avviso.data || avviso.dataPubblicazione || avviso.createdAt);
+        return data && data >= limite;
+    });
 }
 
 function initApp() {
@@ -1388,6 +1474,7 @@ function caricaNewsDashboard() {
     if(!div.innerHTML.includes('news-item')) div.innerHTML = "<div class='loader'></div>";
 
     chiamaServer("getAvvisiPubblici").then(function(avvisi){
+        avvisi = filtraAvvisiRecenti(avvisi);
         if(avvisi.length === 0) {
             div.innerHTML = "<p style='color:var(--text-muted); font-size:14px; font-style:italic;'>Nessun avviso recente.</p>";
             return;
@@ -1495,6 +1582,7 @@ function openWallet() {
     if (walletCode) walletCode.innerText = code;
     if (walletQr) walletQr.src = qrSrc;
     if (walletStatus) walletStatus.innerText = 'ATTIVO';
+    const scadenza = walletScadenza ? walletScadenza.innerText : '-';
     if (walletScadenza && walletScadenza.innerText === '-') walletScadenza.innerText = '-';
     if (walletAvatar && nome && nome !== '-') {
         const initial = nome.trim().charAt(0).toUpperCase();
@@ -1504,6 +1592,7 @@ function openWallet() {
     document.getElementById('passNome').innerText = nome;
     document.getElementById('passRuolo').innerText = ruolo;
     document.getElementById('passTessera').innerText = code;
+    document.getElementById('passScad').innerText = scadenza || '-';
     document.getElementById('passQr').src = qrSrc;
     
     // Apri il modale

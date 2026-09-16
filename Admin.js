@@ -464,6 +464,7 @@ function adminPubblicaNews(dati) {
   var id = "news_" + new Date().getTime();
   
   sheet.appendRow([new Date(), dati.titolo, dati.testo, id]);
+  try { inviaNotificaPush(dati.titolo, dati.testo); } catch (e) { console.log(e); }
   return "OK";
 }
 

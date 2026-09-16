@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "152579274557",
+    "project_id": "gens-ssshhh",
+    "storage_bucket": "gens-ssshhh.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:152579274557:android:e5f128fe9153e09b8c3754",
+        "android_client_info": {
+          "package_name": "it.associazione.gens_ssshhh"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbLkIYrqhej-GSXNaZCt_UHILCpvjrWN8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

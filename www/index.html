@@ -146,6 +146,7 @@
         
         <div id="viewDash" class="page-section active">
           <h2 id="welcomeMsg" style="margin-top:0; margin-bottom:20px;">Benvenuto</h2>
+          <div id="membershipExpiryAlert" class="membership-expiry-alert hidden" role="alert"></div>
 
           <div id="walletHomeCard" class="wallet-profile-card home-wallet-card">
               <div class="wallet-profile-header">
@@ -153,7 +154,10 @@
                       <div class="wallet-profile-label">Tessera digitale</div>
                       <div class="wallet-profile-title">Gens Ssshhh</div>
                   </div>
-                  <button class="wallet-profile-btn" onclick="openWallet()">Apri card</button>
+                  <div class="wallet-profile-actions">
+                      <button class="wallet-profile-btn" onclick="openWallet()">Apri card</button>
+                      <button class="wallet-profile-btn wallet-download-btn" onclick="scaricaTesseraPDF()">Download PDF</button>
+                  </div>
               </div>
 
               <div class="wallet-profile-body">
@@ -273,7 +277,7 @@
         </div>
 
         <!-- GRIGLIA PRINCIPALE A 2 COLONNE -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+        <div class="election-layout" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
             
             <!-- ================= COLONNA SINISTRA ================= -->
             <div style="display: flex; flex-direction: column; gap: 25px;">
@@ -547,7 +551,7 @@
           <button class="btn-secondary" style="width:auto; padding:6px 12px; font-size:12px;" onclick="tornaAiGruppi()">⬅ I miei Gruppi</button>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+    <div class="expenses-main-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
         
         <!-- Modulo Inserimento Spesa -->
         <div style="background:white; padding:25px; border-radius:12px; border:1px solid var(--border);">
@@ -1244,6 +1248,7 @@
                 <div style="font-size:10px; color:#94a3b8; margin-top:2px;">Scadenza <span id="passScad">-</span></div>
             </div>
         </div>
+        <button class="pass-download-btn" type="button" onclick="scaricaTesseraPDF()">Download tessera PDF</button>
     </div>
     
     <div style="position:absolute; bottom:40px; color:rgba(255,255,255,0.5); font-size:12px;">
