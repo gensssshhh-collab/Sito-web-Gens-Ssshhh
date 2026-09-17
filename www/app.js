@@ -608,7 +608,7 @@ function handleVoteClick(el, type) {
        var checked = document.querySelectorAll('input[name="votoCand"]:checked');
        if(checked.length > configVoto.max) { 
          inp.checked = false; el.classList.remove('selected'); 
-         alert("Massimo " + configVoto.max + " preferenze."); 
+         showToast("Massimo " + configVoto.max + " preferenze.", "error"); 
        }
     }, 10);
   }
@@ -616,7 +616,6 @@ function handleVoteClick(el, type) {
 
 function inviaVoto() {
   var checked = document.querySelectorAll('input[name="votoCand"]:checked');
-  // Vecchio: if(checked.length === 0) return alert("Seleziona un candidato.");
   if(checked.length === 0) return showToast("Devi selezionare un candidato!", "error"); // NUOVO
   
   var scelte = []; checked.forEach(c => scelte.push(c.value));
@@ -624,7 +623,6 @@ function inviaVoto() {
   if(!confirm("Confermi il voto?")) return;
   
   chiamaServer("riceviVoto", {email:curEmail, password: curPass, candidato:scelte}).then(function(r){
-    // Vecchio: alert(r==="SUCCESS"?"Voto Registrato!":"Errore");
     if(r === "SUCCESS") {
         showToast("Voto registrato correttamente!", "success");
     } else {
@@ -940,7 +938,7 @@ function copiaHash() {
     navigator.clipboard.writeText(text).then(function() {
         showToast("Codice copiato negli appunti!", "success");
     }, function(err) {
-        alert("Copia manuale: " + text);
+        showToast("Copia manuale: " + text, "info");
     });
 }
 
@@ -951,7 +949,7 @@ function salvaProfilo() {
 
 function richiediDimissioni() {
   if(confirm("Sei sicuro di voler richiedere le dimissioni?")) {
-    chiamaServer("inviaRichiestaDimissioni", {email:curEmail, password:curPass}).then(function(){ alert("Richiesta inviata."); });
+    chiamaServer("inviaRichiestaDimissioni", {email:curEmail, password:curPass}).then(function(){ showToast("Richiesta inviata.", "success"); });
   }
 }
 
@@ -960,7 +958,7 @@ function scaricaTesseraPDF() {
     var emailDownload = curEmail || localStorage.getItem('gens_email') || '';
     chiamaServer("generaTesseraPDF", emailDownload, true).then(function(dataUrl){
         if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:application/pdf;base64,")) {
-            return alert(typeof dataUrl === "string" && dataUrl.startsWith("ERRORE") ? dataUrl : "Impossibile generare il PDF.");
+            return showToast(typeof dataUrl === "string" && dataUrl.startsWith("ERRORE") ? dataUrl : "Impossibile generare il PDF.", "error");
         }
 
         try {
@@ -982,35 +980,55 @@ function scaricaTesseraPDF() {
         }
     }).catch(function(error) {
         console.error("Download tessera fallito:", error);
-        alert("Download non disponibile: " + (error.message || "errore di connessione al server."));
+        showToast("Download non disponibile: " + (error.message || "errore di connessione al server."), "error");
     });
 }
 
 function recupera() {
   var e = document.getElementById('recEmail').value;
-  if(!e) return alert("Inserisci email");
+    if(!e) return showToast("Inserisci la tua email per continuare.", "error");
   chiamaServer("inviaLinkReset", e).then(function(r){
-    if(r==="LINK_INVIATO") { alert("Link inviato (se email esiste)."); toggleView('viewLogin'); }
-    else alert("Errore");
+        if(r==="LINK_INVIATO") {
+            showToast("Se l'indirizzo è associato a un account, riceverai il link a breve.", "success");
+            toggleView('viewLogin');
+        } else showToast("Non è stato possibile inviare il link. Riprova.", "error");
+    }).catch(function() {
+        showToast("Non è stato possibile inviare il link. Riprova.", "error");
   });
 }
 
 function eseguiCambio() {
   var e=document.getElementById('cpEmail').value, o=document.getElementById('cpOld').value, n=document.getElementById('cpNew').value;
-  if(!e||!o||!n) return alert("Compila tutto");
+    if(!e||!o||!n) return showToast("Compila tutti i campi.", "error");
   chiamaServer("cambiaPassword", {email:e, oldPass:o, newPass:n}).then(function(r){
-    if(r==="CAMBIO_OK") { alert("Password cambiata!"); toggleView('viewLogin'); }
-    else alert("Errore credenziali");
+    if(r==="CAMBIO_OK") { showToast("Password cambiata!", "success"); toggleView('viewLogin'); }
+    else showToast("Errore credenziali", "error");
   });
 }
 
 function salvaPassReset() {
   var t=document.getElementById('tokenReset').value, p1=document.getElementById('newResetPass').value, p2=document.getElementById('newResetPassConfirm').value;
-  if(p1!==p2) return alert("Non coincidono");
+    if(!p1 || !p2) return showToast("Compila entrambi i campi.", "error");
+    if(p1!==p2) return showToast("Le password non coincidono.", "error");
+    if(p1.length < 6) return showToast("La password deve contenere almeno 6 caratteri.", "error");
   chiamaServer("completaResetPassword", [t, p1]).then(function(r){
-    if(r==="SUCCESS") { alert("Password aggiornata!"); window.location.href = window.location.href.split('?')[0]; }
-    else alert("Link scaduto o errore");
+        if(r==="SUCCESS") {
+            showToast("Password aggiornata. Ora puoi accedere.", "success");
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setTimeout(function() { toggleView('viewLogin'); }, 1200);
+        } else showToast("Il link è scaduto o non è valido.", "error");
+    }).catch(function() {
+        showToast("Impossibile aggiornare la password. Riprova.", "error");
   });
+}
+
+function gestisciTokenReset() {
+        var token = new URLSearchParams(window.location.search).get('resetToken');
+        if (!token) return false;
+        document.getElementById('tokenReset').value = token;
+        document.getElementById('appInterface').classList.add('hidden');
+        toggleView('viewResetFinale');
+        return true;
 }
 
 function setVoto(nuovoStato) {
@@ -1042,7 +1060,7 @@ function switchAdminTab(tabId, el) {
 
 function caricaDatiAdmin() {
     chiamaServer("getDashboardAdmin", curEmail).then(function(data){
-        if(!data) return alert("Errore caricamento o Accesso Negato");
+        if(!data) return showToast("Errore caricamento o accesso negato.", "error");
         
         // A. STATISTICHE GENERALI (Con controlli di sicurezza se l'ID non c'è nella pagina)
         if(document.getElementById('admTotSoci')) document.getElementById('admTotSoci').innerText = data.totSoci || 0;
@@ -1116,7 +1134,7 @@ function rinnovoRapido(emailSocio, nomeSocio) {
     if (metodo === "1") metodoPagamento = "CONTANTI";
     else if (metodo === "2") metodoPagamento = "BONIFICO";
     else {
-        alert("Metodo non valido. Operazione annullata.");
+        showToast("Metodo non valido. Operazione annullata.", "error");
         return;
     }
     
@@ -1278,12 +1296,8 @@ function salvaModificheSocioAdmin() {
 /* --- AUTO START E GESTIONE SESSIONE --- */
 window.onload = function() {
     aggiornaStatoRete();
-  // 1. Controllo Token Reset Password (Se provieni da una mail)
-  var token = document.getElementById('tokenReset').value;
-  if(token && token !== "") {
-      toggleView('viewResetFinale');
-      return;
-  }
+    // 1. Intercetta il token prima dell'autologin e mostra solo il reset.
+    if (gestisciTokenReset()) return;
 
   // 2. Controllo Auto-Login (Ricorda utente)
   var savedEmail = localStorage.getItem('gens_email');
@@ -1740,7 +1754,7 @@ var htmlOpzioniConti = '<option value="">Caricamento conti in corso...</option>'
 // Chiamata al server per leggere dal nuovo foglio "conti"
 function caricaContiDalNuovoFoglio() {
     chiamaServer("getPianoDeiContiDinamico").then(function(datiConti) {
-        if (!datiConti) return alert("Errore nel caricamento conti");
+        if (!datiConti) return showToast("Errore nel caricamento conti.", "error");
         var optGroups = {};
         for(var i = 1; i < datiConti.length; i++) {
             var cat = datiConti[i][0];
@@ -1871,7 +1885,7 @@ function inviaAccettazione() {
             document.getElementById('appInterface').classList.remove('hidden');
             initApp(); // Avvia l'app finalmente
         } else {
-            alert("Errore di connessione. Riprova.");
+            showToast("Errore di connessione. Riprova.", "error");
         }
     });
 }
@@ -2119,7 +2133,7 @@ function eseguiControfirma(idReq) {
             showToast("Documento validato!", "success");
             caricaStatsFirme(); // Ricarica la lista
         } else {
-            alert("Errore");
+            showToast("Errore durante l'operazione.", "error");
         }
     });
 }
@@ -2198,14 +2212,14 @@ function adminInviaFirma() {
     var mode = document.getElementById('signTarget').value;
     var needCounter = document.getElementById('checkControfirma').checked;
     
-    if(fi.files.length === 0) return alert("Seleziona un PDF");
+    if(fi.files.length === 0) return showToast("Seleziona un PDF.", "error");
 
     var targetFinale = mode; // Di base è la stringa (TUTTI, DIRETTIVO...)
 
     // SE È MANUALE, raccogli gli array
     if (mode === 'MANUAL') {
         var checked = document.querySelectorAll('.chk-socio:checked');
-        if (checked.length === 0) return alert("Seleziona almeno un socio dalla lista!");
+        if (checked.length === 0) return showToast("Seleziona almeno un socio dalla lista.", "error");
         
         var listaEmail = [];
         checked.forEach(c => listaEmail.push(c.value));
@@ -2240,7 +2254,7 @@ function adminInviaFirma() {
                 if(mode==='MANUAL') toggleSelezioneManuale(); 
                 caricaStatsFirme();
             } else {
-                alert("Errore: " + res);
+                showToast("Errore: " + res, "error");
             }
         });
     };
@@ -3027,7 +3041,7 @@ function adminChiudiSpoglioAmmissione(emailCandidato) {
                             "\nQuorum 2/3 Richiesto: " + pezzi[4] + 
                             "\nVoti Favorevoli: " + pezzi[2] + 
                             "\n\nESITO FINALE: " + esito;
-            alert(messaggio);
+            showToast(messaggio, "info");
         } else {
             showToast("Errore: " + res, "error");
         }
@@ -3109,7 +3123,7 @@ function adminChiudiSpoglioAmmissione(emailCandidato) {
                             "ESITO ASSEMBLEA: " + esito;
             
             // Usiamo un alert classico in modo che l'Admin sia obbligato a leggerlo e cliccare OK
-            alert(messaggio); 
+            showToast(messaggio, "info");
             caricaAmmissioniAdmin(); // Aggiorna il pannello (facendo sparire la pratica completata)
         } else {
             showToast("Errore: " + res, "error");
@@ -3485,7 +3499,7 @@ function unisciCostiVacanze(costiFissi, reportCsv) {
 
 function apriDashboardInterattiva() {
     document.getElementById('modalDashboard').classList.add('show');
-    document.getElementById('kpiDashboard').innerHTML = '<div class="dashboard-loading">Sincronizzazione costi vacanze...</div>';
+    document.getElementById('kpiDashboard').innerHTML = '<div class="dashboard-loading">Sincronizzazione gruppi e archivio storico...</div>';
     Promise.all([
         chiamaServer("getCostiVacanzeDashboard"),
         chiamaServer("getReportStorici")
@@ -3511,7 +3525,7 @@ function disegnaGraficiAvanzati() {
     let categorieSommate = {};
     let spesaTotaleGlobale = 0;
 
-    // 1. Estrazione dati dal foglio costi vacanze.
+    // 1. Estrazione dati unificati: preventivo, costi fissi e Splitwise.
     reports.forEach(rep => {
         let annoRep = Number(rep.anno) || ((rep.nome.match(/\d{4}/) || [0])[0] * 1);
         
@@ -3577,18 +3591,9 @@ function disegnaGraficiAvanzati() {
     }
 
     document.getElementById('kpiDashboard').innerHTML = `
-        <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Spesa ${isProCapite ? 'Pro Capite' : 'Totale'}</div>
-            <div style="font-size: 26px; font-weight: 800; color: #0f172a; margin-top: 5px;">€ ${spesaTotaleGlobale.toFixed(2)}</div>
-        </div>
-        <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Media per Viaggio</div>
-            <div style="font-size: 26px; font-weight: 800; color: #0f172a; margin-top: 5px;">€ ${mediaViaggio.toFixed(2)}</div>
-        </div>
-        <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #f59e0b; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Categoria Top</div>
-            <div style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${topCatNome}</div>
-        </div>
+        <div class="dashboard-kpi-card kpi-budget"><div class="kpi-label">Spesa ${isProCapite ? 'Pro Capite' : 'Totale'}</div><div class="kpi-value">€ ${spesaTotaleGlobale.toFixed(2)}</div></div>
+        <div class="dashboard-kpi-card kpi-spent"><div class="kpi-label">Media per Viaggio</div><div class="kpi-value">€ ${mediaViaggio.toFixed(2)}</div></div>
+        <div class="dashboard-kpi-card kpi-category"><div class="kpi-label">Categoria Top</div><div class="kpi-value kpi-value-text">${topCatNome}</div></div>
     `;
 
     // --- Preparazione array per Chart.js ---
@@ -3607,17 +3612,8 @@ function disegnaGraficiAvanzati() {
         type: 'bar',
         data: {
             labels: etichetteEventi,
-            datasets: [{
-                label: 'Spese Fisse (€)',
-                data: costiFissiEventi,
-                backgroundColor: '#6366f1',
-                borderRadius: 6,
-            }, {
-                label: 'Spese Variabili (€)',
-                data: costiVariabiliEventi,
-                backgroundColor: '#10b981',
-                borderRadius: 6
-            }]
+            datasets: [{ label: 'Spese Fisse (€)', data: costiFissiEventi, backgroundColor: '#6366f1', borderRadius: 6 },
+                { label: 'Spese Variabili (€)', data: costiVariabiliEventi, backgroundColor: '#10b981', borderRadius: 6 }]
         },
         options: { responsive: true, plugins: { legend: { display: true } }, scales: { x: { stacked: true, ticks: { maxRotation: 45, minRotation: 45 } }, y: { stacked: true, beginAtZero: true } } }
     });
@@ -3665,6 +3661,8 @@ function disegnaGraficiAvanzati() {
                     chartTrend.data.datasets[0].label = 'Spese Fisse (€)';
                     chartTrend.data.datasets[0].backgroundColor = '#6366f1';
                     chartTrend.data.datasets[1].data = costiVariabiliEventi;
+                    chartTrend.data.datasets[1].label = 'Spese Variabili (€)';
+                    chartTrend.data.datasets[1].backgroundColor = '#10b981';
                     chartTrend.update();
                 }
             }
@@ -4664,17 +4662,17 @@ function salvaMovimentoComposto() {
     }
 
     if (!desc) {
-        alert("Inserisci una descrizione generale.");
+        showToast("Inserisci una descrizione generale.", "error");
         return;
     }
 
     if (righe.length === 0) {
-        alert("Aggiungi almeno una riga contabile valida.");
+        showToast("Aggiungi almeno una riga contabile valida.", "error");
         return;
     }
 
     if (Math.abs(totDare - totAvere) > 0.01) {
-        alert("Il movimento non quadra! Totale DARE e Totale AVERE devono coincidere.");
+        showToast("Il movimento non quadra: Totale DARE e Totale AVERE devono coincidere.", "error");
         return;
     }
 
@@ -4683,10 +4681,10 @@ function salvaMovimentoComposto() {
 
     chiamaServer("registraMovimentoCompostoServer", { data: data, doc: doc, tipoAtt: tipoAtt, desc: desc, controparte: controparte, piva: piva, righe: righe }).then(function(risultato) {
         if(risultato) {
-            alert("Registrazione completata con successo!");
+            showToast("Registrazione completata con successo!", "success");
             if(typeof aggiornaListaMovimentiPD === 'function') aggiornaListaMovimentiPD();
         } else {
-            alert("Errore di salvataggio");
+            showToast("Errore di salvataggio.", "error");
         }
         if(btn) { btn.disabled = false; btn.innerText = "Salva Movimento Quadrato"; }
     });

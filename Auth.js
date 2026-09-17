@@ -133,9 +133,10 @@ function inviaLinkReset(email) {
       foglioSoci.getRange(i + 1, 8).setValue(token); // Colonna H
       foglioSoci.getRange(i + 1, 9).setValue(ora);   // Colonna I
       
-      // 3. Crea il Link
-      // Nota: ScriptApp.getService().getUrl() ti dà l'indirizzo della tua Web App
-      var link = ScriptApp.getService().getUrl() + "?token=" + token;
+      // Il link deve aprire il frontend pubblico: il backend ricevera il token
+      // tramite la chiamata POST completaResetPassword.
+      var frontendResetUrl = "https://gensssshhh-collab.github.io/Sito-web-Gens-Ssshhh/index.html";
+      var link = frontendResetUrl + "?resetToken=" + encodeURIComponent(token);
       
       // 4. Invia Mail
       try {
@@ -300,6 +301,7 @@ function inviaAvvisiScadenzaTessere() {
     var trovato = intestazioni.indexOf(nome.toLowerCase());
     return trovato >= 0 ? trovato : fallback;
   };
+  
   var idxEmail = indice("Email", 2);
   var idxNome = indice("Nome", 0);
   var idxCognome = indice("Cognome", 4);
@@ -307,6 +309,7 @@ function inviaAvvisiScadenzaTessere() {
   var idxStato = indice("Stato Socio", 11);
   var oggi = new Date();
   oggi.setHours(0, 0, 0, 0);
+  
   var proprieta = PropertiesService.getScriptProperties();
   var risultati = { inviati: 0, saltati: 0, errori: 0 };
   var tesoriere = trovaTesorierePerEmail_(dati, intestazioni, indice);
@@ -320,6 +323,7 @@ function inviaAvvisiScadenzaTessere() {
     var scadenza = parseDataNotificaGlobale_(dati[i][idxScadenza]);
     if (!scadenza) continue;
     scadenza.setHours(0, 0, 0, 0);
+    
     var giorni = Math.ceil((scadenza.getTime() - oggi.getTime()) / 86400000);
     var tipo = giorni < 0 ? "SCADUTA" : giorni === 30 ? "PRE_SCADENZA" : "";
     if (!tipo) continue;
@@ -332,15 +336,79 @@ function inviaAvvisiScadenzaTessere() {
 
     var nome = String(dati[i][idxNome] || "").trim();
     var cognome = String(dati[i][idxCognome] || "").trim();
+    var nomeSocio = nome || cognome || "Socio";
     var dataFormattata = Utilities.formatDate(scadenza, "Europe/Rome", "dd/MM/yyyy");
-    var oggetto = tipo === "SCADUTA" ? "Tessera associativa scaduta" : "La tua tessera scade tra 30 giorni";
-    var testo = tipo === "SCADUTA"
-      ? "La tua tessera associativa è scaduta il " + dataFormattata + ".\n\nPer regolarizzare la tua posizione, accedi all'Area Riservata e apri la sezione Profilo.\n\nLa quota associativa è di 10 euro e va versata al Tesoriere attuale: " + tesoriere.nome + (tesoriere.email ? " (" + tesoriere.email + ")" : ".")
-      : "La tua tessera associativa scadrà il " + dataFormattata + ".\n\nPer rinnovarla, accedi all'Area Riservata e apri la sezione Profilo.\n\nLa quota associativa è di 10 euro e va versata al Tesoriere attuale: " + tesoriere.nome + (tesoriere.email ? " (" + tesoriere.email + ")" : ".");
-    testo += "\n\nArea Riservata: " + urlWebApp + "\n\nQuesta è l'unica comunicazione email automatica prevista per questo evento.";
+    
+    // --- INIZIO NUOVA FORMATTAZIONE EMAIL ---
+    var oggetto = tipo === "SCADUTA" ? "Azione richiesta: Tessera associativa scaduta" : "Promemoria: Scadenza tessera associativa";
+    
+    var titoloEmail = tipo === "SCADUTA" ? "La tua tessera è scaduta" : "Scadenza in avvicinamento";
+    var testoIntro = tipo === "SCADUTA" 
+      ? "Ti informiamo che la tua tessera associativa è risultata scaduta in data <strong>" + dataFormattata + "</strong>."
+      : "Ti ricordiamo che la tua tessera associativa scadrà tra 30 giorni, in data <strong>" + dataFormattata + "</strong>.";
+      
+    var htmlBody = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 30px 10px; color: #3f3f46; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .header { background-color: #1e293b; padding: 25px 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 0.5px; }
+        .content { padding: 35px 30px; line-height: 1.6; font-size: 16px; }
+        .title { font-size: 20px; color: #18181b; margin-top: 0; margin-bottom: 20px; font-weight: 600; }
+        .info-box { background-color: #f8fafc; border-left: 4px solid #10b981; padding: 15px 20px; margin: 25px 0; border-radius: 0 4px 4px 0; }
+        .info-box p { margin: 5px 0; font-size: 15px; }
+        .btn-container { text-align: center; margin: 35px 0 20px; }
+        .btn { background-color: #10b981; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; display: inline-block; }
+        .footer { background-color: #f4f4f5; padding: 20px; text-align: center; font-size: 12px; color: #71717a; border-top: 1px solid #e4e4e7; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Gens Ssshhh</h1>
+        </div>
+        <div class="content">
+          <h2 class="title">${titoloEmail}</h2>
+          <p>Ciao <strong>${nomeSocio}</strong>,</p>
+          <p>${testoIntro}</p>
+          <p>Per regolarizzare la tua posizione e continuare a partecipare alle attività dell'associazione, ti invitiamo a procedere con il rinnovo.</p>
+          
+          <div class="info-box">
+            <p><strong>Quota associativa:</strong> 10,00 €</p>
+            <p><strong>Tesoriere di riferimento:</strong> ${tesoriere.nome} ${tesoriere.email ? "(<a href='mailto:" + tesoriere.email + "'>" + tesoriere.email + "</a>)" : ""}</p>
+          </div>
+
+          <p>Puoi gestire il rinnovo aprendo la sezione Profilo all'interno della nostra Area Riservata.</p>
+          
+          <div class="btn-container">
+            <a href="${urlWebApp}" class="btn">Accedi all'Area Riservata</a>
+          </div>
+        </div>
+        <div class="footer">
+          <p>Questa è l'unica comunicazione automatica prevista per questa scadenza.</p>
+          <p>&copy; ${new Date().getFullYear()} Associazione Gens Ssshhh. Tutti i diritti riservati.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    // Testo di riserva per client email molto vecchi che non leggono l'HTML
+    var testoPlain = "Ciao " + nomeSocio + ",\n\n" + testoIntro.replace(/<[^>]*>?/gm, '') + "\n\nLa quota associativa è di 10 euro da versare al Tesoriere: " + tesoriere.nome + ". Vai all'Area Riservata per rinnovare: " + urlWebApp;
 
     try {
-      MailApp.sendEmail(email, oggetto, "Ciao " + (nome || cognome || "Socio") + ",\n\n" + testo);
+      // Usiamo il formato avanzato di MailApp per inviare l'HTML e impostare il mittente ufficiale
+      MailApp.sendEmail({
+        to: email,
+        subject: oggetto,
+        body: testoPlain,
+        htmlBody: htmlBody,
+        name: "Gens Ssshhh App"
+      });
+      
       proprieta.setProperty(chiave, new Date().toISOString());
       scriviLog(email, "EMAIL_TESSERA_" + tipo, "Scadenza " + dataFormattata);
       risultati.inviati++;
@@ -348,6 +416,7 @@ function inviaAvvisiScadenzaTessere() {
       console.log("Errore email scadenza " + email + ": " + errore);
       risultati.errori++;
     }
+    // --- FINE NUOVA FORMATTAZIONE EMAIL ---
   }
   return risultati;
 }
