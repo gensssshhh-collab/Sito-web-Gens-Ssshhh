@@ -4,12 +4,12 @@ function verificaLogin(dati) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioSoci = ss.getSheetByName("soci");
   var emailInput = dati.email.trim().toLowerCase();
-  
+
   // --- 1. CONTROLLO BRUTE FORCE (Novità) ---
   var cache = CacheService.getScriptCache();
   var lockKey = "block_login_" + Utilities.base64Encode(emailInput);
   var tentativi = Number(cache.get(lockKey)) || 0;
-  
+
   // Se ha fallito 5 volte, blocca e restituisce codice speciale
   if (tentativi >= 5) {
     scriviLog(emailInput, "LOGIN_BLOCCATO", "Troppi tentativi");
@@ -19,16 +19,16 @@ function verificaLogin(dati) {
   // --- 2. VERIFICA CREDENZIALI ---
   var passwordHash = creaHash(dati.password.trim()); // Usa il nuovo hash con SALT
   var datiSoci = foglioSoci.getDataRange().getValues();
-  
+
   for (var i = 1; i < datiSoci.length; i++) {
     if (datiSoci[i][2].toString().trim().toLowerCase() === emailInput) {
       if (datiSoci[i][1].toString() === passwordHash) {
         // SUCCESSO: Resetta il contatore e logga (CON INFO BROWSER)
         cache.remove(lockKey);
-        
+
         // *** QUESTA È LA RIGA MODIFICATA ***
         scriviLog(emailInput, "LOGIN_OK", dati.info);
-        
+
         return "OK_LOGIN";
       } else {
         // ERRORE: Incrementa contatore e blocca per 5 min (300 sec)
@@ -39,7 +39,7 @@ function verificaLogin(dati) {
       }
     }
   }
-  
+
   scriviLog(emailInput, "LOGIN_FALLITO_NO_USER");
   return "ERR_CREDENZIALI";
 }
@@ -48,22 +48,22 @@ function getHashUnivoco(email) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("soci");
   var dati = sheet.getDataRange().getValues();
-  var intestazioni = dati.length ? dati[0].map(function(value) { return String(value).trim().toLowerCase(); }) : [];
-  var indiceUuid = intestazioni.indexOf("id univoco");
+  var intestazioni = dati.length ? dati[0].map(function (value) { return String(value).trim().toLowerCase(); }) : [];
+  var indiceUuid = intestazioni.indexOf("ID_Univoco");
   if (indiceUuid < 0) indiceUuid = 18;
   var target = email.trim().toLowerCase();
-  
+
   for (var i = 1; i < dati.length; i++) {
     // Colonna C (indice 2) è l'email
     if (dati[i][2].toString().trim().toLowerCase() === target) {
       var uuid = dati[i][indiceUuid];
-      
+
       // SICUREZZA: Se per caso manca l'UUID (nuovo socio inserito a mano male), lo creiamo al volo
       if (!uuid || uuid === "") {
         uuid = Utilities.getUuid();
         sheet.getRange(i + 1, indiceUuid + 1).setValue(uuid); // Lo salviamo per il futuro
       }
-      
+
       // L'Hash ora si basa sull'UUID, non sull'email!
       return creaHash(uuid);
     }
@@ -76,13 +76,13 @@ function scriviLog(email, azione, infoExtra) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var foglioLog = ss.getSheetByName("Log");
     // Se non passi infoExtra, mette un trattino
-    var extra = infoExtra || "-"; 
-    
+    var extra = infoExtra || "-";
+
     if (foglioLog) {
       // Aggiunge riga: Data | Email | Azione | Info Extra
       foglioLog.appendRow([new Date(), email, azione, extra]);
     }
-  } catch(e) { console.log("Log Error: " + e); }
+  } catch (e) { console.log("Log Error: " + e); }
 }
 
 function cambiaPassword(dati) {
@@ -109,7 +109,7 @@ function eseguiResetPassword(emailInput) {
     if (datiSoci[i][2].toString().trim().toLowerCase() === emailTarget) {
       var passTemp = Math.random().toString(36).slice(-8);
       foglioSoci.getRange(i + 1, 2).setValue(creaHash(passTemp));
-      try { MailApp.sendEmail(emailTarget, "Nuova Password", "Password: " + passTemp); return "RESET_OK"; } catch(e) {}
+      try { MailApp.sendEmail(emailTarget, "Nuova Password", "Password: " + passTemp); return "RESET_OK"; } catch (e) { }
     }
   }
   return "EMAIL_NON_TROVATA";
@@ -120,65 +120,65 @@ function inviaLinkReset(email) {
   var foglioSoci = ss.getSheetByName("soci");
   var dati = foglioSoci.getDataRange().getValues();
   var emailTarget = email.trim().toLowerCase();
-  
+
   for (var i = 1; i < dati.length; i++) {
     if (dati[i][2].toString().trim().toLowerCase() === emailTarget) {
-      
+
       // 1. Genera un Token unico (basato su tempo e random)
       var token = Utilities.getUuid();
       var ora = new Date().getTime(); // Timestamp attuale
-      
+
       // 2. Salva Token e Orario nel foglio (Assumiamo Colonne H=7 e I=8, indici partono da 0)
       // Se le tue colonne sono diverse, adatta gli indici (7 e 8)
       foglioSoci.getRange(i + 1, 8).setValue(token); // Colonna H
       foglioSoci.getRange(i + 1, 9).setValue(ora);   // Colonna I
-      
+
       // Il link deve aprire il frontend pubblico: il backend ricevera il token
       // tramite la chiamata POST completaResetPassword.
       var frontendResetUrl = "https://gensssshhh-collab.github.io/Sito-web-Gens-Ssshhh/index.html";
       var link = frontendResetUrl + "?resetToken=" + encodeURIComponent(token);
-      
+
       // 4. Invia Mail
       try {
         MailApp.sendEmail({
           to: emailTarget,
           subject: "🔐 Reimposta la tua Password",
           htmlBody: "<h3>Richiesta di cambio password</h3>" +
-                    "<p>Hai richiesto di reimpostare la password. Clicca sul link qui sotto per sceglierne una nuova:</p>" +
-                    "<p><a href='" + link + "' style='background:#3b82f6; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>IMPOSTA NUOVA PASSWORD</a></p>" +
-                    "<p><small>Se non sei stato tu, ignora questa mail. Il link scade tra 1 ora.</small></p>"
+            "<p>Hai richiesto di reimpostare la password. Clicca sul link qui sotto per sceglierne una nuova:</p>" +
+            "<p><a href='" + link + "' style='background:#3b82f6; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>IMPOSTA NUOVA PASSWORD</a></p>" +
+            "<p><small>Se non sei stato tu, ignora questa mail. Il link scade tra 1 ora.</small></p>"
         });
         return "LINK_INVIATO";
-      } catch(e) { return "ERRORE_MAIL"; }
+      } catch (e) { return "ERRORE_MAIL"; }
     }
   }
   // Per sicurezza non diciamo se l'email non esiste
-  return "LINK_INVIATO"; 
+  return "LINK_INVIATO";
 }
 
 function completaResetPassword(token, nuovaPass) {
-  if(!token) return "ERR_TOKEN";
-  
+  if (!token) return "ERR_TOKEN";
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioSoci = ss.getSheetByName("soci");
   var dati = foglioSoci.getDataRange().getValues();
   var oraAttuale = new Date().getTime();
-  
+
   for (var i = 1; i < dati.length; i++) {
     // Controlla Colonna H (ResetToken)
     if (dati[i][7] == token) {
       var timestamp = dati[i][8]; // Colonna I (ResetTime)
-      
+
       // Controlla scadenza (1 ora = 3600000 ms)
       if (oraAttuale - timestamp > 3600000) return "SCADUTO";
-      
+
       // Salva nuova password (Hashata)
       foglioSoci.getRange(i + 1, 2).setValue(creaHash(nuovaPass));
-      
+
       // Cancella il token usato per sicurezza
       foglioSoci.getRange(i + 1, 8).setValue("");
       foglioSoci.getRange(i + 1, 9).setValue("");
-      
+
       return "SUCCESS";
     }
   }
@@ -189,7 +189,7 @@ function getDatiUtente(email) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioSoci = ss.getSheetByName("soci");
   var dati = foglioSoci.getDataRange().getValues();
-  var intestazioni = dati.length ? dati[0].map(function(value) { return String(value).trim().toLowerCase(); }) : [];
+  var intestazioni = dati.length ? dati[0].map(function (value) { return String(value).trim().toLowerCase(); }) : [];
   function colonna(nome, fallback) {
     var indice = intestazioni.indexOf(nome.toLowerCase());
     return indice >= 0 ? indice : fallback;
@@ -202,11 +202,11 @@ function getDatiUtente(email) {
     return value ? String(value) : "";
   }
   var target = email.trim().toLowerCase();
-  
+
   for (var i = 1; i < dati.length; i++) {
     // Colonna C (Indice 2) contiene l'email
     if (String(valore(dati[i], "Email", 2)).trim().toLowerCase() === target) {
-      
+
       // --- RECUPERO DATI ---
       var rawTessera = valore(dati[i], "Numero Tessera", 9);
       var rawScadenza = valore(dati[i], "Data Scadenza", 10);
@@ -242,7 +242,7 @@ function getDatiUtente(email) {
         scadenza: scadenzaFmt,
         stato: rawStato ? rawStato.toString().toUpperCase() : "NON ATTIVO",
         // Leggiamo la carica. Se vuota, mettiamo "Socio semplice"
-        ruolo: rawCarica ? rawCarica.toString().trim() : "Socio semplice", 
+        ruolo: rawCarica ? rawCarica.toString().trim() : "Socio semplice",
         hash: mioHash
       };
     }
@@ -251,24 +251,24 @@ function getDatiUtente(email) {
 }
 
 function salvaDatiUtente(datiForm) {
-  if (verificaLogin({email: datiForm.email, password: datiForm.password}) !== "OK_LOGIN") return "ERR_AUTH";
+  if (verificaLogin({ email: datiForm.email, password: datiForm.password }) !== "OK_LOGIN") return "ERR_AUTH";
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioSoci = ss.getSheetByName("soci");
   var dati = foglioSoci.getDataRange().getValues();
-  var intestazioni = dati[0].map(function(value) { return String(value).trim().toLowerCase(); });
+  var intestazioni = dati[0].map(function (value) { return String(value).trim().toLowerCase(); });
   function indice(nome, fallback) {
     var trovato = intestazioni.indexOf(nome.toLowerCase());
     return trovato >= 0 ? trovato : fallback;
   }
   var target = datiForm.email.trim().toLowerCase();
-  
+
   for (var i = 1; i < dati.length; i++) {
     if (dati[i][2].toString().trim().toLowerCase() === target) {
-      foglioSoci.getRange(i+1, indice("Cognome", 4) + 1).setValue(datiForm.cognome);
-      foglioSoci.getRange(i+1, indice("Telefono", 5) + 1).setValue(datiForm.telefono);
-      foglioSoci.getRange(i+1, indice("Indirizzo", 6) + 1).setValue(datiForm.indirizzo);
-      foglioSoci.getRange(i+1, indice("CAP res", 19) + 1).setValue(datiForm.capResidenza || "");
-      foglioSoci.getRange(i+1, indice("Comune res", 20) + 1).setValue(datiForm.comuneResidenza || "");
+      foglioSoci.getRange(i + 1, indice("Cognome", 4) + 1).setValue(datiForm.cognome);
+      foglioSoci.getRange(i + 1, indice("Telefono", 5) + 1).setValue(datiForm.telefono);
+      foglioSoci.getRange(i + 1, indice("Indirizzo", 6) + 1).setValue(datiForm.indirizzo);
+      foglioSoci.getRange(i + 1, indice("CAP res", 19) + 1).setValue(datiForm.capResidenza || "");
+      foglioSoci.getRange(i + 1, indice("Comune res", 20) + 1).setValue(datiForm.comuneResidenza || "");
       scriviLog(target, "PROFILO_AGGIORNATO");
       return "SALVATAGGIO_OK";
     }
@@ -277,7 +277,7 @@ function salvaDatiUtente(datiForm) {
 }
 
 function inviaRichiestaDimissioni(dati) {
-  if(verificaLogin(dati) !== "OK_LOGIN") return "ERR_AUTH";
+  if (verificaLogin(dati) !== "OK_LOGIN") return "ERR_AUTH";
   var emailUtente = dati.email.trim().toLowerCase();
   var info = getDatiUtente(emailUtente);
   var nomeCompleto = info ? (info.nome + " " + info.cognome) : emailUtente;
@@ -287,7 +287,7 @@ function inviaRichiestaDimissioni(dati) {
   try {
     MailApp.sendEmail(emailAdmin, "⚠️ Richiesta Dimissioni", "Il socio " + nomeCompleto + " (" + emailUtente + ") ha richiesto le dimissioni.");
     return "DIMISSIONI_OK";
-  } catch(e) { return "ERRORE_MAIL"; }
+  } catch (e) { return "ERRORE_MAIL"; }
 }
 
 function inviaAvvisiScadenzaTessere() {
@@ -296,12 +296,12 @@ function inviaAvvisiScadenzaTessere() {
   if (!foglioSoci || foglioSoci.getLastRow() < 2) return "NESSUN_SOCIO";
 
   var dati = foglioSoci.getDataRange().getValues();
-  var intestazioni = dati[0].map(function(value) { return String(value).trim().toLowerCase(); });
-  var indice = function(nome, fallback) {
+  var intestazioni = dati[0].map(function (value) { return String(value).trim().toLowerCase(); });
+  var indice = function (nome, fallback) {
     var trovato = intestazioni.indexOf(nome.toLowerCase());
     return trovato >= 0 ? trovato : fallback;
   };
-  
+
   var idxEmail = indice("Email", 2);
   var idxNome = indice("Nome", 0);
   var idxCognome = indice("Cognome", 4);
@@ -309,7 +309,7 @@ function inviaAvvisiScadenzaTessere() {
   var idxStato = indice("Stato Socio", 11);
   var oggi = new Date();
   oggi.setHours(0, 0, 0, 0);
-  
+
   var proprieta = PropertiesService.getScriptProperties();
   var risultati = { inviati: 0, saltati: 0, errori: 0 };
   var tesoriere = trovaTesorierePerEmail_(dati, intestazioni, indice);
@@ -323,7 +323,7 @@ function inviaAvvisiScadenzaTessere() {
     var scadenza = parseDataNotificaGlobale_(dati[i][idxScadenza]);
     if (!scadenza) continue;
     scadenza.setHours(0, 0, 0, 0);
-    
+
     var giorni = Math.ceil((scadenza.getTime() - oggi.getTime()) / 86400000);
     var tipo = giorni < 0 ? "SCADUTA" : giorni === 30 ? "PRE_SCADENZA" : "";
     if (!tipo) continue;
@@ -338,15 +338,15 @@ function inviaAvvisiScadenzaTessere() {
     var cognome = String(dati[i][idxCognome] || "").trim();
     var nomeSocio = nome || cognome || "Socio";
     var dataFormattata = Utilities.formatDate(scadenza, "Europe/Rome", "dd/MM/yyyy");
-    
+
     // --- INIZIO NUOVA FORMATTAZIONE EMAIL ---
     var oggetto = tipo === "SCADUTA" ? "Azione richiesta: Tessera associativa scaduta" : "Promemoria: Scadenza tessera associativa";
-    
+
     var titoloEmail = tipo === "SCADUTA" ? "La tua tessera è scaduta" : "Scadenza in avvicinamento";
-    var testoIntro = tipo === "SCADUTA" 
+    var testoIntro = tipo === "SCADUTA"
       ? "Ti informiamo che la tua tessera associativa è risultata scaduta in data <strong>" + dataFormattata + "</strong>."
       : "Ti ricordiamo che la tua tessera associativa scadrà tra 30 giorni, in data <strong>" + dataFormattata + "</strong>.";
-      
+
     var htmlBody = `
     <!DOCTYPE html>
     <html>
@@ -408,7 +408,7 @@ function inviaAvvisiScadenzaTessere() {
         htmlBody: htmlBody,
         name: "Gens Ssshhh App"
       });
-      
+
       proprieta.setProperty(chiave, new Date().toISOString());
       scriviLog(email, "EMAIL_TESSERA_" + tipo, "Scadenza " + dataFormattata);
       risultati.inviati++;
@@ -451,7 +451,7 @@ function trovaTesorierePerEmail_(dati, intestazioni, indice) {
 }
 
 function configuraTriggerAvvisiScadenzaTessere() {
-  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
     if (trigger.getHandlerFunction() === "inviaAvvisiScadenzaTessere") ScriptApp.deleteTrigger(trigger);
   });
   ScriptApp.newTrigger("inviaAvvisiScadenzaTessere").timeBased().everyDays(1).atHour(8).create();
@@ -460,87 +460,88 @@ function configuraTriggerAvvisiScadenzaTessere() {
 
 
 
+function parseDataNotifica(valore) {
+  if (!valore) return null;
+  if (valore instanceof Date) return valore;
+  var testo = String(valore).trim();
+  var parti = testo.split('/');
+  if (parti.length === 3) return new Date(Number(parti[2]), Number(parti[1]) - 1, Number(parti[0]));
+  var data = new Date(testo);
+  return isNaN(data.getTime()) ? null : data;
+}
+
+function getNotificheUtente(email) {
+  var notifiche = [];
+  var utente = getDatiUtente(email);
+  if (!utente) return notifiche;
+
+  var scadenza = parseDataNotifica(utente.scadenza);
+  if (scadenza) {
+    var giorni = Math.ceil((scadenza.getTime() - new Date().getTime()) / 86400000);
+    if (giorni < 0) {
+      notifiche.push({ tipo: "error", titolo: "Tessera scaduta", testo: "La tessera è scaduta. Versa la quota associativa di 10 euro per rinnovarla." });
+    } else if (giorni <= 30) {
+      notifiche.push({ tipo: "warning", titolo: "Tessera in scadenza", testo: "La tessera scade tra " + giorni + " giorni. Quota associativa da versare: 10 euro." });
+    }
+  }
+
+  try {
+    getAvvisiPubblici().slice(0, 5).forEach(function (avviso) {
+      notifiche.push({ tipo: "info", titolo: avviso.titolo, testo: avviso.testo, data: avviso.data });
+    });
+  } catch (e) { }
+
+  try {
+    if (typeof getRichiesteFirmaUtente === "function") {
+      var firme = getRichiesteFirmaUtente(email) || [];
+      firme.filter(function (firma) { return String(firma.stato || "").toUpperCase().indexOf("FIRM") < 0; }).slice(0, 5).forEach(function (firma) {
+        notifiche.push({ tipo: "action", titolo: "Documento da firmare", testo: firma.nomeFile || "Hai un documento in attesa di firma." });
+      });
+    }
+  } catch (e) { }
+
+  try {
+    if (typeof getConsultazioniAttiveUtente === "function") {
+      var consultazioni = getConsultazioniAttiveUtente(email) || [];
+      consultazioni.slice(0, 5).forEach(function (consultazione) {
+        notifiche.push({ tipo: "action", titolo: "Consultazione aperta", testo: consultazione.titolo || "Hai una consultazione a cui partecipare." });
+      });
+    }
+  } catch (e) { }
+
+  try {
+    if (typeof getElezioniPerCandidatura === "function") {
+      var candidature = getElezioniPerCandidatura(email) || [];
+      candidature.slice(0, 5).forEach(function (candidatura) {
+        notifiche.push({ tipo: "action", titolo: "Candidature aperte", testo: candidatura.titolo || "È possibile presentare una candidatura." });
+      });
+    }
+  } catch (e) { }
+
+  return notifiche;
+}
+
 function getStartData(email) {
 
-  function getNotificheUtente(email) {
-    var notifiche = [];
-    var utente = getDatiUtente(email);
-    if (!utente) return notifiche;
-
-    var scadenza = parseDataNotifica(utente.scadenza);
-    if (scadenza) {
-      var giorni = Math.ceil((scadenza.getTime() - new Date().getTime()) / 86400000);
-      if (giorni < 0) {
-        notifiche.push({tipo: "error", titolo: "Tessera scaduta", testo: "La tessera è scaduta. Versa la quota associativa di 10 euro per rinnovarla."});
-      } else if (giorni <= 30) {
-        notifiche.push({tipo: "warning", titolo: "Tessera in scadenza", testo: "La tessera scade tra " + giorni + " giorni. Quota associativa da versare: 10 euro."});
-      }
-    }
-
-    try {
-      getAvvisiPubblici().slice(0, 5).forEach(function(avviso) {
-        notifiche.push({tipo: "info", titolo: avviso.titolo, testo: avviso.testo, data: avviso.data});
-      });
-    } catch(e) {}
-
-    try {
-      if (typeof getRichiesteFirmaUtente === "function") {
-        var firme = getRichiesteFirmaUtente(email) || [];
-        firme.filter(function(firma) { return String(firma.stato || "").toUpperCase().indexOf("FIRM") < 0; }).slice(0, 5).forEach(function(firma) {
-          notifiche.push({tipo: "action", titolo: "Documento da firmare", testo: firma.nomeFile || "Hai un documento in attesa di firma."});
-        });
-      }
-    } catch(e) {}
-
-    try {
-      if (typeof getConsultazioniAttiveUtente === "function") {
-        var consultazioni = getConsultazioniAttiveUtente(email) || [];
-        consultazioni.slice(0, 5).forEach(function(consultazione) {
-          notifiche.push({tipo: "action", titolo: "Consultazione aperta", testo: consultazione.titolo || "Hai una consultazione a cui partecipare."});
-        });
-      }
-    } catch(e) {}
-
-    try {
-      if (typeof getElezioniPerCandidatura === "function") {
-        var candidature = getElezioniPerCandidatura(email) || [];
-        candidature.slice(0, 5).forEach(function(candidatura) {
-          notifiche.push({tipo: "action", titolo: "Candidature aperte", testo: candidatura.titolo || "È possibile presentare una candidatura."});
-        });
-      }
-    } catch(e) {}
-
-    return notifiche;
-  }
-
-  function parseDataNotifica(valore) {
-    if (!valore) return null;
-    if (valore instanceof Date) return valore;
-    var testo = String(valore).trim();
-    var parti = testo.split('/');
-    if (parti.length === 3) return new Date(Number(parti[2]), Number(parti[1]) - 1, Number(parti[0]));
-    var data = new Date(testo);
-    return isNaN(data.getTime()) ? null : data;
-  }
   var cache = CacheService.getScriptCache();
   var cacheKey = "start_data_" + Utilities.base64EncodeWebSafe(String(email).toLowerCase()).slice(0, 180);
   var cached = cache.get(cacheKey);
   if (cached) {
-    try { return JSON.parse(cached); } catch(e) {}
+    try { return JSON.parse(cached); } catch (e) { }
   }
 
   // Eseguiamo tutte le letture insieme lato server (molto più veloce)
   // Recupera i dati utente di base
-  var user = getHomeSummary(email); 
-  
+  var user = getHomeSummary(email);
+
   // Recupera le news (se la funzione esiste, altrimenti array vuoto)
   var news = [];
-  try { news = getAvvisiPubblici(); } catch(e) {}
+  try { news = getAvvisiPubblici(); } catch (e) { }
 
   // Recupera stato voto
   var voto = { status: "CHIUSE" };
-  try { voto = checkStatoVoto(email); } catch(e) {}
-  
+  try { voto = checkStatoVoto(email); } catch (e) { }
+
   // Restituiamo un pacchetto unico al sito
   var result = {
     utente: user,

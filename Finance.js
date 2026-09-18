@@ -428,19 +428,26 @@ function generaFatturaXML(datiInput) {
     var socioCAP = "";
     var socioComune = "";
     var socioProv = "";
+      var intestazioniSoci = dati.length ? dati[0].map(function(value) {
+        return String(value || "").trim().toLowerCase();
+      }) : [];
+      function indiceSocio(nome, fallback) {
+        var indice = intestazioniSoci.indexOf(nome.toLowerCase());
+        return indice >= 0 ? indice : fallback;
+      }
     
     for(var i=1; i<dati.length; i++) {
       if(dati[i][2].toString().toLowerCase() === datiInput.email.toLowerCase()) {
          // Trovato! Estraiamo i dati basandoci sulle tue colonne esatte
-         socioCF = dati[i][14]; // Colonna O
-         
-         var splitNome = dati[i][4].split(" "); // Colonna B
-         socioNome = splitNome[0] || "NomeSconosciuto";
-         socioCognome = splitNome.slice(4).join(" ") || "CognomeSconosciuto";
-         socioComune = dati[i][20] || "Comune Sconosciuto"; // Colonna G
-         socioProv = dati[i][7] || "PR";                   // Colonna H
-         socioCAP = dati[i][19] || "00000";                 // Colonna I
-         socioIndirizzo = dati[i][6] || "Indirizzo Sconosciuto"; // Colonna J
+           socioNome = dati[i][indiceSocio("Nome", 0)] || "NomeSconosciuto";
+           socioCognome = dati[i][indiceSocio("Cognome", 4)] || "CognomeSconosciuto";
+           socioCF = dati[i][indiceSocio("Codice Fiscale", 14)] || "";
+           socioIndirizzo = dati[i][indiceSocio("Indirizzo", 6)] || "Indirizzo Sconosciuto";
+           socioCAP = dati[i][indiceSocio("CAP res", 19)] || "00000";
+           socioComune = dati[i][indiceSocio("Comune res", 20)] || "Comune Sconosciuto";
+           // Il foglio soci non contiene una colonna Provincia: non usare H,
+           // che e ResetToken. Per i soci dell'associazione il codice provincia e BO.
+           socioProv = dati[i][indiceSocio("Provincia", -1)] || "BO";
          break;
       }
     }

@@ -1,20 +1,20 @@
 function getHomeSummary(email) {
   var user = getDatiUtente(email);
-  if(!user) return null;
-  
+  if (!user) return null;
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
+
   // 1. Calcoliamo quante votazioni sono aperte e disponibili per questo utente
   var votiAttivi = 0;
   try {
     var foglioDb = ss.getSheetByName("Database_Elezioni");
     var foglioVoti = ss.getSheetByName("archivio votazioni") || ss.getSheetByName("voti");
-    
+
     if (foglioDb && foglioDb.getLastRow() >= 2) {
       var campagne = foglioDb.getDataRange().getValues();
       var votiRegistrati = foglioVoti ? foglioVoti.getDataRange().getValues() : [];
       var adesso = new Date();
-      
+
       // Raccogliamo gli ID delle elezioni a cui l'utente ha già votato (tramite il suo hash)
       var hashUtente = getHashUnivoco(email);
       var elezioniVotate = [];
@@ -23,26 +23,26 @@ function getHomeSummary(email) {
           elezioniVotate.push(votiRegistrati[v][3]); // Colonna dell'ID elezione nel registro voti
         }
       }
-      
+
       // Controlliamo quante campagne sono attualmente in corso e non ancora votate
       for (var i = 1; i < campagne.length; i++) {
         var idElezione = campagne[i][0];
         var inizio = new Date(campagne[i][3]);
         var fine = new Date(campagne[i][4]);
-        
+
         // Se la consultazione è attiva nel periodo corrente e l'utente non ha ancora votato
         if (adesso >= inizio && adesso <= fine && !elezioniVotate.includes(idElezione)) {
           votiAttivi++;
         }
       }
     }
-  } catch(e) {
+  } catch (e) {
     votiAttivi = 0; // Fallback di sicurezza
   }
 
   var filesPub = getListaDocumenti("PUBBLICO", email).length;
   var filesPriv = getListaDocumenti("PRIVATO", email).length;
-  
+
   // --- LOGICA RUOLI ---
   var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
   var ruoloUtente = user.ruolo ? user.ruolo.toUpperCase() : "";
@@ -50,12 +50,12 @@ function getHomeSummary(email) {
 
   return {
     nome: user.nome,
-    cognome: user.cognome, 
-    tessera: user.tessera, 
+    cognome: user.cognome,
+    tessera: user.tessera,
     scadenza: user.scadenza,
     votiAttivi: votiAttivi, // Mostra il numero reale di voti/assemblee in sospeso
     numFiles: filesPub + filesPriv,
-    isAdmin: isAdmin, 
+    isAdmin: isAdmin,
     ruolo: user.ruolo,
   };
 }
@@ -64,25 +64,25 @@ function getHomeSummary(email) {
 function inviaCandidatura(dati) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var foglioCand = ss.getSheetByName("candidature"); 
+    var foglioCand = ss.getSheetByName("candidature");
     if (!foglioCand) return "Foglio 'candidature' non trovato.";
-    
-    var foglioSoci = ss.getSheetByName("soci"); 
+
+    var foglioSoci = ss.getSheetByName("soci");
     var nomeCompleto = dati.email; // Fallback se non trovato
-    
+
     if (foglioSoci) {
-        var datiSoci = foglioSoci.getDataRange().getValues();
-        for (var i = 1; i < datiSoci.length; i++) {
-          // Colonna C del foglio soci è l'indice 2 (Email)
-          var emailNelDb = datiSoci[i][2] ? datiSoci[i][2].toString().trim() : "";
-          
-          if (emailNelDb.toLowerCase() === dati.email.toLowerCase()) {
-            var nome = datiSoci[i][0] || "";     // Colonna A: Nome
-            var cognome = datiSoci[i][4] || "";  // Colonna E: Cognome
-            nomeCompleto = (nome + " " + cognome).trim();
-            break;
-          }
+      var datiSoci = foglioSoci.getDataRange().getValues();
+      for (var i = 1; i < datiSoci.length; i++) {
+        // Colonna C del foglio soci è l'indice 2 (Email)
+        var emailNelDb = datiSoci[i][2] ? datiSoci[i][2].toString().trim() : "";
+
+        if (emailNelDb.toLowerCase() === dati.email.toLowerCase()) {
+          var nome = datiSoci[i][0] || "";     // Colonna A: Nome
+          var cognome = datiSoci[i][4] || "";  // Colonna E: Cognome
+          nomeCompleto = (nome + " " + cognome).trim();
+          break;
         }
+      }
     }
 
     // Controllo doppioni sulla colonna B (Email) e E (ID Elezione)
@@ -104,7 +104,7 @@ function inviaCandidatura(dati) {
       "IN ATTESA",         // F: Esito
       dati.email           // G: Da chi
     ]);
-    
+
     return "OK";
   } catch (e) {
     return e.toString5 ? e.toString() : e;
@@ -116,42 +116,42 @@ function inviaCandidatura(dati) {
 // ==========================================
 function getNomiSociAttivi() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var foglio = ss.getSheetByName("soci"); 
+  var foglio = ss.getSheetByName("soci");
   if (!foglio) return [];
-  
+
   var dati = foglio.getDataRange().getValues();
   var tempLista = [];
-  
-  var intestazioni = dati[0].map(function(h) { return h.toString().toLowerCase().trim(); });
+
+  var intestazioni = dati[0].map(function (h) { return h.toString().toLowerCase().trim(); });
   var colNome = intestazioni.indexOf("nome");
   var colCognome = intestazioni.indexOf("cognome");
-  var colStato = intestazioni.findIndex(function(h) { return h.indexOf("stato") > -1; });
+  var colStato = intestazioni.findIndex(function (h) { return h.indexOf("stato") > -1; });
 
   for (var i = 1; i < dati.length; i++) {
     var stato = colStato >= 0 ? dati[i][colStato].toString().toLowerCase().trim() : "attivo";
-    
+
     // CORREZIONE: Controllo rigoroso. "non attivo" viene scartato automaticamente.
     if (stato === "attivo") {
       var n = colNome >= 0 ? dati[i][colNome].toString().trim() : "";
       var c = colCognome >= 0 ? dati[i][colCognome].toString().trim() : "";
-      
+
       if (n !== "" || c !== "") {
         tempLista.push({
           nome: n,
           cognome: c,
-          etichetta: (c + " " + n).trim() 
+          etichetta: (c + " " + n).trim()
         });
       }
     }
   }
-  
-  tempLista.sort(function(a, b) { 
-      var cmp = a.cognome.localeCompare(b.cognome);
-      if(cmp === 0) return a.nome.localeCompare(b.nome);
-      return cmp;
+
+  tempLista.sort(function (a, b) {
+    var cmp = a.cognome.localeCompare(b.cognome);
+    if (cmp === 0) return a.nome.localeCompare(b.nome);
+    return cmp;
   });
-  
-  return tempLista.map(function(x) { return x.etichetta; });
+
+  return tempLista.map(function (x) { return x.etichetta; });
 }
 
 
@@ -160,40 +160,40 @@ function getListaSociPerSponsor() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglio = ss.getSheetByName("soci");
   if (!foglio) return [];
-  
+
   var dati = foglio.getDataRange().getValues();
   var lista = [];
-  
-  var intestazioni = dati[0].map(function(h) { return h.toString().toLowerCase().trim(); });
+
+  var intestazioni = dati[0].map(function (h) { return h.toString().toLowerCase().trim(); });
   var colNome = intestazioni.indexOf("nome");
   var colCognome = intestazioni.indexOf("cognome");
   var colEmail = intestazioni.indexOf("email");
-  var colStato = intestazioni.findIndex(function(h) { return h.indexOf("stato") > -1; });
+  var colStato = intestazioni.findIndex(function (h) { return h.indexOf("stato") > -1; });
 
   for (var i = 1; i < dati.length; i++) {
     var stato = colStato >= 0 ? dati[i][colStato].toString().toLowerCase().trim() : "attivo";
-    
+
     // CORREZIONE: Controllo rigoroso anche qui.
     if (stato === "attivo") {
       var n = colNome >= 0 ? dati[i][colNome].toString().trim() : "";
       var c = colCognome >= 0 ? dati[i][colCognome].toString().trim() : "";
       var e = colEmail >= 0 ? dati[i][colEmail].toString().trim() : "";
-      
+
       if (e !== "") {
-         lista.push({
-            nome: n,
-            cognome: c,
-            nomeCompleto: (c + " " + n).trim(), 
-            email: e
-         });
+        lista.push({
+          nome: n,
+          cognome: c,
+          nomeCompleto: (c + " " + n).trim(),
+          email: e
+        });
       }
     }
   }
-  
-  return lista.sort(function(a, b) { 
-      var cmp = a.cognome.localeCompare(b.cognome);
-      if(cmp === 0) return a.nome.localeCompare(b.nome);
-      return cmp;
+
+  return lista.sort(function (a, b) {
+    var cmp = a.cognome.localeCompare(b.cognome);
+    if (cmp === 0) return a.nome.localeCompare(b.nome);
+    return cmp;
   });
 }
 
@@ -232,8 +232,8 @@ function proponiNuovoSocio(dati) {
       // Aggiornato il corpo della mail per mostrare Nome e Cognome insieme
       htmlBody: "<p>Ciao, <b>" + dati.sponsor1 + "</b> ti ha indicato come secondo garante per l'ammissione di <b>" + dati.nomeCandidato + " " + dati.cognomeCandidato + "</b>.</p><p>Accedi al portale per confermare il tuo sostegno, in modo da poter portare la candidatura al voto in assemblea.</p>"
     });
-  } catch(e) {}
-  
+  } catch (e) { }
+
   return "OK";
 }
 
@@ -241,32 +241,32 @@ function proponiNuovoSocio(dati) {
 function getCandidatureAttive(emailUtente) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioAmmissioni = ss.getSheetByName("Ammissioni");
-  if(!foglioAmmissioni) return { daSostenere: [], inAssemblea: [] };
-  
+  if (!foglioAmmissioni) return { daSostenere: [], inAssemblea: [] };
+
   var dati = foglioAmmissioni.getDataRange().getValues();
   var daSostenere = [];
   var inAssemblea = [];
-  
-  for(var i = 1; i < dati.length; i++) {
-     // Uniamo Nome (colonna 1) e Cognome (colonna 2) per un'visualizzazione pulita
-     var nomeCompleto = (dati[i][1] || "") + " " + (dati[i][2] || "");
-     
-     var candidato = {
-         nome: nomeCompleto.trim(),
-         email: dati[i][3],     // Email Candidato (Colonna D)
-         sponsor1: dati[i][5],  // Sponsor 1 (Colonna F)
-         stato: dati[i][7]      // Stato Sostegno (Colonna H)
-     };
-     
-     // Se l'utente loggato è lo Sponsor 2 (Colonna G, indice 6) e lo stato è in attesa (Colonna H, indice 7)
-     if(dati[i][7] === "ATTESA 2° SPONSOR" && dati[i][6].toString().toLowerCase() === emailUtente.toLowerCase()) {
-         daSostenere.push(candidato);
-     }
-     
-     // Tutte le candidature pronte per essere votate in assemblea (Stato in Colonna H, Esito in Colonna I)
-     if(dati[i][7] === "SOSTENUTO (PRONTO PER ASSEMBLEA)" && dati[i][8] === "DA VOTARE") {
-         inAssemblea.push(candidato);
-     }
+
+  for (var i = 1; i < dati.length; i++) {
+    // Uniamo Nome (colonna 1) e Cognome (colonna 2) per un'visualizzazione pulita
+    var nomeCompleto = (dati[i][1] || "") + " " + (dati[i][2] || "");
+
+    var candidato = {
+      nome: nomeCompleto.trim(),
+      email: dati[i][3],     // Email Candidato (Colonna D)
+      sponsor1: dati[i][5],  // Sponsor 1 (Colonna F)
+      stato: dati[i][7]      // Stato Sostegno (Colonna H)
+    };
+
+    // Se l'utente loggato è lo Sponsor 2 (Colonna G, indice 6) e lo stato è in attesa (Colonna H, indice 7)
+    if (dati[i][7] === "ATTESA 2° SPONSOR" && dati[i][6].toString().toLowerCase() === emailUtente.toLowerCase()) {
+      daSostenere.push(candidato);
+    }
+
+    // Tutte le candidature pronte per essere votate in assemblea (Stato in Colonna H, Esito in Colonna I)
+    if (dati[i][7] === "SOSTENUTO (PRONTO PER ASSEMBLEA)" && dati[i][8] === "DA VOTARE") {
+      inAssemblea.push(candidato);
+    }
   }
   return { daSostenere: daSostenere, inAssemblea: inAssemblea };
 }
@@ -281,11 +281,11 @@ function sostieniCandidato(emailCandidato, emailSponsor2) {
     // Lo Sponsor 1 è alla colonna F (indice 5)
     // Lo Sponsor 2 è alla colonna G (indice 6)
     // Lo Stato Sostegno è alla colonna H (indice 7)
-    
+
     if (dati[i][3].toString().toLowerCase() === emailCandidato.toLowerCase() &&
-        dati[i][6].toString().toLowerCase() === emailSponsor2.toLowerCase() &&
-        dati[i][7] === "ATTESA 2° SPONSOR") {
-      
+      dati[i][6].toString().toLowerCase() === emailSponsor2.toLowerCase() &&
+      dati[i][7] === "ATTESA 2° SPONSOR") {
+
       // Aggiorna lo stato: ora ha i due sostegni ed è pronto per l'assemblea (Colonna H, indice 7)
       foglioAmmissioni.getRange(i + 1, 8).setValue("SOSTENUTO (PRONTO PER ASSEMBLEA)");
       return "OK";
@@ -306,71 +306,71 @@ function getAmmissioniInVoto(emailSocio) {
 
   // Se non c'è, crea il foglio per lo spoglio segreto
   if (!foglioVotiAmm) {
-      foglioVotiAmm = ss.insertSheet("VotiAmmissioni");
-      foglioVotiAmm.appendRow(["Timestamp", "HashSocio", "CandidatoEmail", "Voto"]);
+    foglioVotiAmm = ss.insertSheet("VotiAmmissioni");
+    foglioVotiAmm.appendRow(["Timestamp", "HashSocio", "CandidatoEmail", "Voto"]);
   }
 
   var hashUtente = getHashUnivoco(emailSocio);
-  if(!hashUtente) return [];
+  if (!hashUtente) return [];
 
   var datiAmm = foglioAmm.getDataRange().getValues();
   var datiVoti = foglioVotiAmm.getDataRange().getValues();
   var daVotare = [];
 
   for (var i = 1; i < datiAmm.length; i++) {
-      // Lo stato ora si trova alla colonna H (indice 7)
-      if (datiAmm[i][7] === "IN VOTAZIONE") {
-          
-          // L'email del candidato ora è alla colonna D (indice 3)
-          var emailCand = datiAmm[i][3]; 
-          
-          // Uniamo Nome (colonna B, indice 1) e Cognome (colonna C, indice 2)
-          var nomeCompleto = (datiAmm[i][1] || "") + " " + (datiAmm[i][2] || "");
-          var nomeCand = nomeCompleto.trim();
-          
-          // Controlla se questo socio ha già votato per questo specifico candidato
-          var giaVotato = false;
-          for (var v = 1; v < datiVoti.length; v++) {
-              if (datiVoti[v][1] === hashUtente && datiVoti[v][2] === emailCand) {
-                  giaVotato = true;
-                  break;
-              }
-          }
-          if (!giaVotato) {
-              daVotare.push({ nome: nomeCand, email: emailCand });
-          }
+    // Lo stato ora si trova alla colonna H (indice 7)
+    if (datiAmm[i][7] === "IN VOTAZIONE") {
+
+      // L'email del candidato ora è alla colonna D (indice 3)
+      var emailCand = datiAmm[i][3];
+
+      // Uniamo Nome (colonna B, indice 1) e Cognome (colonna C, indice 2)
+      var nomeCompleto = (datiAmm[i][1] || "") + " " + (datiAmm[i][2] || "");
+      var nomeCand = nomeCompleto.trim();
+
+      // Controlla se questo socio ha già votato per questo specifico candidato
+      var giaVotato = false;
+      for (var v = 1; v < datiVoti.length; v++) {
+        if (datiVoti[v][1] === hashUtente && datiVoti[v][2] === emailCand) {
+          giaVotato = true;
+          break;
+        }
       }
+      if (!giaVotato) {
+        daVotare.push({ nome: nomeCand, email: emailCand });
+      }
+    }
   }
   return daVotare;
 }
 
 function votaAmmissioneSocio(dati) {
-  if (verificaLogin({email: dati.email, password: dati.password}) !== "OK_LOGIN") return "ERR_AUTH";
-  
+  if (verificaLogin({ email: dati.email, password: dati.password }) !== "OK_LOGIN") return "ERR_AUTH";
+
   var hashUtente = getHashUnivoco(dati.email);
-  if(!hashUtente) return "ERR_USER";
+  if (!hashUtente) return "ERR_USER";
 
   var lock = LockService.getScriptLock();
   try {
-      lock.waitLock(10000);
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var foglioVoti = ss.getSheetByName("VotiAmmissioni");
+    lock.waitLock(10000);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var foglioVoti = ss.getSheetByName("VotiAmmissioni");
 
-      // Doppio controllo anti-frode
-      var datiVoti = foglioVoti.getDataRange().getValues();
-      for(var i=1; i<datiVoti.length; i++){
-          if(datiVoti[i][1] === hashUtente && datiVoti[i][3] === dati.emailCandidato) {
-              return "GIA_VOTATO";
-          }
+    // Doppio controllo anti-frode
+    var datiVoti = foglioVoti.getDataRange().getValues();
+    for (var i = 1; i < datiVoti.length; i++) {
+      if (datiVoti[i][1] === hashUtente && datiVoti[i][2] === dati.emailCandidato) {
+        return "GIA_VOTATO";
       }
+    }
 
-      foglioVoti.appendRow([new Date(), hashUtente, dati.emailCandidato, dati.voto]);
-      scriviLog(dati.email, "VOTO_AMMISSIONE", "Espresso voto per: " + dati.emailCandidato);
-      return "OK";
-  } catch(e) {
-      return "ERRORE";
+    foglioVoti.appendRow([new Date(), hashUtente, dati.emailCandidato, dati.voto]);
+    scriviLog(dati.email, "VOTO_AMMISSIONE", "Espresso voto per: " + dati.emailCandidato);
+    return "OK";
+  } catch (e) {
+    return "ERRORE";
   } finally {
-      lock.releaseLock();
+    lock.releaseLock();
   }
 }
 

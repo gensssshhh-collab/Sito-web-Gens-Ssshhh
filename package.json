@@ -4,7 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +12,7 @@
   "type": "commonjs",
   "dependencies": {
     "@capacitor/android": "^8.5.1",
+    "@capacitor/local-notifications": "^8.1.2",
     "@capacitor/core": "^8.5.1",
     "@capacitor/push-notifications": "^8.1.2"
   },

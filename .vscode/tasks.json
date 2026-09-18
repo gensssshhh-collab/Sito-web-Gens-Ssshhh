@@ -1,0 +1,102 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Test doppio voto",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--test",
+				"test/backend.test.js",
+				"--test-name-pattern=votazioni"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test doppio voto corretto",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--test",
+				"test/backend.test.js",
+				"--test-name-pattern",
+				"votazioni: salva il voto"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test login",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--test",
+				"--test-name-pattern=login",
+				"test/backend.test.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test login corretto",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--test",
+				"--test-name-pattern=login",
+				"test/backend.test.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test documenti",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--test",
+				"--test-name-pattern=documenti",
+				"test/backend.test.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test documenti corretto",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--test",
+				"--test-name-pattern=documenti",
+				"test/backend.test.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test documenti finale",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--test",
+				"--test-name-pattern=documenti",
+				"test/backend.test.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test documenti verificato",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"--test",
+				"--test-name-pattern=documenti",
+				"test/backend.test.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

@@ -10,10 +10,10 @@ function registraTokenPush(dati) {
   var tokens = {};
   try {
     tokens = JSON.parse(properties.getProperty("PUSH_TOKENS") || "{}");
-  } catch (e) {}
+  } catch (e) { }
 
   if (!tokens[email]) tokens[email] = [];
-  tokens[email] = tokens[email].filter(function(item) {
+  tokens[email] = tokens[email].filter(function (item) {
     return item.token !== dati.token;
   });
   tokens[email].push({
@@ -34,9 +34,9 @@ function rimuoviTokenPush(dati) {
   var tokens = {};
   try {
     tokens = JSON.parse(properties.getProperty("PUSH_TOKENS") || "{}");
-  } catch (e) {}
+  } catch (e) { }
 
-  tokens[email] = (tokens[email] || []).filter(function(item) {
+  tokens[email] = (tokens[email] || []).filter(function (item) {
     return item.token !== dati.token;
   });
   properties.setProperty("PUSH_TOKENS", JSON.stringify(tokens));
@@ -61,8 +61,8 @@ function inviaNotificaPush(titolo, testo) {
     "Content-Type": "application/json"
   };
 
-  Object.keys(tokens).forEach(function(email) {
-    (tokens[email] || []).forEach(function(item) {
+  Object.keys(tokens).forEach(function (email) {
+    (tokens[email] || []).forEach(function (item) {
       try {
         var response = UrlFetchApp.fetch(endpoint, {
           method: "post",
@@ -71,17 +71,23 @@ function inviaNotificaPush(titolo, testo) {
             message: {
               token: item.token,
               notification: { title: titolo, body: testo },
+              android: {
+                notification: {
+                  channel_id: "gens-notifiche",
+                  default_sound: true
+                }
+              },
               data: { viewId: "viewDash" }
             }
           }),
           muteHttpExceptions: true
         });
         if (response.getResponseCode() === 404 || response.getResponseCode() === 400) {
-          tokens[email] = (tokens[email] || []).filter(function(saved) {
+          tokens[email] = (tokens[email] || []).filter(function (saved) {
             return saved.token !== item.token;
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     });
   });
 
