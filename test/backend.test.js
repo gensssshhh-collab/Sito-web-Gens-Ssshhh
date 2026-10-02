@@ -123,6 +123,39 @@ test('votazioni: salva il voto e rifiuta un secondo voto dello stesso socio', ()
   assert.equal(rows.length, 2);
 });
 
+test('eventi: condivide la proposta e rifiuta il doppio voto', () => {
+  const sociRows = [['Nome', 'Password', 'Email'], ['Mario', 'hash', 'mario@example.it']];
+  const eventiRows = [['ID', 'CreatoIl', 'CreatoreEmail', 'Titolo', 'Descrizione', 'OpzioniJson', 'VotiJson', 'Stato']];
+  const sociSheet = dataSheet(sociRows);
+  const eventiSheet = dataSheet(eventiRows);
+  eventiSheet.getRange = (row, column) => ({
+    setValue(value) {
+      eventiRows[row - 1][column - 1] = value;
+    }
+  });
+  const spreadsheet = {
+    getSheetByName: name => name === 'soci' ? sociSheet : name === 'ProposteEventi' ? eventiSheet : null,
+    insertSheet: () => eventiSheet
+  };
+  const context = {
+    SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
+    Utilities: { getUuid: () => 'evento-1' },
+    LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) }
+  };
+
+  loadScript('Eventi.js', context);
+
+  const proposta = context.creaPropostaEvento('mario@example.it', {
+    titolo: 'Cena sociale',
+    descrizione: 'Cena tra soci',
+    opzioni: [{ data: '10/10/2026', ora: '20:00', luogo: 'Centro' }]
+  });
+  assert.equal(proposta.ok, true);
+  assert.equal(context.getProposteEventi('mario@example.it').length, 1);
+  assert.equal(context.votaPropostaEvento('mario@example.it', 'evento-1', 0).ok, true);
+  assert.equal(context.votaPropostaEvento('mario@example.it', 'evento-1', 0).messaggio, 'Hai già votato questa proposta.');
+});
+
 test('firme: invia OTP e lega il codice al documento richiesto', () => {
   const cacheValues = new Map();
   let emailSent = null;

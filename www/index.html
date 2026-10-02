@@ -130,8 +130,8 @@
 
             <nav class="nav-links" aria-label="Navigazione principale">
                 <div class="nav-section-label">Dashboard</div>
-                <div class="nav-item active" role="button" tabindex="0" onclick="nav('viewDash', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
+                <div class="nav-item active" role="button" tabindex="0" onclick="nav('viewHome', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewHome', this); }">
                     <span class="nav-icon" aria-hidden="true">⌂</span><span>Home page</span></div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewDash', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
@@ -146,7 +146,7 @@
                     <span class="nav-icon" aria-hidden="true">◌</span><span>Calendario</span></div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewElezioni', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewElezioni', this); }">
-                    <span class="nav-icon" aria-hidden="true">◉</span><span>Attività</span></div>
+                    <span class="nav-icon" aria-hidden="true">◉</span><span>Consultazioni</span></div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewComunicazioni', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewComunicazioni', this); }">
                     <span class="nav-icon" aria-hidden="true">✉</span><span>Comunicazioni</span></div>
@@ -155,8 +155,8 @@
                     <span class="nav-icon" aria-hidden="true">◎</span><span>Soci e volontari</span></div>
 
                 <div class="nav-section-label nav-section-secondary">Documenti e contabilità</div>
-                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDocs', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocs', this); }">
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewArchivio', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewArchivio', this); }">
                     <span class="nav-icon" aria-hidden="true">▣</span><span>Archivio</span></div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewListinoPrezzi', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewListinoPrezzi', this); }">
@@ -167,8 +167,11 @@
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewMovimenti', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewMovimenti', this); }">
                     <span class="nav-icon" aria-hidden="true">⤴</span><span>Movimenti</span></div>
-                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDocs', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocs', this); }">
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewSpese', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSpese', this); }">
+                    <span class="nav-icon" aria-hidden="true">◌</span><span>Spese condivise</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDocumenti', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocumenti', this); }">
                     <span class="nav-icon" aria-hidden="true">▤</span><span>Documenti</span></div>
 
                 <div class="nav-section-label nav-section-secondary">Gestione</div>
@@ -235,6 +238,40 @@
 
 
             <div class="content-scroll">
+
+                <div id="viewHome" class="page-section hidden">
+                    <div class="club-page-header">
+                        <div>
+                            <span class="section-kicker">Overview</span>
+                            <h2>Home page</h2>
+                            <p>Panoramica rapida dell’associazione, delle attività e dei prossimi step da completare.</p>
+                        </div>
+                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Panoramica attiva</div>
+                    </div>
+
+                    <div class="club-summary-grid">
+                        <div class="club-summary-card">
+                            <span>Votazioni</span>
+                            <strong id="homeVotazioni">0</strong>
+                        </div>
+                        <div class="club-summary-card">
+                            <span>Documenti</span>
+                            <strong id="homeDocumenti">0</strong>
+                        </div>
+                        <div class="club-summary-card">
+                            <span>Eventi</span>
+                            <strong id="homeEventi">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="calendar-panel">
+                        <div class="calendar-header-row">
+                            <h3>Attività principali</h3>
+                            <button class="compact-action" onclick="renderHomeView()">Aggiorna</button>
+                        </div>
+                        <div id="homeList" class="calendar-list"></div>
+                    </div>
+                </div>
 
                 <div id="viewDash" class="page-section active">
                     <h2 id="welcomeMsg" style="margin-top:0; margin-bottom:20px;">Benvenuto</h2>
@@ -590,6 +627,67 @@
                                     <div
                                         style="background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                                         <div
+                                            style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+                                            <div style="background: #fef3c7; padding: 10px; border-radius: 8px;"><span
+                                                    style="font-size: 22px; line-height: 1;">🎉</span></div>
+                                            <div>
+                                                <h3 style="margin: 0; font-size: 18px; color: #0f172a;">Proponi un evento</h3>
+                                                <p style="margin: 0; font-size: 13px; color: #64748b; margin-top: 2px;">Suggerisci attività per la comunità e fai votare le migliori opzioni.</p>
+                                            </div>
+                                        </div>
+
+                                        <div style="display: grid; gap: 15px;">
+                                            <div>
+                                                <label style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Titolo evento</label>
+                                                <input type="text" id="eventoNome" placeholder="Es. Calcetto serale, Cena sociale, Escape room..."
+                                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
+                                            </div>
+
+                                            <div>
+                                                <label style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Descrizione</label>
+                                                <textarea id="eventoDescrizione" rows="3" placeholder="Spiega di cosa si tratta, il tipo di attività e il target..."
+                                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; font-size: 14px;"></textarea>
+                                            </div>
+
+                                            <div>
+                                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                                    <label style="display: block; font-size: 13px; font-weight: bold; color: #334155;">Possibili date / orari / luoghi</label>
+                                                    <button type="button" onclick="aggiungiOpzioneEvento()" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: bold; color: #0f172a; cursor: pointer;">+ aggiungi</button>
+                                                </div>
+
+                                                <div id="eventOptionsList" style="display: grid; gap: 10px;">
+                                                    <div class="event-option-row" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
+                                                        <input type="text" data-role="data" placeholder="Data" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                                        <input type="text" data-role="ora" placeholder="Ora" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                                        <input type="text" data-role="luogo" placeholder="Luogo" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button onclick="inviaPropostaEvento()"
+                                                style="background: #f59e0b; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer;">
+                                                INVIA PROPOSTA EVENTO
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        style="background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+                                            <div>
+                                                <h3 style="margin: 0; font-size: 18px; color: #0f172a;">Eventi proposti</h3>
+                                                <p style="margin: 0; font-size: 13px; color: #64748b; margin-top: 2px;">Vota la proposta che preferisci e la migliore data/ora/luogo.</p>
+                                            </div>
+                                        </div>
+
+                                        <div id="eventiPropostiList" style="display: grid; gap: 12px;">
+                                            <p style="margin: 0; color: #64748b; font-size: 13px;">Nessuna proposta ancora inviata.</p>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        style="background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                                        <div
                                             style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                                             <span style="font-size: 20px;">👤</span>
                                             <h3 style="margin: 0; font-size: 16px; color: #0f172a;">Presenta nuovo socio
@@ -874,6 +972,40 @@
                     </div>
                 </div>
 
+                <div id="viewArchivio" class="page-section hidden">
+                    <div class="club-page-header">
+                        <div>
+                            <span class="section-kicker">Archivio</span>
+                            <h2>Archivio</h2>
+                            <p>Overview dei documenti, dei report e dei file principali dell’associazione.</p>
+                        </div>
+                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Catalogo centrale</div>
+                    </div>
+
+                    <div class="club-summary-grid">
+                        <div class="club-summary-card">
+                            <span>File totali</span>
+                            <strong id="archivioTotale">0</strong>
+                        </div>
+                        <div class="club-summary-card">
+                            <span>In evidenza</span>
+                            <strong id="archivioEvidenza">0</strong>
+                        </div>
+                        <div class="club-summary-card">
+                            <span>Recenti</span>
+                            <strong id="archivioRecenti">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="calendar-panel">
+                        <div class="calendar-header-row">
+                            <h3>Documenti principali</h3>
+                            <button class="compact-action" onclick="renderArchivioView()">Aggiorna</button>
+                        </div>
+                        <div id="archivioList" class="calendar-list"></div>
+                    </div>
+                </div>
+
                 <div id="viewDocs" class="page-section">
 
                     <!-- BANNER RISERVATEZZA STATUTARIA (Art. 24) -->
@@ -942,6 +1074,40 @@
                     </div>
                 </div>
 
+
+                <div id="viewDocumenti" class="page-section hidden">
+                    <div class="club-page-header">
+                        <div>
+                            <span class="section-kicker">Documenti</span>
+                            <h2>Documenti</h2>
+                            <p>Archivio dei file principali, aggiornamenti e documenti da esaminare in ogni momento.</p>
+                        </div>
+                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Archivio consultabile</div>
+                    </div>
+
+                    <div class="club-summary-grid">
+                        <div class="club-summary-card">
+                            <span>Totale file</span>
+                            <strong id="documentiTotali">0</strong>
+                        </div>
+                        <div class="club-summary-card">
+                            <span>Pubblici</span>
+                            <strong id="documentiPubblici">0</strong>
+                        </div>
+                        <div class="club-summary-card">
+                            <span>Recenti</span>
+                            <strong id="documentiRecenti">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="calendar-panel">
+                        <div class="calendar-header-row">
+                            <h3>Elenco documenti</h3>
+                            <button class="compact-action" onclick="renderDocumentiView()">Aggiorna</button>
+                        </div>
+                        <div id="documentiList" class="calendar-list"></div>
+                    </div>
+                </div>
 
                 <div id="viewFirma" class="page-section">
                     <h2 style="margin-top:0; color:#0f172a;">Firma Digitale</h2>
@@ -2188,7 +2354,7 @@
                         <span>Firma</span>
                     </a>
 
-                    <a href="#" class="bottom-nav-item" onclick="nav('viewDocs', this); return false;">
+                    <a href="#" class="bottom-nav-item" onclick="nav('viewArchivio', this); return false;">
                         <span class="bottom-nav-icon">📁</span>
                         <span>Archivio</span>
                     </a>

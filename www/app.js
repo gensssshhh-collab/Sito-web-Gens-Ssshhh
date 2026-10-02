@@ -222,6 +222,7 @@ function nav(viewId, el) {
 
     // 2. TITOLI
     var titles = {
+        'viewHome': 'Home page',
         'viewDash': 'Dashboard',
         'viewClub': 'Il Club',
         'viewCalendario': 'Calendario',
@@ -233,7 +234,9 @@ function nav(viewId, el) {
         'viewReport': 'Report',
         'viewConfigurazione': 'Configurazione',
         'viewElezioni': 'Centro Elettorale',
+        'viewArchivio': 'Archivio',
         'viewDocs': 'Archivio Documenti',
+        'viewDocumenti': 'Documenti',
         'viewFirma': 'Firma Digitale',
         'viewSpese': 'Spese Condivise',
         'viewProf': 'Profilo Utente',
@@ -249,7 +252,8 @@ function nav(viewId, el) {
         if (el.classList.contains('bottom-nav-item')) el.classList.add('active');
     } else {
         var mapping = {
-            'viewDash': 0,
+            'viewHome': 0,
+            'viewDash': 1,
             'viewClub': 2,
             'viewCalendario': 3,
             'viewComunicazioni': 5,
@@ -260,11 +264,13 @@ function nav(viewId, el) {
             'viewReport': 17,
             'viewConfigurazione': 17,
             'viewElezioni': 4,
-            'viewDocs': 9,
-            'viewFirma': 12,
-            'viewSpese': 8,
-            'viewProf': 15,
-            'viewAdmin': 16
+            'viewArchivio': 7,
+            'viewDocs': 12,
+            'viewDocumenti': 12,
+            'viewFirma': 13,
+            'viewSpese': 11,
+            'viewProf': 16,
+            'viewAdmin': 17
         };
         var items = document.querySelectorAll('.nav-item');
         items.forEach(x => x.classList.remove('active'));
@@ -277,7 +283,9 @@ function nav(viewId, el) {
             'viewDash': 0,
             'viewElezioni': 1,
             'viewFirma': 2,
+            'viewArchivio': 3,
             'viewDocs': 3,
+            'viewDocumenti': 3,
             'viewProf': 4
         };
         document.querySelectorAll('.bottom-nav-item').forEach(x => x.classList.remove('active'));
@@ -316,12 +324,15 @@ function nav(viewId, el) {
         });
     }
 
+    if (viewId === 'viewArchivio') renderArchivioView();
     if (viewId === 'viewDocs') {
         document.getElementById('filterContainer').classList.remove('hidden');
         document.getElementById('uploadArea').classList.remove('hidden');
         loadDocs('PUBBLICO');
     }
+    if (viewId === 'viewDocumenti') renderDocumentiView();
 
+    if (viewId === 'viewHome') renderHomeView();
     if (viewId === 'viewProf') caricaProfilo();
     if (viewId === 'viewFirma') caricaRichiesteFirma();
     if (viewId === 'viewCalendario') renderCalendarioView();
@@ -332,11 +343,38 @@ function nav(viewId, el) {
     if (viewId === 'viewMovimenti') renderMovimentiView();
     if (viewId === 'viewReport') renderReportView();
     if (viewId === 'viewConfigurazione') renderConfigurazioneView();
+    if (viewId === 'viewAdmin') renderAdminView();
 
     // Aggiungi questo blocco per le Spese Condivise:
     if (viewId === 'viewSpese') {
         caricaListaGruppi();
     }
+}
+
+function renderHomeView() {
+    var list = document.getElementById('homeList');
+    if (!list) return;
+
+    var attivita = [
+        { titolo: 'Votazioni aperte', dettaglio: 'Consulta le consultazioni in corso', tag: 'Attive' },
+        { titolo: 'Documenti da verificare', dettaglio: 'Archivi e modulistica aggiornata', tag: 'Nuovo' },
+        { titolo: 'Prossimo evento', dettaglio: 'Riunione associativa del mese', tag: 'Agenda' }
+    ];
+
+    document.getElementById('homeVotazioni').innerText = '3';
+    document.getElementById('homeDocumenti').innerText = '12';
+    document.getElementById('homeEventi').innerText = '5';
+
+    list.innerHTML = attivita.map(function (item) {
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>HP</span><strong>' + item.tag.charAt(0).toUpperCase() + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + item.tag + '</span>' +
+            '<h4>' + item.titolo + '</h4>' +
+            '<p>' + item.dettaglio + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessuna attività disponibile.</p>';
 }
 
 function renderSociVolontariView() {
@@ -531,6 +569,75 @@ function renderConfigurazioneView() {
             '</div>' +
             '</article>';
     }).join('') || '<p class="notification-empty">Nessuna impostazione disponibile.</p>';
+}
+
+function renderAdminView() {
+    var totals = [
+        { id: 'admTotSoci', value: '138' },
+        { id: 'admAventi', value: '126' },
+        { id: 'admVotanti', value: '94' }
+    ];
+
+    totals.forEach(function (item) {
+        var el = document.getElementById(item.id);
+        if (el) el.innerText = item.value;
+    });
+}
+
+function renderArchivioView() {
+    var list = document.getElementById('archivioList');
+    if (!list) return;
+
+    var archivio = [
+        { titolo: 'Statuto e regolamenti', categoria: 'Normativa', data: '2026-10-01' },
+        { titolo: 'Bilancio consuntivo', categoria: 'Economia', data: '2026-09-18' },
+        { titolo: 'Verbale assemblea', categoria: 'Interno', data: '2026-09-12' },
+        { titolo: 'Agenda eventi', categoria: 'Comunicazioni', data: '2026-09-02' },
+        { titolo: 'Report attività', categoria: 'Gestione', data: '2026-08-28' }
+    ];
+
+    document.getElementById('archivioTotale').innerText = String(archivio.length);
+    document.getElementById('archivioEvidenza').innerText = String(archivio.filter(function (item) { return item.categoria === 'Normativa' || item.categoria === 'Economia'; }).length);
+    document.getElementById('archivioRecenti').innerText = String(archivio.filter(function (item) { return item.data >= '2026-09-10'; }).length);
+
+    list.innerHTML = archivio.map(function (item) {
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>AR</span><strong>' + item.categoria.charAt(0).toUpperCase() + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + item.categoria + '</span>' +
+            '<h4>' + item.titolo + '</h4>' +
+            '<p>' + item.data + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessun archivio disponibile.</p>';
+}
+
+function renderDocumentiView() {
+    var list = document.getElementById('documentiList');
+    if (!list) return;
+
+    var documenti = [
+        { titolo: 'Statuto e regolamenti', categoria: 'Pubblico', data: '2026-10-01' },
+        { titolo: 'Bilancio consuntivo', categoria: 'Pubblico', data: '2026-09-18' },
+        { titolo: 'Verbale assemblea', categoria: 'Privato', data: '2026-09-12' },
+        { titolo: 'Modello rinnovo tessera', categoria: 'Privato', data: '2026-09-08' },
+        { titolo: 'Agenda eventi', categoria: 'Pubblico', data: '2026-09-02' }
+    ];
+
+    document.getElementById('documentiTotali').innerText = String(documenti.length);
+    document.getElementById('documentiPubblici').innerText = String(documenti.filter(function (item) { return item.categoria === 'Pubblico'; }).length);
+    document.getElementById('documentiRecenti').innerText = String(documenti.filter(function (item) { return item.data >= '2026-09-15'; }).length);
+
+    list.innerHTML = documenti.map(function (item) {
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>DOC</span><strong>' + item.categoria.charAt(0).toUpperCase() + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + item.categoria + '</span>' +
+            '<h4>' + item.titolo + '</h4>' +
+            '<p>' + item.data + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessun documento disponibile.</p>';
 }
 
 function renderComunicazioniView() {
@@ -4409,6 +4516,146 @@ function eliminaElezioneAdmin(idElezione) {
     });
 }
 
+function aggiungiOpzioneEvento() {
+    var list = document.getElementById('eventOptionsList');
+    if (!list) return;
+
+    var row = document.createElement('div');
+    row.className = 'event-option-row';
+    row.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;';
+    row.innerHTML = `
+        <input type="text" data-role="data" placeholder="Data" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+        <input type="text" data-role="ora" placeholder="Ora" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+        <input type="text" data-role="luogo" placeholder="Luogo" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+    `;
+    list.appendChild(row);
+}
+
+function renderProposteEventi(proposte) {
+    var list = document.getElementById('eventiPropostiList');
+    if (!list) return;
+
+    proposte = Array.isArray(proposte) ? proposte : [];
+
+    if (!proposte.length) {
+        list.innerHTML = '<p style="margin: 0; color: #64748b; font-size: 13px;">Nessuna proposta ancora inviata.</p>';
+        return;
+    }
+
+    var html = proposte.map(function (proposta) {
+        var opzioniHtml = (proposta.opzioni || []).map(function (opzione, idx) {
+            var votoCount = proposta.voti && proposta.voti[idx] ? Number(proposta.voti[idx]) : 0;
+            return `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <div>
+                        <strong style="font-size: 12px; color: #0f172a;">${opzione.data || '-'}</strong>
+                        <div style="font-size: 11px; color: #475569;">${opzione.ora || '-'} · ${opzione.luogo || '-'}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 11px; color: #475569; font-weight: bold;">${votoCount} voti</span>
+                        <button type="button" onclick="votaPropostaEvento('${proposta.id}', ${idx})" style="background: #2563eb; color: white; border: none; border-radius: 6px; padding: 7px 10px; font-size: 11px; font-weight: bold; cursor: pointer;">Vota</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div style="padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(15,23,42,0.04);">
+                <div style="margin-bottom: 10px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #0f172a;">${proposta.titolo || 'Evento proposto'}</div>
+                    <div style="font-size: 12px; color: #475569; margin-top: 4px;">${proposta.descrizione || 'Nessuna descrizione'}</div>
+                </div>
+                <div style="display: grid; gap: 8px;">${opzioniHtml}</div>
+            </div>
+        `;
+    }).join('');
+
+    list.innerHTML = html;
+}
+
+async function votaPropostaEvento(propostaId, optionIndex) {
+    var result = await chiamaServer('votaPropostaEvento', [curEmail, propostaId, optionIndex], true).catch(function (error) {
+        showToast(error.message || 'Impossibile registrare il voto.', 'error');
+        return null;
+    });
+    if (!result) return;
+    if (!result.ok) {
+        showToast(result.messaggio || 'Voto non registrato.', 'error');
+        return;
+    }
+
+    showToast('Voto registrato con successo.', 'success');
+    caricaProposteEventi();
+}
+
+async function inviaPropostaEvento() {
+    var nome = document.getElementById('eventoNome');
+    var descrizione = document.getElementById('eventoDescrizione');
+
+    if (!nome || !descrizione) return;
+
+    var titolo = nome.value.trim();
+    var testo = descrizione.value.trim();
+    var rows = Array.prototype.slice.call(document.querySelectorAll('.event-option-row'));
+    var opzioni = rows.map(function (row) {
+        var data = row.querySelector('[data-role="data"]');
+        var ora = row.querySelector('[data-role="ora"]');
+        var luogo = row.querySelector('[data-role="luogo"]');
+
+        return {
+            data: data ? data.value.trim() : '',
+            ora: ora ? ora.value.trim() : '',
+            luogo: luogo ? luogo.value.trim() : ''
+        };
+    }).filter(function (opzione) {
+        return opzione.data || opzione.ora || opzione.luogo;
+    });
+
+    if (!titolo || !testo || opzioni.length === 0) {
+        showToast('Inserisci titolo, descrizione e almeno una proposta di data/ora/luogo.', 'error');
+        return;
+    }
+
+    var result = await chiamaServer('creaPropostaEvento', [curEmail, {
+        titolo: titolo,
+        descrizione: testo,
+        opzioni: opzioni
+    }], true).catch(function (error) {
+        showToast(error.message || 'Impossibile inviare la proposta.', 'error');
+        return null;
+    });
+    if (!result) return;
+    if (!result.ok) {
+        showToast(result.messaggio || 'Proposta non inviata.', 'error');
+        return;
+    }
+
+    nome.value = '';
+    descrizione.value = '';
+
+    var optionsList = document.getElementById('eventOptionsList');
+    if (optionsList) {
+        optionsList.innerHTML = `
+            <div class="event-option-row" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
+                <input type="text" data-role="data" placeholder="Data" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                <input type="text" data-role="ora" placeholder="Ora" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                <input type="text" data-role="luogo" placeholder="Luogo" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+            </div>
+        `;
+    }
+
+    caricaProposteEventi();
+    showToast('Proposta evento inviata e disponibile al voto.', 'success');
+}
+
+async function caricaProposteEventi() {
+    var list = document.getElementById('eventiPropostiList');
+    if (list) list.innerHTML = '<div class="loader"></div>';
+
+    var proposte = await chiamaServer('getProposteEventi', curEmail);
+    renderProposteEventi(proposte || []);
+}
+
 // Carica la schermata del Centro Elettorale per il socio
 function caricaCentroElettorale() {
     var divAttive = document.getElementById('elencoAttive');
@@ -4421,6 +4668,8 @@ function caricaCentroElettorale() {
     if (divProgrammate) divProgrammate.innerHTML = '<p style="color:#64748b; font-size:12px;">Caricamento...</p>';
     if (divArchivio) divArchivio.innerHTML = '<p style="color:#64748b; font-size:12px;">Caricamento...</p>';
     if (areaCand) areaCand.innerHTML = '<p style="color: #64748b; font-size: 13px; text-align: center; padding: 10px;">Caricamento candidature...</p>';
+
+    caricaProposteEventi();
 
     // 1. Carica le consultazioni dal server
     chiamaServer("getConsultazioniAttiveUtente", curEmail).then(function (lista) {
