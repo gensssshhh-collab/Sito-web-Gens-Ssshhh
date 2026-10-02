@@ -46,6 +46,16 @@ var bilancioRequestInFlight = null;
 var bilancioCacheTimestamp = 0;
 var newsRequestInFlight = null;
 
+function isRuoloAmministrativo(ruolo) {
+    var ruoloNorm = String(ruolo || "").trim().toUpperCase();
+    return ["PRESIDENTE", "VICEPRESIDENTE", "SEGRETARIO", "TESORIERE"].indexOf(ruoloNorm) >= 0;
+}
+
+function utenteCorrenteHaRuoloAdmin() {
+    var utente = (window.__gensAppData && window.__gensAppData.utente) || {};
+    return isRuoloAmministrativo(utente.ruolo) || utente.isAdmin === true;
+}
+
 function controllaAggiornamentoApp() {
     if (appUpdateChecked || !window.Capacitor || !window.Capacitor.getPlatform || window.Capacitor.getPlatform() !== 'android') return;
     appUpdateChecked = true;
@@ -204,6 +214,9 @@ function toggleView(viewId) {
 }
 
 function nav(viewId, el) {
+    // Ripristino temporaneo della sezione admin: torniamo a renderla visibile
+    // senza bloccare l'accesso alla pagina mentre si lavora sul contenuto.
+
     // 1. GESTIONE PAGINE (Nascondi tutte, mostra quella giusta)
     document.querySelectorAll('.page-section').forEach(x => {
         x.classList.remove('active', 'hidden');
@@ -343,7 +356,10 @@ function nav(viewId, el) {
     if (viewId === 'viewMovimenti') renderMovimentiView();
     if (viewId === 'viewReport') renderReportView();
     if (viewId === 'viewConfigurazione') renderConfigurazioneView();
-    if (viewId === 'viewAdmin') renderAdminView();
+    if (viewId === 'viewAdmin') {
+        renderAdminView();
+        caricaDatiAdmin();
+    }
 
     // Aggiungi questo blocco per le Spese Condivise:
     if (viewId === 'viewSpese') {
@@ -572,15 +588,15 @@ function renderConfigurazioneView() {
 }
 
 function renderAdminView() {
-    var totals = [
-        { id: 'admTotSoci', value: '138' },
-        { id: 'admAventi', value: '126' },
-        { id: 'admVotanti', value: '94' }
+    var placeholders = [
+        { id: 'admTotSoci', value: '...' },
+        { id: 'admAventi', value: '...' },
+        { id: 'admVotanti', value: '...' }
     ];
 
-    totals.forEach(function (item) {
+    placeholders.forEach(function (item) {
         var el = document.getElementById(item.id);
-        if (el) el.innerText = item.value;
+        if (el && el.innerText.trim() === '') el.innerText = item.value;
     });
 }
 
@@ -680,61 +696,107 @@ function renderComunicazioniView() {
     }).join('') || '<p class="notification-empty">Nessun avviso disponibile.</p>';
 }
 
-function renderCalendarioView() {
+async function renderCalendarioView() {
     var list = document.getElementById('calendarEventsList');
     if (!list) return;
 
-    var data = window.__gensAppData || {};
-    var eventi = [];
+    list.innerHTML = '<div class="loader"></div>';
 
-    if (Array.isArray(data.avvisi)) {
-        data.avvisi.forEach(function (avviso) {
-            var dataEvento = avviso.data || avviso.dataPubblicazione || avviso.createdAt || '2026-10-15';
-            var dataObj = parseDataUtente(dataEvento);
-            eventi.push({
-                titolo: avviso.titolo || 'Evento associativo',
-                data: dataObj ? dataObj.toISOString().slice(0, 10) : String(dataEvento),
-                luogo: 'Sede associativa',
-                tipo: 'Comunicazione'
+    try {
+        var proposte = await chiamaServer('getProposteEventi', curEmail);
+        var eventi = [];
+
+        if (Array.isArray(proposte)) {
+            proposte.forEach(function (proposta) {
+                var opzioni = Array.isArray(proposta.opzioni) ? proposta.opzioni : [];
+                opzioni.forEach(function (opzione) {
+                    var data = (opzione.data || '').trim();
+                    if (!data) return;
+                    eventi.push({
+                        titolo: proposta.titolo || 'Evento proposto',
+                        data: data,
+                        luogo: (opzione.luogo || 'Sede associativa').trim() || 'Sede associativa',
+                        tipo: 'Evento',
+                        descrizione: proposta.descrizione || ''
+                    });
+                });
             });
-        });
+        }
+
+        if (!eventi.length) {
+            list.innerHTML = '<p class="notification-empty">Nessun evento in agenda.</p>';
+            return;
+        }
+
+        list.innerHTML = eventi.map(function (evento) {
+            var dataFormattata = parseDataUtente(evento.data);
+            var dataLabel = dataFormattata ? dataFormattata.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : evento.data;
+            var parti = dataLabel.split(' ');
+            var giorno = parti[0] || '01';
+            var mese = parti[1] || 'SET';
+
+            return '<article class="calendar-item">' +
+                '<div class="calendar-date-pill"><span>' + mese + '</span><strong>' + giorno + '</strong></div>' +
+                '<div class="calendar-item-body">' +
+                '<span class="calendar-tag">' + (evento.tipo || 'Evento') + '</span>' +
+                '<h4>' + (evento.titolo || 'Evento') + '</h4>' +
+                '<p>' + (evento.luogo || 'Sede associativa') + '</p>' +
+                (evento.descrizione ? '<p style="font-size: 11px; color: #64748b; margin-top: 4px;">' + evento.descrizione + '</p>' : '') +
+                '</div>' +
+                '</article>';
+        }).join('');
+    } catch (error) {
+        console.error('Errore nel caricamento eventi calendario:', error);
+        list.innerHTML = '<p class="notification-empty">Impossibile caricare gli eventi.</p>';
     }
-
-    if (!eventi.length) {
-        eventi = [
-            { titolo: 'Assemblea mensile', data: '2026-10-15', luogo: 'Sede centrale', tipo: 'Assemblea' },
-            { titolo: 'Incontro soci e volontari', data: '2026-10-20', luogo: 'Sala riunioni', tipo: 'Incontro' },
-            { titolo: 'Verifica quote e rinnovi', data: '2026-10-27', luogo: 'Ufficio associativo', tipo: 'Amministrativo' }
-        ];
-    }
-
-    var upcoming = eventi.slice(0, 5);
-    var countByType = {
-        'Assemblea': 0,
-        'Incontro': 0,
-        'Comunicazione': 0,
-        'Amministrativo': 0
-    };
-    upcoming.forEach(function (item) {
-        countByType[item.tipo] = (countByType[item.tipo] || 0) + 1;
-    });
-    document.getElementById('calendarUpcomingCount').innerText = String(upcoming.length || 0);
-    document.getElementById('calendarMeetingsCount').innerText = String(countByType['Assemblea'] + countByType['Incontro'] || 0);
-    document.getElementById('calendarActivitiesCount').innerText = String(countByType['Comunicazione'] + countByType['Amministrativo'] || 0);
-
-    list.innerHTML = upcoming.map(function (evento) {
-        var dataFormattata = parseDataUtente(evento.data);
-        var dataLabel = dataFormattata ? dataFormattata.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : evento.data;
-        return '<article class="calendar-item">' +
-            '<div class="calendar-date-pill"><span>' + dataLabel.split(' ')[0] + '</span><strong>' + dataLabel.split(' ')[1] + '</strong></div>' +
-            '<div class="calendar-item-body">' +
-            '<span class="calendar-tag">' + (evento.tipo || 'Evento') + '</span>' +
-            '<h4>' + (evento.titolo || 'Evento') + '</h4>' +
-            '<p>' + (evento.luogo || 'Sede associativa') + '</p>' +
-            '</div>' +
-            '</article>';
-    }).join('') || '<p class="notification-empty">Nessun evento in agenda.</p>';
 }
+
+function formattaDataSmart(value) {
+    var numeri = (value || '').replace(/\D/g, '').slice(0, 8);
+    if (!numeri) return '';
+    if (numeri.length <= 2) return numeri;
+    if (numeri.length <= 4) return numeri.slice(0, 2) + '/' + numeri.slice(2);
+    return numeri.slice(0, 2) + '/' + numeri.slice(2, 4) + '/' + numeri.slice(4, 8);
+}
+
+function formattaOraSmart(value) {
+    var numeri = (value || '').replace(/\D/g, '').slice(0, 4);
+    if (!numeri) return '';
+    if (numeri.length <= 2) return numeri;
+    return numeri.slice(0, 2) + ':' + numeri.slice(2, 4);
+}
+
+function applicaMascheraInputSmart(input) {
+    if (!input) return;
+
+    var ruolo = input.getAttribute('data-role');
+    if (!ruolo) return;
+
+    if (ruolo === 'data') {
+        input.setAttribute('inputmode', 'numeric');
+        input.setAttribute('maxlength', '10');
+        input.value = formattaDataSmart(input.value);
+    }
+
+    if (ruolo === 'ora') {
+        input.setAttribute('inputmode', 'numeric');
+        input.setAttribute('maxlength', '5');
+        input.value = formattaOraSmart(input.value);
+    }
+}
+
+document.addEventListener('input', function (event) {
+    var target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    if (target.getAttribute('data-role') === 'data') {
+        target.value = formattaDataSmart(target.value);
+    }
+
+    if (target.getAttribute('data-role') === 'ora') {
+        target.value = formattaOraSmart(target.value);
+    }
+});
 
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
@@ -914,25 +976,16 @@ function renderStartData(data, fromCache) {
     if (walletAvatar) walletAvatar.innerText = (u.nome || "U").charAt(0).toUpperCase();
     aggiornaAvvisoScadenza(u.scadenza);
 
-    // Gestione Menu Admin (se l'utente è admin)
-    if (u.isAdmin === true) {
-        // Controlla se il bottone esiste già per non duplicarlo
-        var menu = document.querySelector('.nav-links');
-        if (!document.getElementById('btnAdminMenu')) {
-            var btnAdmin = document.createElement('div');
-            btnAdmin.id = 'btnAdminMenu'; // ID per evitare duplicati
-            btnAdmin.className = 'nav-item';
-            btnAdmin.style.color = '#fca5a5';
-            btnAdmin.innerHTML = 'Amministrazione';
-            btnAdmin.onclick = function () {
-                nav('viewAdmin', this);
-                caricaDatiAdmin();
-            };
-            menu.appendChild(btnAdmin);
+    // Gestione menu Amministrazione: riportato visibile per accedere subito
+    // ai contenuti admin già presenti nella pagina.
+    var adminNavItem = document.getElementById('adminNavItem');
+    if (adminNavItem) {
+        adminNavItem.style.display = '';
+        adminNavItem.classList.remove('hidden');
+        if (isRuoloAmministrativo(u.ruolo) || u.isAdmin === true) {
+            caricaGraficoOverview();
+            if (document.getElementById('listaNewsAdmin')) renderNewsAdmin(data.avvisi);
         }
-        // Carica grafici admin in background senza bloccare
-        caricaGraficoOverview();
-        if (document.getElementById('listaNewsAdmin')) renderNewsAdmin(data.avvisi);
     }
 
     // 2. POPOLA NEWS (Senza fare un'altra chiamata!)
@@ -4524,11 +4577,14 @@ function aggiungiOpzioneEvento() {
     row.className = 'event-option-row';
     row.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;';
     row.innerHTML = `
-        <input type="text" data-role="data" placeholder="Data" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-        <input type="text" data-role="ora" placeholder="Ora" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+        <input type="text" data-role="data" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+        <input type="text" data-role="ora" inputmode="numeric" maxlength="5" placeholder="hh:mm" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
         <input type="text" data-role="luogo" placeholder="Luogo" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
     `;
     list.appendChild(row);
+    row.querySelectorAll('[data-role="data"], [data-role="ora"]').forEach(function (input) {
+        applicaMascheraInputSmart(input);
+    });
 }
 
 function renderProposteEventi(proposte) {
@@ -4637,11 +4693,14 @@ async function inviaPropostaEvento() {
     if (optionsList) {
         optionsList.innerHTML = `
             <div class="event-option-row" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
-                <input type="text" data-role="data" placeholder="Data" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                <input type="text" data-role="ora" placeholder="Ora" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                <input type="text" data-role="data" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                <input type="text" data-role="ora" inputmode="numeric" maxlength="5" placeholder="hh:mm" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
                 <input type="text" data-role="luogo" placeholder="Luogo" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
             </div>
         `;
+        optionsList.querySelectorAll('[data-role="data"], [data-role="ora"]').forEach(function (input) {
+            applicaMascheraInputSmart(input);
+        });
     }
 
     caricaProposteEventi();

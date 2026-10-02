@@ -87,6 +87,7 @@ textarea {
   position: sticky;
   top: 0;
   height: 100%;
+  min-height: 0;
   z-index: 20;
 }
 
@@ -148,9 +149,25 @@ textarea {
 
 .nav-links {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 4px;
   margin-top: 22px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+}
+
+.nav-links::-webkit-scrollbar {
+  width: 6px;
+}
+
+.nav-links::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.7);
+  border-radius: 999px;
 }
 
 .nav-section-label {
@@ -486,6 +503,178 @@ textarea {
 .page-section.active {
   display: block;
   animation: fadeIn 0.25s ease;
+}
+
+#viewAdmin {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 12px;
+}
+
+#viewAdmin > div:first-of-type {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+  padding: 18px 20px;
+  border: 1px solid rgba(26, 41, 69, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(247,240,228,0.9));
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.04);
+}
+
+#viewAdmin > div:first-of-type h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: clamp(28px, 3vw, 38px);
+  letter-spacing: -0.05em;
+}
+
+#viewAdmin > div:first-of-type span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(254,226,226,0.9), rgba(254,242,242,0.75));
+  color: #dc2626;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(239, 68, 68, 0.18);
+}
+
+#viewAdmin .admin-tabs {
+  margin-bottom: 18px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(26, 41, 69, 0.08);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.03);
+}
+
+#viewAdmin .section-tabs .pill {
+  min-height: 42px;
+  padding: 10px 15px;
+  border-radius: 11px;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+#viewAdmin .admin-tab-content {
+  position: relative;
+  padding-top: 8px;
+}
+
+#viewAdmin .admin-tab-content .dash-grid {
+  margin-top: 10px;
+}
+
+#viewAdmin .admin-tab-content .stat-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(246,241,233,0.9));
+  border-color: rgba(26, 41, 69, 0.08);
+  box-shadow: 0 16px 30px rgba(17, 24, 39, 0.04);
+}
+
+#viewAdmin .admin-tab-content .form-input {
+  background: rgba(255, 255, 255, 0.82);
+}
+
+#viewAdmin .admin-tab-content .btn-primary {
+  background: linear-gradient(135deg, #1f2e48 0%, #2d466f 100%);
+}
+
+#viewAdmin .admin-tab-content .btn-secondary {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+#tabSoci {
+  padding-top: 4px;
+}
+
+#tabSoci > div:first-of-type {
+  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(244,240,230,0.96));
+  border: 1px solid rgba(26, 41, 69, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.04);
+}
+
+#searchSocio {
+  height: 46px !important;
+  border: 1px solid rgba(26, 41, 69, 0.12) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02);
+  font-size: 14px !important;
+  color: var(--navy) !important;
+}
+
+#tabellaSoci {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(26, 41, 69, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.04);
+}
+
+#tabellaSoci tr {
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+#tabellaSoci th,
+#tabellaSoci td {
+  padding: 14px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  text-align: left;
+}
+
+#tabellaSoci th {
+  background: linear-gradient(135deg, #f8fafc, #eef2f8);
+  color: #475569;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+#tabellaSoci td {
+  color: var(--navy);
+  font-size: 13px;
+}
+
+#tabellaSoci tbody tr:hover {
+  background: rgba(248, 250, 252, 0.95);
+}
+
+#tabellaSoci tbody tr:last-child td {
+  border-bottom: none;
+}
+
+#tabellaSoci tbody tr td:first-child {
+  font-weight: 600;
+}
+
+#tabellaSoci tbody tr td:first-child b {
+  color: var(--navy);
+}
+
+#tabellaSoci tbody tr td:nth-child(3) span,
+#tabellaSoci tbody tr td:nth-child(4) {
+  font-weight: 700;
+}
+
+#tabellaSoci td[colspan="5"] {
+  padding: 26px 18px;
+  text-align: center;
+  color: #64748b;
+  font-weight: 600;
+  background: rgba(248, 250, 252, 0.8);
 }
 
 /* Le card interattive sono finestre indipendenti dalle pagine principali. */

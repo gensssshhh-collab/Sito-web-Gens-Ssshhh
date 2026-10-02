@@ -1,3 +1,8 @@
+function isRuoloAmministrativo(ruolo) {
+  var ruoloNorm = String(ruolo || "").trim().toUpperCase();
+  return ["PRESIDENTE", "VICEPRESIDENTE", "SEGRETARIO", "TESORIERE"].indexOf(ruoloNorm) >= 0;
+}
+
 function getHomeSummary(email) {
   var user = getDatiUtente(email);
   if (!user) return null;
@@ -44,9 +49,7 @@ function getHomeSummary(email) {
   var filesPriv = getListaDocumenti("PRIVATO", email).length;
 
   // --- LOGICA RUOLI ---
-  var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
-  var ruoloUtente = user.ruolo ? user.ruolo.toUpperCase() : "";
-  var isAdmin = ruoliAdmin.includes(ruoloUtente);
+  var isAdmin = isRuoloAmministrativo(user.ruolo);
 
   return {
     nome: user.nome,

@@ -1,15 +1,17 @@
 /// SEZIONE ADMIN
 // 1. Dashboard e Gestione Soci
 
-
+function isRuoloAmministrativo(ruolo) {
+  var ruoloNorm = String(ruolo || "").trim().toUpperCase();
+  return ["PRESIDENTE", "VICEPRESIDENTE", "SEGRETARIO", "TESORIERE"].indexOf(ruoloNorm) >= 0;
+}
 
 // ADMIN: RECUPERO DATI DASHBOARD E LISTA SOCI
 
 function getDashboardAdmin(email) {
   try {
     var user = getDatiUtente(email);
-    var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE", "VICEPRESIDENTE"];
-    if (!user || !ruoliAdmin.includes(user.ruolo.toUpperCase())) return null;
+    if (!user || !isRuoloAmministrativo(user.ruolo)) return null;
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
@@ -55,8 +57,7 @@ function getDashboardAdmin(email) {
 function adminUpdateSocio(dati) {
   // 1. Controllo: Sei un admin?
   var adminUser = getDatiUtente(dati.adminEmail);
-  var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
-  if (!adminUser || !ruoliAdmin.includes(adminUser.ruolo.toUpperCase())) {
+  if (!adminUser || !isRuoloAmministrativo(adminUser.ruolo)) {
     return "NO_AUTH";
   }
 
@@ -88,8 +89,7 @@ function adminUpdateSocio(dati) {
 function adminGetListaPagamenti(adminEmail) {
   // 1. Sicurezza: Solo Admin/Tesoriere
   var user = getDatiUtente(adminEmail);
-  var ruoliAmmessi = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
-  if (!user || !ruoliAmmessi.includes(user.ruolo.toUpperCase())) return [];
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return [];
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var fSoci = ss.getSheetByName("soci");
@@ -123,8 +123,7 @@ function adminGetListaPagamenti(adminEmail) {
 function adminRegistraRinnovo(adminEmail, targetEmail, metodo) {
   // 1. Sicurezza
   var user = getDatiUtente(adminEmail);
-  var ruoliAmmessi = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
-  if (!user || !ruoliAmmessi.includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var fSoci = ss.getSheetByName("Soci");
@@ -289,8 +288,7 @@ function adminEliminaElezione(emailAdmin, idElezione) {
 function adminCambiaStatoVoto(email, nuovoStato) {
   // Controllo sicurezza
   var user = getDatiUtente(email);
-  var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
-  if (!ruoliAdmin.includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.getSheetByName("Config").getRange("B3").setValue(nuovoStato);
@@ -301,10 +299,9 @@ function adminCambiaStatoVoto(email, nuovoStato) {
 function adminGetCandidaturePendenti(adminEmail) {
   try {
     var user = getDatiUtente(adminEmail);
-    var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
 
     // Controlla che l'utente esista e sia un admin
-    if (!user || !ruoliAdmin.includes(user.ruolo.toUpperCase())) return [];
+    if (!user || !isRuoloAmministrativo(user.ruolo)) return [];
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     // Cerca il foglio (accetta sia minuscolo che maiuscolo)
@@ -367,8 +364,7 @@ function adminProcessaCandidatura(emailAdmin, rigaIndex, azione) {
 function adminGetRisultatiLive(adminEmail, idElezione) {
   try {
     var user = getDatiUtente(adminEmail);
-    var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE", "VICEPRESIDENTE"];
-    if (!user || !ruoliAdmin.includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+    if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
@@ -454,8 +450,7 @@ function adminGetRisultatiLive(adminEmail, idElezione) {
 
 function adminPubblicaNews(dati) {
   var user = getDatiUtente(dati.email);
-  var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
-  if (!user || !ruoliAdmin.includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("News");
@@ -470,7 +465,7 @@ function adminPubblicaNews(dati) {
 
 function adminCancellaNews(dati) {
   var user = getDatiUtente(dati.email);
-  if (!["PRESIDENTE", "SEGRETARIO", "TESORIERE"].includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("News");
@@ -487,7 +482,7 @@ function adminCancellaNews(dati) {
 
 function getAmmissioniAdmin(adminEmail) {
   var user = getDatiUtente(adminEmail);
-  if (!["PRESIDENTE", "SEGRETARIO", "VICEPRESIDENTE"].includes(user.ruolo.toUpperCase())) return [];
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return [];
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioAmm = ss.getSheetByName("Ammissioni");
@@ -517,7 +512,7 @@ function getAmmissioniAdmin(adminEmail) {
 
 function adminGestisciAmmissione(adminEmail, emailCandidato, azione) {
   var user = getDatiUtente(adminEmail);
-  if (!["PRESIDENTE", "SEGRETARIO"].includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioAmm = ss.getSheetByName("Ammissioni");
@@ -582,8 +577,7 @@ function adminGestisciAmmissione(adminEmail, emailCandidato, azione) {
 
 function adminInviaDocumentoFirma(data, target, richiedeControfirma) {
   var user = getDatiUtente(data.adminEmail);
-  var ruoliAdmin = ["PRESIDENTE", "SEGRETARIO", "TESORIERE"];
-  if (!user || !ruoliAdmin.includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -650,7 +644,7 @@ function adminInviaDocumentoFirma(data, target, richiedeControfirma) {
 
 function adminGetStatisticheFirme(adminEmail) {
   var user = getDatiUtente(adminEmail);
-  if (!["PRESIDENTE", "SEGRETARIO", "TESORIERE"].includes(user.ruolo.toUpperCase())) return [];
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return [];
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("RichiesteFirma");
@@ -763,7 +757,7 @@ function adminInviaSollecito(docName, listaEmail) {
 
 function adminEseguiControfirma(idRichiesta, adminEmail) {
   var user = getDatiUtente(adminEmail);
-  if (!["PRESIDENTE", "SEGRETARIO"].includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("RichiesteFirma");
@@ -803,7 +797,7 @@ function adminEseguiControfirma(idRichiesta, adminEmail) {
 function adminChiudiEGeneraRegistroFirme(docName, adminEmail) {
   try {
     var user = getDatiUtente(adminEmail);
-    if (!["PRESIDENTE", "SEGRETARIO", "TESORIERE"].includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+    if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheetReq = ss.getSheetByName("RichiesteFirma");
@@ -956,7 +950,7 @@ function adminChiudiEGeneraRegistroFirme(docName, adminEmail) {
 
 function adminEliminaGruppoRichieste(docName, adminEmail) {
   var user = getDatiUtente(adminEmail);
-  if (!["PRESIDENTE", "SEGRETARIO", "TESORIERE"].includes(user.ruolo.toUpperCase())) return "NO_AUTH";
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("RichiesteFirma");

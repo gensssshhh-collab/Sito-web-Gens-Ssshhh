@@ -136,6 +136,9 @@
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewDash', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
                     <span class="nav-icon" aria-hidden="true">▣</span><span>Dashboard</span></div>
+                <div id="adminNavItem" class="nav-item" role="button" tabindex="0" onclick="nav('viewAdmin', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewAdmin', this); }">
+                    <span class="nav-icon" aria-hidden="true">⚙</span><span>Amministrazione</span></div>
 
                 <div class="nav-section-label nav-section-secondary">La tua società</div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewClub', this)"
@@ -187,9 +190,6 @@
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewProf', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewProf', this); }">
                     <span class="nav-icon" aria-hidden="true">♙</span><span>Profilo</span></div>
-                <div class="nav-item" role="button" tabindex="0" onclick="nav('viewAdmin', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewAdmin', this); }">
-                    <span class="nav-icon" aria-hidden="true">⚙</span><span>Amministrazione</span></div>
             </nav>
 
             <div class="sidebar-footer">
@@ -429,27 +429,61 @@
                         <div class="club-status-badge"><span class="sidebar-status-dot"></span> Agenda associativa</div>
                     </div>
 
-                    <div class="club-summary-grid">
-                        <div class="club-summary-card">
-                            <span>Prossimi eventi</span>
-                            <strong id="calendarUpcomingCount">0</strong>
-                        </div>
-                        <div class="club-summary-card">
-                            <span>Riunioni</span>
-                            <strong id="calendarMeetingsCount">0</strong>
-                        </div>
-                        <div class="club-summary-card">
-                            <span>Attività</span>
-                            <strong id="calendarActivitiesCount">0</strong>
-                        </div>
-                    </div>
-
                     <div class="calendar-panel">
                         <div class="calendar-header-row">
                             <h3>Programma del mese</h3>
                             <button class="compact-action" onclick="renderCalendarioView()">Aggiorna</button>
                         </div>
                         <div id="calendarEventsList" class="calendar-list"></div>
+                    </div>
+
+                    <div class="calendar-panel" style="margin-top: 20px;">
+                        <div class="calendar-header-row">
+                            <h3>Proponi un evento</h3>
+                        </div>
+
+                        <div style="display: grid; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Titolo evento</label>
+                                <input type="text" id="eventoNome" placeholder="Es. Calcetto serale, Cena sociale, Escape room..."
+                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Descrizione</label>
+                                <textarea id="eventoDescrizione" rows="3" placeholder="Spiega di cosa si tratta, il tipo di attività e il target..."
+                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; font-size: 14px;"></textarea>
+                            </div>
+
+                            <div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                    <label style="display: block; font-size: 13px; font-weight: bold; color: #334155;">Possibili date / orari / luoghi</label>
+                                    <button type="button" onclick="aggiungiOpzioneEvento()" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: bold; color: #0f172a; cursor: pointer;">+ aggiungi</button>
+                                </div>
+
+                                <div id="eventOptionsList" style="display: grid; gap: 10px;">
+                                    <div class="event-option-row" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
+                                        <input type="text" data-role="data" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                        <input type="text" data-role="ora" inputmode="numeric" maxlength="5" placeholder="hh:mm" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                        <input type="text" data-role="luogo" placeholder="Luogo" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="inviaPropostaEvento()"
+                                style="background: #f59e0b; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer;">
+                                INVIA PROPOSTA EVENTO
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="calendar-panel" style="margin-top: 20px;">
+                        <div class="calendar-header-row">
+                            <h3>Eventi proposti</h3>
+                        </div>
+                        <div id="eventiPropostiList" style="display: grid; gap: 12px;">
+                            <p style="margin: 0; color: #64748b; font-size: 13px;">Nessuna proposta ancora inviata.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -620,68 +654,6 @@
                                         <div
                                             style="margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px; color: #475569;">
                                             ℹ️ <b>Nota:</b> È necessario essere in regola con la quota associativa.
-                                        </div>
-                                    </div>
-
-                                    <!-- CARD PROPONI NUOVO SOCIO -->
-                                    <div
-                                        style="background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                                        <div
-                                            style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
-                                            <div style="background: #fef3c7; padding: 10px; border-radius: 8px;"><span
-                                                    style="font-size: 22px; line-height: 1;">🎉</span></div>
-                                            <div>
-                                                <h3 style="margin: 0; font-size: 18px; color: #0f172a;">Proponi un evento</h3>
-                                                <p style="margin: 0; font-size: 13px; color: #64748b; margin-top: 2px;">Suggerisci attività per la comunità e fai votare le migliori opzioni.</p>
-                                            </div>
-                                        </div>
-
-                                        <div style="display: grid; gap: 15px;">
-                                            <div>
-                                                <label style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Titolo evento</label>
-                                                <input type="text" id="eventoNome" placeholder="Es. Calcetto serale, Cena sociale, Escape room..."
-                                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
-                                            </div>
-
-                                            <div>
-                                                <label style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Descrizione</label>
-                                                <textarea id="eventoDescrizione" rows="3" placeholder="Spiega di cosa si tratta, il tipo di attività e il target..."
-                                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; font-size: 14px;"></textarea>
-                                            </div>
-
-                                            <div>
-                                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                                                    <label style="display: block; font-size: 13px; font-weight: bold; color: #334155;">Possibili date / orari / luoghi</label>
-                                                    <button type="button" onclick="aggiungiOpzioneEvento()" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: bold; color: #0f172a; cursor: pointer;">+ aggiungi</button>
-                                                </div>
-
-                                                <div id="eventOptionsList" style="display: grid; gap: 10px;">
-                                                    <div class="event-option-row" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
-                                                        <input type="text" data-role="data" placeholder="Data" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                                        <input type="text" data-role="ora" placeholder="Ora" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                                        <input type="text" data-role="luogo" placeholder="Luogo" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <button onclick="inviaPropostaEvento()"
-                                                style="background: #f59e0b; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer;">
-                                                INVIA PROPOSTA EVENTO
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div
-                                        style="background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
-                                            <div>
-                                                <h3 style="margin: 0; font-size: 18px; color: #0f172a;">Eventi proposti</h3>
-                                                <p style="margin: 0; font-size: 13px; color: #64748b; margin-top: 2px;">Vota la proposta che preferisci e la migliore data/ora/luogo.</p>
-                                            </div>
-                                        </div>
-
-                                        <div id="eventiPropostiList" style="display: grid; gap: 12px;">
-                                            <p style="margin: 0; color: #64748b; font-size: 13px;">Nessuna proposta ancora inviata.</p>
                                         </div>
                                     </div>
 

@@ -156,6 +156,18 @@ test('eventi: condivide la proposta e rifiuta il doppio voto', () => {
   assert.equal(context.votaPropostaEvento('mario@example.it', 'evento-1', 0).messaggio, 'Hai già votato questa proposta.');
 });
 
+test('ruoli: riconosce come amministrativi presidente, vicepresidente e segretario ma non consiglieri', () => {
+  const context = {};
+  loadScript('user.js', context);
+
+  assert.equal(context.isRuoloAmministrativo('Presidente'), true);
+  assert.equal(context.isRuoloAmministrativo('Vicepresidente'), true);
+  assert.equal(context.isRuoloAmministrativo('Segretario'), true);
+  assert.equal(context.isRuoloAmministrativo('Tesoriere'), true);
+  assert.equal(context.isRuoloAmministrativo('Consigliere'), false);
+  assert.equal(context.isRuoloAmministrativo('Socio semplice'), false);
+});
+
 test('firme: invia OTP e lega il codice al documento richiesto', () => {
   const cacheValues = new Map();
   let emailSent = null;

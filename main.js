@@ -57,7 +57,115 @@ function doPost(e) {
        }
     }
 
-    // 2. PONTE UNIVERSALE DINAMICO
+    // 2. BACKEND COMPATIBILITÀ EVENTI: gestione diretta delle azioni di calendario
+    if (azione === "getProposteEventi") {
+      var emailProposte = Array.isArray(richiesta.payload) ? richiesta.payload[0] : (richiesta.email || richiesta.payload || "");
+      var sheetEventi = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('ProposteEventi');
+      if (!sheetEventi) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: [] })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var values = sheetEventi.getDataRange().getValues();
+      var dati = values.slice(1).filter(function (row) {
+        return String(row[7] || 'ATTIVA') === 'ATTIVA';
+      }).map(function (row) {
+        var opzioni = [];
+        var voti = {};
+        try { opzioni = JSON.parse(row[5] || '[]'); } catch (e) { }
+        try { voti = JSON.parse(row[6] || '{}'); } catch (e) { }
+        delete voti._votanti;
+        return {
+          id: String(row[0]),
+          titolo: String(row[3] || ''),
+          descrizione: String(row[4] || ''),
+          opzioni: opzioni,
+          voti: voti
+        };
+      });
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: dati })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (azione === "creaPropostaEvento") {
+      var payloadEvento = richiesta.payload;
+      if (Array.isArray(payloadEvento)) {
+        payloadEvento = { email: payloadEvento[0], proposta: payloadEvento[1] || {} };
+      }
+      var emailEvento = payloadEvento.email || payloadEvento && payloadEvento[0] || richiesta.email || "";
+      var propostaEvento = payloadEvento.proposta || payloadEvento || {};
+      var titolo = String(propostaEvento.titolo || '').trim();
+      var descrizione = String(propostaEvento.descrizione || '').trim();
+      var opzioni = Array.isArray(propostaEvento.opzioni) ? propostaEvento.opzioni.map(function (opzione) {
+        return {
+          data: String(opzione.data || '').trim(),
+          ora: String(opzione.ora || '').trim(),
+          luogo: String(opzione.luogo || '').trim()
+        };
+      }).filter(function (opzione) {
+        return opzione.data || opzione.ora || opzione.luogo;
+      }) : [];
+
+      if (!titolo || !descrizione || !opzioni.length) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: { ok: false, messaggio: 'Titolo, descrizione e almeno una opzione sono obbligatori.' } })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var ssEvento = SpreadsheetApp.getActiveSpreadsheet();
+      var sheetEvento = ssEvento.getSheetByName('ProposteEventi');
+      if (!sheetEvento) {
+        sheetEvento = ssEvento.insertSheet('ProposteEventi');
+        sheetEvento.appendRow(['ID', 'CreatoIl', 'CreatoreEmail', 'Titolo', 'Descrizione', 'OpzioniJson', 'VotiJson', 'Stato']);
+      }
+
+      var idEvento = Utilities.getUuid();
+      sheetEvento.appendRow([idEvento, new Date(), String(emailEvento).trim().toLowerCase(), titolo, descrizione, JSON.stringify(opzioni), JSON.stringify({}), 'ATTIVA']);
+
+      return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: { ok: true, proposta: { id: idEvento, titolo: titolo, descrizione: descrizione, opzioni: opzioni, voti: {} } } })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (azione === "votaPropostaEvento") {
+      var payloadVoto = richiesta.payload;
+      if (Array.isArray(payloadVoto)) {
+        payloadVoto = { email: payloadVoto[0], propostaId: payloadVoto[1], optionIndex: payloadVoto[2] };
+      }
+      var emailVoto = String(payloadVoto.email || richiesta.email || '').trim().toLowerCase();
+      var propostaId = String(payloadVoto.propostaId || payloadVoto.id || '');
+      var indice = Number(payloadVoto.optionIndex);
+
+      var sheetVoto = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('ProposteEventi');
+      if (!sheetVoto) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: { ok: false, messaggio: 'Proposta non trovata.' } })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var rowsVoto = sheetVoto.getDataRange().getValues();
+      var rowIndex = rowsVoto.findIndex(function (row, index) {
+        return index > 0 && String(row[0]) === String(propostaId);
+      });
+      if (rowIndex < 1) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: { ok: false, messaggio: 'Proposta non trovata.' } })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var rigaVoto = rowsVoto[rowIndex];
+      var opzioniVoto = JSON.parse(rigaVoto[5] || '[]');
+      if (!Number.isInteger(indice) || indice < 0 || indice >= opzioniVoto.length) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: { ok: false, messaggio: 'Opzione non valida.' } })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var voti = {};
+      try { voti = JSON.parse(rigaVoto[6] || '{}'); } catch (e) { }
+      var votanti = voti._votanti || {};
+      if (votanti[emailVoto] !== undefined) {
+        return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: { ok: false, messaggio: 'Hai già votato questa proposta.' } })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      voti[indice] = Number(voti[indice] || 0) + 1;
+      votanti[emailVoto] = indice;
+      voti._votanti = votanti;
+      sheetVoto.getRange(rowIndex + 1, 7).setValue(JSON.stringify(voti));
+      delete voti._votanti;
+      return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: { ok: true, voti: voti } })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 3. PONTE UNIVERSALE DINAMICO
     // Cerca una funzione nel backend che si chiami esattamente come l'azione richiesta
     if (typeof this[azione] === 'function') {
        // Estrae i parametri in modo flessibile a seconda di come li invia l'app
@@ -78,7 +186,7 @@ function doPost(e) {
        })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 3. SE LA FUNZIONE NON ESISTE
+    // 4. SE LA FUNZIONE NON ESISTE
     return ContentService.createTextOutput(JSON.stringify({
       status: "ERROR",
       messaggio: "Azione (" + azione + ") non trovata sul server."
