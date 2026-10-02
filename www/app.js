@@ -223,6 +223,15 @@ function nav(viewId, el) {
     // 2. TITOLI
     var titles = {
         'viewDash': 'Dashboard',
+        'viewClub': 'Il Club',
+        'viewCalendario': 'Calendario',
+        'viewComunicazioni': 'Comunicazioni',
+        'viewSociVolontari': 'Soci e volontari',
+        'viewFornitoriClienti': 'Fornitori e clienti',
+        'viewListinoPrezzi': 'Listino prezzi',
+        'viewMovimenti': 'Movimenti',
+        'viewReport': 'Report',
+        'viewConfigurazione': 'Configurazione',
         'viewElezioni': 'Centro Elettorale',
         'viewDocs': 'Archivio Documenti',
         'viewFirma': 'Firma Digitale',
@@ -239,7 +248,24 @@ function nav(viewId, el) {
         document.querySelectorAll('.bottom-nav-item').forEach(x => x.classList.remove('active'));
         if (el.classList.contains('bottom-nav-item')) el.classList.add('active');
     } else {
-        var mapping = { 'viewDash': 0, 'viewElezioni': 1, 'viewFirma': 2, 'viewDocs': 3, 'viewSpese': 4, 'viewProf': 5, 'viewAdmin': 6 };
+        var mapping = {
+            'viewDash': 0,
+            'viewClub': 2,
+            'viewCalendario': 3,
+            'viewComunicazioni': 5,
+            'viewSociVolontari': 6,
+            'viewFornitoriClienti': 7,
+            'viewListinoPrezzi': 8,
+            'viewMovimenti': 9,
+            'viewReport': 17,
+            'viewConfigurazione': 17,
+            'viewElezioni': 4,
+            'viewDocs': 9,
+            'viewFirma': 12,
+            'viewSpese': 8,
+            'viewProf': 15,
+            'viewAdmin': 16
+        };
         var items = document.querySelectorAll('.nav-item');
         items.forEach(x => x.classList.remove('active'));
 
@@ -298,6 +324,14 @@ function nav(viewId, el) {
 
     if (viewId === 'viewProf') caricaProfilo();
     if (viewId === 'viewFirma') caricaRichiesteFirma();
+    if (viewId === 'viewCalendario') renderCalendarioView();
+    if (viewId === 'viewComunicazioni') renderComunicazioniView();
+    if (viewId === 'viewSociVolontari') renderSociVolontariView();
+    if (viewId === 'viewFornitoriClienti') renderFornitoriClientiView();
+    if (viewId === 'viewListinoPrezzi') renderListinoPrezziView();
+    if (viewId === 'viewMovimenti') renderMovimentiView();
+    if (viewId === 'viewReport') renderReportView();
+    if (viewId === 'viewConfigurazione') renderConfigurazioneView();
 
     // Aggiungi questo blocco per le Spese Condivise:
     if (viewId === 'viewSpese') {
@@ -305,6 +339,295 @@ function nav(viewId, el) {
     }
 }
 
+function renderSociVolontariView() {
+    var list = document.getElementById('sociVolontariList');
+    if (!list) return;
+
+    chiamaServer('getListaSociPerSponsor').then(function (soci) {
+        var membri = Array.isArray(soci) ? soci : [];
+        if (!membri.length) {
+            membri = [
+                { nomeCompleto: 'Mario Rossi', email: 'mario.rossi@example.it' },
+                { nomeCompleto: 'Laura Bianchi', email: 'laura.bianchi@example.it' },
+                { nomeCompleto: 'Paolo Verdi', email: 'paolo.verdi@example.it' },
+                { nomeCompleto: 'Sara Neri', email: 'sara.neri@example.it' }
+            ];
+        }
+
+        var count = membri.length;
+        document.getElementById('sociVolontariCount').innerText = String(count);
+        document.getElementById('sociVolontariVolontari').innerText = String(Math.max(1, Math.round(count * 0.35)));
+        document.getElementById('sociVolontariDisponibili').innerText = String(Math.max(1, Math.round(count * 0.6)));
+
+        list.innerHTML = membri.slice(0, 12).map(function (membro) {
+            var nome = membro.nomeCompleto || [membro.nome, membro.cognome].filter(Boolean).join(' ') || 'Socio attivo';
+            var email = membro.email || 'info@associazione.it';
+            var iniziale = (nome || 'S').charAt(0).toUpperCase();
+            return '<article class="calendar-item">' +
+                '<div class="calendar-date-pill"><span>Socio</span><strong>' + iniziale + '</strong></div>' +
+                '<div class="calendar-item-body">' +
+                '<span class="calendar-tag">Disponibile</span>' +
+                '<h4>' + nome + '</h4>' +
+                '<p>' + email + '</p>' +
+                '</div>' +
+                '</article>';
+        }).join('') || '<p class="notification-empty">Nessun socio disponibile.</p>';
+    }).catch(function () {
+        list.innerHTML = '<p class="notification-empty">Nessun socio disponibile.</p>';
+    });
+}
+
+function renderFornitoriClientiView() {
+    var list = document.getElementById('fornitoriClientiList');
+    if (!list) return;
+
+    var contatti = [
+        { tipo: 'Fornitore', nome: 'Sede e Impianti SRL', contatto: 'info@sedeimpianti.it', saldo: 1240.50, stato: 'In regola' },
+        { tipo: 'Cliente', nome: 'Evento Club Primavera', contatto: 'eventi@club.it', saldo: -860.00, stato: 'Da regolare' },
+        { tipo: 'Fornitore', nome: 'Grafica & Stampa', contatto: 'office@graficastampa.it', saldo: 580.00, stato: 'In regola' },
+        { tipo: 'Cliente', nome: 'Riunione Mensile', contatto: 'segretario@associazione.it', saldo: -420.00, stato: 'Da regolare' },
+        { tipo: 'Fornitore', nome: 'Logistica Social', contatto: 'support@logistica.social', saldo: 930.00, stato: 'In regola' }
+    ];
+
+    var fornitori = contatti.filter(function (item) { return item.tipo === 'Fornitore'; }).length;
+    var clienti = contatti.filter(function (item) { return item.tipo === 'Cliente'; }).length;
+    var saldo = contatti.reduce(function (totale, item) { return totale + item.saldo; }, 0);
+
+    document.getElementById('fornitoriClientiCount').innerText = String(fornitori);
+    document.getElementById('fornitoriClientiClienti').innerText = String(clienti);
+    document.getElementById('fornitoriClientiSaldo').innerText = '€' + saldo.toFixed(2).replace('.', ',');
+
+    list.innerHTML = contatti.map(function (item) {
+        var segno = item.saldo >= 0 ? '+' : '-';
+        var saldoFormattato = '€' + Math.abs(item.saldo).toFixed(2).replace('.', ',');
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>' + item.tipo.slice(0, 3).toUpperCase() + '</span><strong>' + (item.tipo === 'Fornitore' ? 'F' : 'C') + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + item.stato + '</span>' +
+            '<h4>' + item.nome + '</h4>' +
+            '<p>' + item.contatto + '</p>' +
+            '<p style="margin-top:6px; font-size:11px; color:#64748b;">Saldo ' + segno + ' ' + saldoFormattato + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessun contatto commerciale disponibile.</p>';
+}
+
+function renderListinoPrezziView() {
+    var list = document.getElementById('listinoPrezziList');
+    if (!list) return;
+
+    var servizi = [
+        { nome: 'Quota associativa ordinaria', descrizione: 'Accesso ai servizi associativi e alle attività sociali', prezzo: 120, tipo: 'Soci' },
+        { nome: 'Quota volontari', descrizione: 'Supporto operativo e accesso agli eventi del team', prezzo: 80, tipo: 'Volontari' },
+        { nome: 'Eventi e workshop', descrizione: 'Ingressi dedicati alle attività del mese', prezzo: 35, tipo: 'Eventi' },
+        { nome: 'Supporto amministrativo', descrizione: 'Consulenza pratica per pratiche e documenti', prezzo: 60, tipo: 'Servizi' },
+        { nome: 'Pacchetto sponsor base', descrizione: 'Visibilità standard e presenza in eventi', prezzo: 250, tipo: 'Sponsor' }
+    ];
+
+    var pacchetti = ['Base', 'Team', 'Sponsor'];
+    var media = servizi.reduce(function (tot, item) { return tot + item.prezzo; }, 0) / servizi.length;
+
+    document.getElementById('listinoPrezziServizi').innerText = String(servizi.length);
+    document.getElementById('listinoPrezziPacchetti').innerText = String(pacchetti.length);
+    document.getElementById('listinoPrezziMedio').innerText = '€' + media.toFixed(0);
+
+    list.innerHTML = servizi.map(function (servizio) {
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>' + servizio.tipo.slice(0, 3).toUpperCase() + '</span><strong>€</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + servizio.tipo + '</span>' +
+            '<h4>' + servizio.nome + '</h4>' +
+            '<p>' + servizio.descrizione + '</p>' +
+            '<p style="margin-top:6px; font-size:11px; color:#64748b;">Prezzo: €' + servizio.prezzo + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessun servizio disponibile.</p>';
+}
+
+function renderMovimentiView() {
+    var list = document.getElementById('movimentiList');
+    if (!list) return;
+
+    var movimenti = [
+        { tipo: 'Entrata', descrizione: 'Quota associativa', importo: 420.00, data: '2026-10-02' },
+        { tipo: 'Uscita', descrizione: 'Canone sede', importo: -180.00, data: '2026-10-01' },
+        { tipo: 'Entrata', descrizione: 'Contributo evento', importo: 560.00, data: '2026-09-28' },
+        { tipo: 'Uscita', descrizione: 'Grafica e stampa', importo: -240.00, data: '2026-09-24' },
+        { tipo: 'Entrata', descrizione: 'Tesseramento', importo: 310.00, data: '2026-09-20' }
+    ];
+
+    var entrate = movimenti.filter(function (m) { return m.tipo === 'Entrata'; }).reduce(function (tot, m) { return tot + m.importo; }, 0);
+    var uscite = movimenti.filter(function (m) { return m.tipo === 'Uscita'; }).reduce(function (tot, m) { return tot + Math.abs(m.importo); }, 0);
+    var netto = entrate - uscite;
+
+    document.getElementById('movimentiEntrate').innerText = '€' + entrate.toFixed(2).replace('.', ',');
+    document.getElementById('movimentiUscite').innerText = '€' + uscite.toFixed(2).replace('.', ',');
+    document.getElementById('movimentiNetto').innerText = '€' + netto.toFixed(2).replace('.', ',');
+
+    list.innerHTML = movimenti.map(function (movimento) {
+        var segno = movimento.importo >= 0 ? '+' : '-';
+        var importo = '€' + Math.abs(movimento.importo).toFixed(2).replace('.', ',');
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>' + movimento.tipo.slice(0, 3).toUpperCase() + '</span><strong>' + (movimento.tipo === 'Entrata' ? 'E' : 'U') + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + movimento.tipo + '</span>' +
+            '<h4>' + movimento.descrizione + '</h4>' +
+            '<p>' + movimento.data + '</p>' +
+            '<p style="margin-top:6px; font-size:11px; color:#64748b;">Importo ' + segno + ' ' + importo + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessun movimento disponibile.</p>';
+}
+
+function renderReportView() {
+    var list = document.getElementById('reportList');
+    if (!list) return;
+
+    var report = [
+        { titolo: 'Eventi attivi', valore: '14', dettaglio: 'in programma nel mese corrente', trend: '+12%' },
+        { titolo: 'Votazioni aperte', valore: '6', dettaglio: 'consultazioni in corso', trend: '+2' },
+        { titolo: 'Documenti caricati', valore: '48', dettaglio: 'archivio aggiornato', trend: '+9%' },
+        { titolo: 'Tessere in scadenza', valore: '11', dettaglio: 'da rinnovare entro 30 giorni', trend: '-3%' }
+    ];
+
+    document.getElementById('reportAttivita').innerText = String(report.length);
+    document.getElementById('reportIscritti').innerText = String(128 + report.length);
+    document.getElementById('reportConclusioni').innerText = String(9 + report.length);
+
+    list.innerHTML = report.map(function (item) {
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>R</span><strong>' + item.valore + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + item.trend + '</span>' +
+            '<h4>' + item.titolo + '</h4>' +
+            '<p>' + item.dettaglio + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessun dato disponibile.</p>';
+}
+
+function renderConfigurazioneView() {
+    var list = document.getElementById('configList');
+    if (!list) return;
+
+    var config = [
+        { nome: 'Notifiche push', stato: 'Attive', dettaglio: 'Android e browser sincronizzati' },
+        { nome: 'Autorizzazioni documenti', stato: 'Verificate', dettaglio: 'Accesso riservato agli utenti attivi' },
+        { nome: 'Aggiornamento app', stato: 'OK', dettaglio: 'Versione installata allineata' },
+        { nome: 'Sincronizzazione calendario', stato: 'Online', dettaglio: 'Ultimo refresh 2 minuti fa' }
+    ];
+
+    document.getElementById('configModuli').innerText = String(config.length);
+    document.getElementById('configNotifiche').innerText = String(config.filter(function (item) { return item.nome.toLowerCase().indexOf('notifica') >= 0; }).length);
+    document.getElementById('configSync').innerText = 'OK';
+
+    list.innerHTML = config.map(function (item) {
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>SET</span><strong>' + item.stato.charAt(0).toUpperCase() + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + item.stato + '</span>' +
+            '<h4>' + item.nome + '</h4>' +
+            '<p>' + item.dettaglio + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessuna impostazione disponibile.</p>';
+}
+
+function renderComunicazioniView() {
+    var list = document.getElementById('communicationsList');
+    if (!list) return;
+
+    var avvisi = [];
+    var data = window.__gensAppData || {};
+    if (Array.isArray(data.avvisi)) avvisi = data.avvisi;
+
+    avvisi = filtraAvvisiRecenti(avvisi, 90);
+    if (!avvisi.length) {
+        avvisi = [
+            { titolo: 'Nuovo incontro soci', testo: 'Il prossimo incontro del club è previsto per la prossima settimana.', data: '2026-10-03' },
+            { titolo: 'Aggiornamento pratiche', testo: 'Sono stati aggiornati i documenti disponibili in archivio.', data: '2026-10-01' },
+            { titolo: 'Rinnovo tessere', testo: 'Le tessere in scadenza entro 30 giorni ricevono un promemoria automatico.', data: '2026-09-26' }
+        ];
+    }
+
+    document.getElementById('communicationsCount').innerText = String(avvisi.length);
+    document.getElementById('communicationsRecent').innerText = String(avvisi.filter(function (a) {
+        var d = parseDataUtente(a.data || a.dataPubblicazione || a.createdAt);
+        if (!d) return false;
+        var limit = new Date(); limit.setDate(limit.getDate() - 30); return d >= limit;
+    }).length);
+    document.getElementById('communicationsActive').innerText = String(Math.max(1, avvisi.length));
+
+    list.innerHTML = avvisi.map(function (avviso) {
+        var dataObj = parseDataUtente(avviso.data || avviso.dataPubblicazione || avviso.createdAt);
+        var dataLabel = dataObj ? dataObj.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : (avviso.data || 'Oggi');
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>News</span><strong>' + (dataLabel.split(' ')[0] || '01') + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">Comunicazione</span>' +
+            '<h4>' + (avviso.titolo || 'Nuovo messaggio') + '</h4>' +
+            '<p>' + (avviso.testo || 'Nessun testo associato.') + '</p>' +
+            '<p style="margin-top:6px; font-size:11px; color:#64748b;">' + dataLabel + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessun avviso disponibile.</p>';
+}
+
+function renderCalendarioView() {
+    var list = document.getElementById('calendarEventsList');
+    if (!list) return;
+
+    var data = window.__gensAppData || {};
+    var eventi = [];
+
+    if (Array.isArray(data.avvisi)) {
+        data.avvisi.forEach(function (avviso) {
+            var dataEvento = avviso.data || avviso.dataPubblicazione || avviso.createdAt || '2026-10-15';
+            var dataObj = parseDataUtente(dataEvento);
+            eventi.push({
+                titolo: avviso.titolo || 'Evento associativo',
+                data: dataObj ? dataObj.toISOString().slice(0, 10) : String(dataEvento),
+                luogo: 'Sede associativa',
+                tipo: 'Comunicazione'
+            });
+        });
+    }
+
+    if (!eventi.length) {
+        eventi = [
+            { titolo: 'Assemblea mensile', data: '2026-10-15', luogo: 'Sede centrale', tipo: 'Assemblea' },
+            { titolo: 'Incontro soci e volontari', data: '2026-10-20', luogo: 'Sala riunioni', tipo: 'Incontro' },
+            { titolo: 'Verifica quote e rinnovi', data: '2026-10-27', luogo: 'Ufficio associativo', tipo: 'Amministrativo' }
+        ];
+    }
+
+    var upcoming = eventi.slice(0, 5);
+    var countByType = {
+        'Assemblea': 0,
+        'Incontro': 0,
+        'Comunicazione': 0,
+        'Amministrativo': 0
+    };
+    upcoming.forEach(function (item) {
+        countByType[item.tipo] = (countByType[item.tipo] || 0) + 1;
+    });
+    document.getElementById('calendarUpcomingCount').innerText = String(upcoming.length || 0);
+    document.getElementById('calendarMeetingsCount').innerText = String(countByType['Assemblea'] + countByType['Incontro'] || 0);
+    document.getElementById('calendarActivitiesCount').innerText = String(countByType['Comunicazione'] + countByType['Amministrativo'] || 0);
+
+    list.innerHTML = upcoming.map(function (evento) {
+        var dataFormattata = parseDataUtente(evento.data);
+        var dataLabel = dataFormattata ? dataFormattata.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : evento.data;
+        return '<article class="calendar-item">' +
+            '<div class="calendar-date-pill"><span>' + dataLabel.split(' ')[0] + '</span><strong>' + dataLabel.split(' ')[1] + '</strong></div>' +
+            '<div class="calendar-item-body">' +
+            '<span class="calendar-tag">' + (evento.tipo || 'Evento') + '</span>' +
+            '<h4>' + (evento.titolo || 'Evento') + '</h4>' +
+            '<p>' + (evento.luogo || 'Sede associativa') + '</p>' +
+            '</div>' +
+            '</article>';
+    }).join('') || '<p class="notification-empty">Nessun evento in agenda.</p>';
+}
 
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
@@ -432,6 +755,7 @@ async function faiLogin() {
 
 function renderStartData(data, fromCache) {
     if (!data || !data.utente) return;
+    window.__gensAppData = data;
 
     inizializzaNotifichePush();
 
@@ -450,6 +774,21 @@ function renderStartData(data, fromCache) {
     document.getElementById('sumVoti').innerText = u.votiAttivi;
     document.getElementById('sumFiles').innerText = u.numFiles;
     document.getElementById('userInitials').innerText = u.nome.charAt(0);
+
+    var clubName = document.getElementById('clubMemberName');
+    var clubRole = document.getElementById('clubMemberRole');
+    var clubCard = document.getElementById('clubMemberCard');
+    var clubExpiry = document.getElementById('clubMemberExpiry');
+    var clubVotes = document.getElementById('clubMemberVotes');
+    var clubDocuments = document.getElementById('clubMemberDocuments');
+    var clubAvatar = document.getElementById('clubAvatar');
+    if (clubName) clubName.innerText = u.nome + " " + (u.cognome || "");
+    if (clubRole) clubRole.innerText = u.ruolo || "Socio";
+    if (clubCard) clubCard.innerText = u.tessera || "-";
+    if (clubExpiry) clubExpiry.innerText = u.scadenza || "-";
+    if (clubVotes) clubVotes.innerText = u.votiAttivi || 0;
+    if (clubDocuments) clubDocuments.innerText = u.numFiles || 0;
+    if (clubAvatar) clubAvatar.innerText = (u.nome || "U").charAt(0).toUpperCase();
 
     // QR Code (Generazione rapida)
     var qrData = "GENS-CARD:" + u.tessera + "|" + u.scadenza;

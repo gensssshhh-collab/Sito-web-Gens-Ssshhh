@@ -3177,3 +3177,249 @@ textarea {
     overflow-x: auto;
   }
 }
+
+.club-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.club-page-header h2 {
+  margin: 4px 0 6px;
+  color: var(--navy);
+}
+
+.club-page-header p,
+.club-next-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.section-kicker {
+  color: #b28538;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.club-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(53, 166, 111, 0.2);
+  border-radius: 999px;
+  background: rgba(53, 166, 111, 0.08);
+  color: #277d53;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.club-identity-panel,
+.club-next-panel {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.8));
+  box-shadow: 0 10px 26px rgba(30, 64, 175, 0.07);
+}
+
+.club-avatar {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 16px;
+  background: #1e40af;
+  color: white;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.club-identity-label,
+.club-card-number span,
+.club-summary-card span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.club-identity-panel h3 {
+  margin: 3px 0;
+  color: var(--navy);
+}
+
+.club-identity-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.club-card-number {
+  margin-left: auto;
+  text-align: right;
+}
+
+.club-card-number strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--navy);
+  font-family: monospace;
+  font-size: 16px;
+}
+
+.club-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.club-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.club-summary-card strong {
+  color: var(--navy);
+  font-size: 20px;
+}
+
+.club-next-panel {
+  justify-content: space-between;
+  background: #fffaf0;
+  border-color: rgba(197, 157, 75, 0.22);
+}
+
+.club-next-panel h3 {
+  margin: 4px 0 6px;
+  color: var(--navy);
+}
+
+.club-action {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.calendar-panel {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.04);
+}
+
+.calendar-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.calendar-header-row h3 {
+  margin: 0;
+  color: var(--navy);
+}
+
+.calendar-list {
+  display: grid;
+  gap: 14px;
+}
+
+.calendar-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.calendar-date-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  color: #1d4ed8;
+  text-align: center;
+}
+
+.calendar-date-pill span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.calendar-date-pill strong {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.calendar-item-body {
+  flex: 1;
+}
+
+.calendar-tag {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(30, 64, 175, 0.08);
+  color: #1e40af;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.calendar-item h4 {
+  margin: 0 0 4px;
+  color: var(--navy);
+  font-size: 16px;
+}
+
+.calendar-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .club-page-header,
+  .club-next-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .club-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .club-card-number {
+    margin-left: auto;
+  }
+
+  .club-action {
+    width: 100%;
+  }
+}
