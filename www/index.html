@@ -119,29 +119,45 @@
         <div class="overlay" onclick="toggleSidebar()"></div>
 
         <div class="sidebar" id="sidebar">
-            <div class="brand gs-logo-mark" aria-label="Logo GS"><span class="logo-g">G</span><span
-                    class="logo-s">S</span></div>
+            <div class="sidebar-brand">
+                <div class="brand gs-logo-mark" aria-label="Logo GS"><span class="logo-g">G</span><span
+                        class="logo-s">S</span></div>
+                <div class="sidebar-brand-copy">
+                    <strong>Gens Ssshhh</strong>
+                    <span>Area riservata</span>
+                </div>
+            </div>
 
             <nav class="nav-links" aria-label="Navigazione principale">
+                <div class="nav-section-label">La tua area</div>
                 <div class="nav-item active" role="button" tabindex="0" onclick="nav('viewDash', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
-                    Home page</div>
+                    <span class="nav-icon" aria-hidden="true">⌂</span><span>Home page</span></div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewElezioni', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewElezioni', this); }">
-                    Consultazioni</div>
+                    <span class="nav-icon" aria-hidden="true">◉</span><span>Consultazioni</span></div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewFirma', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewFirma', this); }">
-                    Firma Digitale</div>
+                    <span class="nav-icon" aria-hidden="true">✎</span><span>Firma Digitale</span></div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewDocs', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocs', this); }">
-                    Archivio</div>
+                    <span class="nav-icon" aria-hidden="true">▣</span><span>Archivio</span></div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewSpese', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSpese', this); }">
-                    Spese Condivise</div>
+                    <span class="nav-icon" aria-hidden="true">↕</span><span>Spese Condivise</span></div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewProf', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewProf', this); }">
-                    Profilo</div>
+                    <span class="nav-icon" aria-hidden="true">♙</span><span>Profilo</span></div>
+                <div class="nav-section-label nav-section-secondary">Gestione</div>
+                <div class="nav-item" role="button" tabindex="0" onclick="nav('viewAdmin', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewAdmin', this); }">
+                    <span class="nav-icon" aria-hidden="true">⚙</span><span>Amministrazione</span></div>
             </nav>
+
+            <div class="sidebar-footer">
+                <span class="sidebar-status-dot" aria-hidden="true"></span>
+                <span>Sistema operativo</span>
+            </div>
 
         </div>
 

@@ -234,7 +234,7 @@ function nav(viewId, el) {
         document.querySelectorAll('.bottom-nav-item').forEach(x => x.classList.remove('active'));
         if (el.classList.contains('bottom-nav-item')) el.classList.add('active');
     } else {
-        var mapping = { 'viewDash': 0, 'viewElezioni': 1, 'viewDocs': 2, 'viewProf': 3 };
+        var mapping = { 'viewDash': 0, 'viewElezioni': 1, 'viewFirma': 2, 'viewDocs': 3, 'viewSpese': 4, 'viewProf': 5, 'viewAdmin': 6 };
         var items = document.querySelectorAll('.nav-item');
         items.forEach(x => x.classList.remove('active'));
 
