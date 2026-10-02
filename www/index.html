@@ -27,8 +27,8 @@
 
 
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 </head>
 
@@ -129,26 +129,61 @@
             </div>
 
             <nav class="nav-links" aria-label="Navigazione principale">
-                <div class="nav-section-label">La tua area</div>
+                <div class="nav-section-label">Dashboard</div>
                 <div class="nav-item active" role="button" tabindex="0" onclick="nav('viewDash', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
                     <span class="nav-icon" aria-hidden="true">⌂</span><span>Home page</span></div>
-                <div class="nav-item" role="button" tabindex="0" onclick="nav('viewElezioni', this)"
+                <div class="nav-item" role="button" tabindex="0" onclick="nav('viewDash', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
+                    <span class="nav-icon" aria-hidden="true">▣</span><span>Dashboard</span></div>
+
+                <div class="nav-section-label nav-section-secondary">La tua società</div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDash', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
+                    <span class="nav-icon" aria-hidden="true">◫</span><span>Club</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDash', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
+                    <span class="nav-icon" aria-hidden="true">◌</span><span>Calendario</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewElezioni', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewElezioni', this); }">
-                    <span class="nav-icon" aria-hidden="true">◉</span><span>Consultazioni</span></div>
+                    <span class="nav-icon" aria-hidden="true">◉</span><span>Attività</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDash', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
+                    <span class="nav-icon" aria-hidden="true">✉</span><span>Comunicazioni</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewProf', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewProf', this); }">
+                    <span class="nav-icon" aria-hidden="true">◎</span><span>Soci e volontari</span></div>
+
+                <div class="nav-section-label nav-section-secondary">Documenti e contabilità</div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDocs', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocs', this); }">
+                    <span class="nav-icon" aria-hidden="true">▣</span><span>Archivio</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewSpese', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSpese', this); }">
+                    <span class="nav-icon" aria-hidden="true">↕</span><span>Listino prezzi</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewSpese', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSpese', this); }">
+                    <span class="nav-icon" aria-hidden="true">◫</span><span>Fornitori e clienti</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewSpese', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSpese', this); }">
+                    <span class="nav-icon" aria-hidden="true">⤴</span><span>Movimenti</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDocs', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocs', this); }">
+                    <span class="nav-icon" aria-hidden="true">▤</span><span>Documenti</span></div>
+
+                <div class="nav-section-label nav-section-secondary">Gestione</div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewFirma', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewFirma', this); }">
                     <span class="nav-icon" aria-hidden="true">✎</span><span>Firma Digitale</span></div>
-                <div class="nav-item" role="button" tabindex="0" onclick="nav('viewDocs', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocs', this); }">
-                    <span class="nav-icon" aria-hidden="true">▣</span><span>Archivio</span></div>
-                <div class="nav-item" role="button" tabindex="0" onclick="nav('viewSpese', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSpese', this); }">
-                    <span class="nav-icon" aria-hidden="true">↕</span><span>Spese Condivise</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewAdmin', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewAdmin', this); }">
+                    <span class="nav-icon" aria-hidden="true">⚙</span><span>Configurazione</span></div>
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewAdmin', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewAdmin', this); }">
+                    <span class="nav-icon" aria-hidden="true">◬</span><span>Report</span></div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewProf', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewProf', this); }">
                     <span class="nav-icon" aria-hidden="true">♙</span><span>Profilo</span></div>
-                <div class="nav-section-label nav-section-secondary">Gestione</div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewAdmin', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewAdmin', this); }">
                     <span class="nav-icon" aria-hidden="true">⚙</span><span>Amministrazione</span></div>

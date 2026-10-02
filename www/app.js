@@ -24,6 +24,8 @@ function getSkeletonLoader() {
 var cacheDocs = []; // Memorizza i file scaricati per filtrarli velocemente
 var curCategory = "TUTTI"; // Filtro attuale
 var curSearchDocs = "";
+var docsRequestInFlight = {};
+var docsSearchDebounceTimer = null;
 
 
 /* --- VARIABILI GLOBALI --- */
@@ -40,6 +42,9 @@ var configVoto = { mode: "", max: 1 };
 var pushNotificationsInitialized = false;
 var localNotificationsPlugin = null;
 var appUpdateChecked = false;
+var bilancioRequestInFlight = null;
+var bilancioCacheTimestamp = 0;
+var newsRequestInFlight = null;
 
 function controllaAggiornamentoApp() {
     if (appUpdateChecked || !window.Capacitor || !window.Capacitor.getPlatform || window.Capacitor.getPlatform() !== 'android') return;
@@ -748,17 +753,21 @@ function loadDocs(mode) {
         } catch (error) {
             localStorage.removeItem(cacheKey);
         }
-    } else {
+    } else if (div) {
         div.innerHTML = getSkeletonLoader();
     }
 
-    chiamaServer("getListaDocumenti", [mode, curEmail]).then(function (files) {
+    if (docsRequestInFlight[mode]) return;
+
+    docsRequestInFlight[mode] = chiamaServer("getListaDocumenti", [mode, curEmail]).then(function (files) {
         if (!Array.isArray(files)) return;
         cacheDocs = files.filter(function (file) {
             return file && file.url && file.nome;
         });
         localStorage.setItem(cacheKey, JSON.stringify(cacheDocs));
-        renderDocs();      // Disegna a video
+        renderDocs();
+    }).finally(function () {
+        delete docsRequestInFlight[mode];
     });
 }
 
@@ -774,19 +783,15 @@ function filtraCategoria(cat, el) {
 
 function renderDocs() {
     var div = document.getElementById('listaFiles');
+    if (!div) return;
 
-    // 1. Filtra i dati in memoria (Categoria AND Testo)
-    var filtered = cacheDocs.filter(f => {
-        // Controllo Categoria
+    var filtered = cacheDocs.filter(function (f) {
         var matchCat = (curCategory === "TUTTI" || f.categoria === curCategory);
-
-        // Controllo Testo (Nome file)
         var matchText = true;
         if (curSearchDocs !== "") {
-            matchText = f.nome.toLowerCase().includes(curSearchDocs);
+            matchText = String(f.nome || '').toLowerCase().includes(curSearchDocs);
         }
-
-        return matchCat && matchText; // Deve soddisfare entrambi!
+        return matchCat && matchText;
     });
 
     if (filtered.length === 0) {
@@ -799,35 +804,70 @@ function renderDocs() {
         return;
     }
 
-    // 2. Genera l'HTML corretto per le card dei documenti
-    var html = "";
-    filtered.forEach(f => {
-        // Logica pulsanti: se siamo nel cestino mostra l'icona per ripristinare, altrimenti quella per eliminare
-        var actionBtn = curDocMode === 'CESTINO'
-            ? `<div class="doc-action restore" onclick="gestisciFile('${f.id}', 'restore', event)" title="Ripristina file">♻️</div>`
-            : `<div class="doc-action" onclick="gestisciFile('${f.id}', 'delete', event)" title="Sposta nel cestino">🗑️</div>`;
+    var fragment = document.createDocumentFragment();
+    filtered.forEach(function (f) {
+        var card = document.createElement('a');
+        card.href = f.url;
+        card.target = '_blank';
+        card.rel = 'noopener';
+        card.className = 'doc-card';
 
-        var safeName = String(f.nome || 'Documento');
-        var safeCategory = String(f.categoria || 'Altro');
-        html += `<a href="${f.url}" target="_blank" rel="noopener" class="doc-card">
-            ${actionBtn}
-            <div class="doc-card-top"><div class="doc-icon">PDF</div><span class="doc-open">Apri →</span></div>
-            <div class="doc-name">${safeName}</div>
-            <div class="doc-category">${safeCategory}</div>
-        </a>`;
+        var actionBtn = document.createElement('div');
+        if (curDocMode === 'CESTINO') {
+            actionBtn.className = 'doc-action restore';
+            actionBtn.title = 'Ripristina file';
+            actionBtn.textContent = '♻️';
+            actionBtn.onclick = function (event) {
+                gestisciFile(f.id, 'restore', event);
+            };
+        } else {
+            actionBtn.className = 'doc-action';
+            actionBtn.title = 'Sposta nel cestino';
+            actionBtn.textContent = '🗑️';
+            actionBtn.onclick = function (event) {
+                gestisciFile(f.id, 'delete', event);
+            };
+        }
+
+        var head = document.createElement('div');
+        head.className = 'doc-card-top';
+        var icon = document.createElement('div');
+        icon.className = 'doc-icon';
+        icon.textContent = 'PDF';
+        var open = document.createElement('span');
+        open.className = 'doc-open';
+        open.textContent = 'Apri →';
+        head.appendChild(icon);
+        head.appendChild(open);
+
+        var name = document.createElement('div');
+        name.className = 'doc-name';
+        name.textContent = String(f.nome || 'Documento');
+
+        var category = document.createElement('div');
+        category.className = 'doc-category';
+        category.textContent = String(f.categoria || 'Altro');
+
+        card.appendChild(actionBtn);
+        card.appendChild(head);
+        card.appendChild(name);
+        card.appendChild(category);
+        fragment.appendChild(card);
     });
 
-    div.innerHTML = html;
+    div.innerHTML = '';
+    div.appendChild(fragment);
 }
-
-
 
 function filtraDocsTesto() {
     var input = document.getElementById('searchDoc');
-    if (input) {
-        curSearchDocs = input.value.toLowerCase(); // Salva il testo in minuscolo
-        renderDocs(); // Ridisegna la lista
-    }
+    if (!input) return;
+
+    curSearchDocs = input.value.toLowerCase();
+    clearTimeout(docsSearchDebounceTimer);
+    docsSearchDebounceTimer = setTimeout(function () {
+        renderDocs();
+    }, 180);
 }
 
 
@@ -1126,6 +1166,14 @@ function switchAdminTab(tabId, el) {
     if (tabId === 'tabElez') {
         caricaCampagneAdmin();
         caricaCandidatureAdmin();
+        caricaAmmissioniAdmin();
+        caricaGraficoElezioni();
+    }
+    if (tabId === 'tabFirmaAdmin') {
+        caricaStatsFirme();
+    }
+    if (tabId === 'tabBilancioAdmin') {
+        caricaContiDalNuovoFoglio();
     }
 }
 
@@ -1144,14 +1192,6 @@ function caricaDatiAdmin() {
 
         // C. GENERAZIONE TABELLA (Usa la tua funzione originale)
         renderTabellaSoci(cacheSoci);
-
-        // D. ALTRE CHIAMATE (Grafici e Candidature)
-        if (typeof caricaCandidatureAdmin === 'function') caricaCandidatureAdmin();
-        if (typeof caricaAmmissioniAdmin === 'function') caricaAmmissioniAdmin();
-        if (typeof caricaCampagneAdmin === 'function') caricaCampagneAdmin();
-        if (typeof caricaGraficoElezioni === 'function') caricaGraficoElezioni();
-
-        caricaContiDalNuovoFoglio();
 
     });
 }
@@ -1592,10 +1632,11 @@ function aggiornaListaMovimenti() {
 // 1. Carica le news nella Dashboard Utente
 function caricaNewsDashboard() {
     var div = document.getElementById('containerAvvisi');
+    if (!div || newsRequestInFlight) return;
     // Non mettiamo il loader se c'è già contenuto, per non fare "flash"
     if (!div.innerHTML.includes('news-item')) div.innerHTML = "<div class='loader'></div>";
 
-    chiamaServer("getAvvisiPubblici").then(function (avvisi) {
+    newsRequestInFlight = chiamaServer("getAvvisiPubblici").then(function (avvisi) {
         avvisi = filtraAvvisiRecenti(avvisi);
         if (avvisi.length === 0) {
             div.innerHTML = "<p style='color:var(--text-muted); font-size:14px; font-style:italic;'>Nessun avviso recente.</p>";
@@ -1621,7 +1662,8 @@ function caricaNewsDashboard() {
 
         // Se siamo admin, aggiorniamo anche la lista per cancellare
         if (document.getElementById('listaNewsAdmin')) renderNewsAdmin(avvisi);
-
+    }).finally(function () {
+        newsRequestInFlight = null;
     });
 }
 
@@ -4567,13 +4609,29 @@ function tornaAllaDashboard() {
 var cacheDatiBilancio = null;
 
 function caricaGraficoOverview() {
-    chiamaServer("getDatiBilancioCompleto").then(function (dati) {
+    var cacheAge = Date.now() - bilancioCacheTimestamp;
+    if (cacheDatiBilancio && cacheAge < 60000) {
+        renderGraficoOverview(cacheDatiBilancio);
+        return;
+    }
+    if (bilancioRequestInFlight) return;
+
+    bilancioRequestInFlight = chiamaServer("getDatiBilancioCompleto").then(function (dati) {
         if (!dati) {
             document.getElementById('boxOverviewBilancio').innerHTML = "<p style='font-size:12px; color:#94a3b8;'>Nessun dato registrato</p>";
             return;
         }
-        cacheDatiBilancio = dati; // Salviamo i dati per la schermata di dettaglio
+        cacheDatiBilancio = dati;
+        bilancioCacheTimestamp = Date.now();
+        renderGraficoOverview(dati);
+    }).finally(function () {
+        bilancioRequestInFlight = null;
+    });
+}
 
+function renderGraficoOverview(dati) {
+        var box = document.getElementById('boxOverviewBilancio');
+        if (!box) return;
         // Grafico a BARRE Orizzontali (Sintesi)
         var config = {
             type: 'horizontalBar',
@@ -4591,8 +4649,7 @@ function caricaGraficoOverview() {
             }
         };
         var url = "https://quickchart.io/chart?c=" + encodeURIComponent(JSON.stringify(config)) + "&h=120";
-        document.getElementById('boxOverviewBilancio').innerHTML = `<img src="${url}" style="width:100%; max-height:120px; object-fit:contain;">`;
-    });
+        box.innerHTML = `<img src="${url}" loading="lazy" decoding="async" alt="Sintesi bilancio" style="width:100%; max-height:120px; object-fit:contain;">`;
 }
 
 // Funzione per APRIRE il dettaglio del bilancio
