@@ -144,6 +144,7 @@ function riceviVotoCampagna(datiVoto) {
         subject: "✅ Conferma Registrazione Voto",
         htmlBody: "<h3>Voto Registrato con Successo</h3><p>La tua preferenza è stata registrata in modo sicuro ed anonimo nel registro dei voti.</p>"
       });
+      inviaNotificaPushUtente(emailChiara, "Voto registrato", "La tua preferenza è stata registrata correttamente.", "viewElezioni");
     } catch (e) {
       console.log("Errore invio mail conferma voto: " + e);
     }
@@ -388,6 +389,9 @@ function _inviaBatchEmailElettorali(bccList, subject, testoMessaggio, urlWebApp,
     try {
       MailApp.sendEmail(opzioniMail);
       inviatiConSuccesso = inviatiConSuccesso.concat(batch); // Salva i nomi per la ricevuta
+      batch.forEach(function (email) {
+        inviaNotificaPushUtente(email, subject, "Hai ricevuto un nuovo promemoria elettorale.", "viewElezioni");
+      });
       Utilities.sleep(1000); 
     } catch (e) {
       console.log("Errore invio batch promemoria: " + e.toString());
@@ -418,6 +422,7 @@ function _inviaBatchEmailElettorali(bccList, subject, testoMessaggio, urlWebApp,
         htmlBody: testoRicevuta,
         name: "Sistema Gestionale Gens Ssshhh"
       });
+      inviaNotificaPushUtente(adminEmail, "Report invio elettorale", "Il sistema ha completato l'invio delle comunicazioni.", "viewAdmin");
     } catch (e) {
       console.log("Errore invio ricevuta log: " + e.toString());
     }

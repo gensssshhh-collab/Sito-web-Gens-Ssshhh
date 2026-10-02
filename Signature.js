@@ -22,6 +22,7 @@ function requestSignOTP(email, docId) {
               "<p>Inserisci questo codice per firmare digitalmente il documento.</p>" +
               "<p><small>Il codice scade tra 5 minuti.</small></p>"
   });
+  if (typeof inviaNotificaPushUtente === "function") inviaNotificaPushUtente(email, "Codice per firma digitale", "Il tuo codice OTP è " + otp + ". Scade tra 5 minuti.", "viewFirma");
 
   return "OTP_SENT";
 }
@@ -78,6 +79,7 @@ function verifyAndSign(email, inputOtp, browserInfo) {
     htmlBody: "Hai firmato correttamente. In allegato trovi il certificato di firma con i dati crittografici.",
     attachments: [certificatoBlob]
   });
+  if (typeof inviaNotificaPushUtente === "function") inviaNotificaPushUtente(email, "Documento firmato", "Hai firmato correttamente il documento.", "viewFirma");
 
   // Pulisce la cache (OTP bruciato)
   cache.remove("SIGN_OTP_" + email);

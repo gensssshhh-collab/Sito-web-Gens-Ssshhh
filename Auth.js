@@ -109,7 +109,11 @@ function eseguiResetPassword(emailInput) {
     if (datiSoci[i][2].toString().trim().toLowerCase() === emailTarget) {
       var passTemp = Math.random().toString(36).slice(-8);
       foglioSoci.getRange(i + 1, 2).setValue(creaHash(passTemp));
-      try { MailApp.sendEmail(emailTarget, "Nuova Password", "Password: " + passTemp); return "RESET_OK"; } catch (e) { }
+      try {
+        MailApp.sendEmail(emailTarget, "Nuova Password", "Password: " + passTemp);
+        inviaNotificaPushUtente(emailTarget, "Nuova password", "La tua password temporanea è stata generata.", "viewProf");
+        return "RESET_OK";
+      } catch (e) { }
     }
   }
   return "EMAIL_NON_TROVATA";
@@ -148,6 +152,7 @@ function inviaLinkReset(email) {
             "<p><a href='" + link + "' style='background:#3b82f6; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>IMPOSTA NUOVA PASSWORD</a></p>" +
             "<p><small>Se non sei stato tu, ignora questa mail. Il link scade tra 1 ora.</small></p>"
         });
+          inviaNotificaPushUtente(emailTarget, "Reimpostazione password", "È disponibile il link per reimpostare la password.", "viewProf");
         return "LINK_INVIATO";
       } catch (e) { return "ERRORE_MAIL"; }
     }
@@ -286,6 +291,7 @@ function inviaRichiestaDimissioni(dati) {
   var emailAdmin = ss.getSheetByName("Config").getRange("B19").getValue() || "gens.ssshhh@gmail.com";
   try {
     MailApp.sendEmail(emailAdmin, "⚠️ Richiesta Dimissioni", "Il socio " + nomeCompleto + " (" + emailUtente + ") ha richiesto le dimissioni.");
+    inviaNotificaPushUtente(emailAdmin, "Richiesta dimissioni", "" + nomeCompleto + " ha richiesto le dimissioni.", "viewAdmin");
     return "DIMISSIONI_OK";
   } catch (e) { return "ERRORE_MAIL"; }
 }
@@ -408,6 +414,7 @@ function inviaAvvisiScadenzaTessere() {
         htmlBody: htmlBody,
         name: "Gens Ssshhh App"
       });
+      inviaNotificaPushUtente(email, titoloEmail, testoIntro.replace(/<[^>]*>?/gm, ''), "viewProf");
 
       proprieta.setProperty(chiave, new Date().toISOString());
       scriviLog(email, "EMAIL_TESSERA_" + tipo, "Scadenza " + dataFormattata);

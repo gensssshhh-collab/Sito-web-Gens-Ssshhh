@@ -232,6 +232,7 @@ function proponiNuovoSocio(dati) {
       // Aggiornato il corpo della mail per mostrare Nome e Cognome insieme
       htmlBody: "<p>Ciao, <b>" + dati.sponsor1 + "</b> ti ha indicato come secondo garante per l'ammissione di <b>" + dati.nomeCandidato + " " + dati.cognomeCandidato + "</b>.</p><p>Accedi al portale per confermare il tuo sostegno, in modo da poter portare la candidatura al voto in assemblea.</p>"
     });
+    inviaNotificaPushUtente(dati.emailSponsor2, "Richiesta di sostegno", "Ti è stato richiesto di sostenere una candidatura.", "viewAdmin");
   } catch (e) { }
 
   return "OK";

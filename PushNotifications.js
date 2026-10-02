@@ -43,7 +43,7 @@ function rimuoviTokenPush(dati) {
   return "TOKEN_RIMOSSO";
 }
 
-function inviaNotificaPush(titolo, testo) {
+function inviaNotificaPush(titolo, testo, emailDestinatario, viewId) {
   var properties = PropertiesService.getScriptProperties();
   var projectId = properties.getProperty("FCM_PROJECT_ID") || "gens-ssshhh";
   if (!projectId) return "FCM_NON_CONFIGURATO";
@@ -61,7 +61,11 @@ function inviaNotificaPush(titolo, testo) {
     "Content-Type": "application/json"
   };
 
-  Object.keys(tokens).forEach(function (email) {
+  var destinatari = emailDestinatario
+    ? [String(emailDestinatario).trim().toLowerCase()]
+    : Object.keys(tokens);
+
+  destinatari.forEach(function (email) {
     (tokens[email] || []).forEach(function (item) {
       try {
         var response = UrlFetchApp.fetch(endpoint, {
@@ -77,7 +81,7 @@ function inviaNotificaPush(titolo, testo) {
                   default_sound: true
                 }
               },
-              data: { viewId: "viewDash" }
+              data: { viewId: viewId || "viewDash" }
             }
           }),
           muteHttpExceptions: true
@@ -93,4 +97,14 @@ function inviaNotificaPush(titolo, testo) {
 
   properties.setProperty("PUSH_TOKENS", JSON.stringify(tokens));
   return "PUSH_INVIATA";
+}
+
+function inviaNotificaPushUtente(email, titolo, testo, viewId) {
+  if (!email) return "EMAIL_MANCANTE";
+  try {
+    return inviaNotificaPush(titolo, testo, email, viewId);
+  } catch (e) {
+    console.log("Errore invio push a " + email + ": " + e);
+    return "PUSH_ERRORE";
+  }
 }

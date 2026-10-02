@@ -87,12 +87,16 @@ test('notifiche: registra un token una sola volta e invia il canale Android', ()
   assert.equal(context.registraTokenPush(token), 'TOKEN_REGISTRATO');
   assert.equal(context.registraTokenPush(token), 'TOKEN_REGISTRATO');
   assert.equal(context.inviaNotificaPush('Titolo', 'Testo'), 'PUSH_INVIATA');
+  assert.equal(context.inviaNotificaPushUtente('MARIO@EXAMPLE.IT', 'Firma', 'Documento da firmare', 'viewFirma'), 'PUSH_INVIATA');
 
   const saved = JSON.parse(properties.get('PUSH_TOKENS'));
   assert.equal(saved['mario@example.it'].length, 1);
   const payload = JSON.parse(requests[0].options.payload);
   assert.equal(payload.message.android.notification.channel_id, 'gens-notifiche');
   assert.equal(payload.message.notification.body, 'Testo');
+  const targetedPayload = JSON.parse(requests[1].options.payload);
+  assert.equal(targetedPayload.message.notification.title, 'Firma');
+  assert.equal(targetedPayload.message.data.viewId, 'viewFirma');
 });
 
 test('votazioni: salva il voto e rifiuta un secondo voto dello stesso socio', () => {
