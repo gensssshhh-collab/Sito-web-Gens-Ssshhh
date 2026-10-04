@@ -4,3 +4,4 @@ node_modules/**
 package.json
 package-lock.json
 capacitor.config.json
+test/backend.test.js
