@@ -528,6 +528,144 @@ function getNotificheUtente(email) {
   return notifiche;
 }
 
+function parseDataActionCenter_(valore) {
+  if (!valore) return null;
+  if (valore instanceof Date) return isNaN(valore.getTime()) ? null : new Date(valore.getTime());
+  var testo = String(valore).trim();
+  var parti = testo.split(/[\/\-.]/);
+  if (parti.length === 3) {
+    if (parti[0].length === 4) return new Date(Number(parti[0]), Number(parti[1]) - 1, Number(parti[2]));
+    return new Date(Number(parti[2]), Number(parti[1]) - 1, Number(parti[0]));
+  }
+  var data = new Date(testo);
+  return isNaN(data.getTime()) ? null : data;
+}
+
+function costruisciActionCenter_(email, user, oggi) {
+  var firme = [];
+  var consultazioni = [];
+  var proposte = [];
+  var candidature = [];
+  var statisticheFirme = [];
+
+  try { firme = getRichiesteFirmaUtente(email) || []; } catch (e) { }
+  try { consultazioni = getConsultazioniAttiveUtente(email) || []; } catch (e) { }
+  try { proposte = getProposteEventi(email) || []; } catch (e) { }
+
+  var eventi = [];
+  proposte.forEach(function (proposta) {
+    (proposta.opzioni || []).forEach(function (opzione) {
+      var dataEvento = parseDataActionCenter_(opzione.data);
+      if (!dataEvento || dataEvento < oggi) return;
+      eventi.push({
+        id: proposta.id,
+        titolo: proposta.titolo || "Evento proposto",
+        descrizione: proposta.descrizione || "",
+        data: opzione.data || "",
+        ora: opzione.ora || "",
+        luogo: opzione.luogo || ""
+      });
+    });
+  });
+  eventi.sort(function (a, b) {
+    return parseDataActionCenter_(a.data).getTime() - parseDataActionCenter_(b.data).getTime();
+  });
+
+  var azioni = [];
+  if (firme.length) azioni.push({
+    id: "firme",
+    tipo: "firma",
+    titolo: "Documenti da firmare",
+    dettaglio: "Hai " + firme.length + " documento/i in attesa della tua firma.",
+    count: firme.length,
+    viewId: "viewFirma",
+    priorita: "urgente"
+  });
+  var votazioniPendenti = consultazioni.filter(function (item) {
+    return item.categoria === "ATTIVE" && item.statoVoto !== "GIÀ VOTATO";
+  });
+  if (votazioniPendenti.length) azioni.push({
+    id: "votazioni",
+    tipo: "votazione",
+    titolo: "Votazioni da completare",
+    dettaglio: "Hai " + votazioniPendenti.length + " consultazione/i aperta/e.",
+    count: votazioniPendenti.length,
+    viewId: "viewElezioni",
+    priorita: "urgente"
+  });
+
+  var isAdmin = isRuoloAmministrativo(user.ruolo);
+  var adminData = null;
+  if (isAdmin) {
+    try { candidature = adminGetCandidaturePendenti(email) || []; } catch (e) { }
+    try { statisticheFirme = adminGetStatisticheFirme(email) || []; } catch (e) { }
+    var controfirme = 0;
+    statisticheFirme.forEach(function (statistica) {
+      controfirme += (statistica.daControfirmare || []).length;
+    });
+    adminData = {
+      candidaturePendenti: candidature.length,
+      controfirmePendenti: controfirme,
+      richiesteFirma: statisticheFirme
+    };
+    if (candidature.length) azioni.push({
+      id: "candidature-admin",
+      tipo: "admin",
+      titolo: "Candidature da esaminare",
+      dettaglio: "Ci sono " + candidature.length + " candidatura/e in attesa.",
+      count: candidature.length,
+      viewId: "viewAdmin",
+      priorita: "alta"
+    });
+    if (controfirme) azioni.push({
+      id: "controfirme-admin",
+      tipo: "admin",
+      titolo: "Controfirme in sospeso",
+      dettaglio: "Ci sono " + controfirme + " documento/i da controfirmare.",
+      count: controfirme,
+      viewId: "viewAdmin",
+      priorita: "alta"
+    });
+  }
+
+  var finanze = { disponibile: false, entrate: 0, uscite: 0, saldo: 0 };
+  if (isAdmin && typeof getDatiBilancioCompleto === "function") {
+    try {
+      var bilancio = getDatiBilancioCompleto();
+      if (bilancio) {
+        finanze = {
+          disponibile: true,
+          entrate: Number(bilancio.totEntrate || 0),
+          uscite: Number(bilancio.totUscite || 0),
+          saldo: Number(bilancio.totEntrate || 0) - Number(bilancio.totUscite || 0)
+        };
+      }
+    } catch (e) { }
+  }
+
+  var scadenza = parseDataActionCenter_(user.scadenza);
+  var giorniScadenza = scadenza ? Math.ceil((scadenza.getTime() - oggi.getTime()) / 86400000) : null;
+  return {
+    tessera: {
+      stato: giorniScadenza !== null && giorniScadenza < 0 ? "SCADUTA" : "ATTIVA",
+      scadenza: user.scadenza || "",
+      giorniAllaScadenza: giorniScadenza
+    },
+    counters: {
+      firmePendenti: firme.length,
+      votazioniPendenti: votazioniPendenti.length,
+      azioniUrgenti: azioni.length
+    },
+    azioni: azioni,
+    eventi: {
+      prossimi: eventi.slice(0, 5),
+      proposteAttive: proposte.length
+    },
+    finanze: finanze,
+    admin: adminData
+  };
+}
+
 function getStartData(email) {
 
   var cache = CacheService.getScriptCache();
@@ -537,23 +675,25 @@ function getStartData(email) {
     try { return JSON.parse(cached); } catch (e) { }
   }
 
-  // Eseguiamo tutte le letture insieme lato server (molto più veloce)
-  // Recupera i dati utente di base
   var user = getHomeSummary(email);
+  if (!user) return null;
+  var oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
 
   // Recupera le news (se la funzione esiste, altrimenti array vuoto)
   var news = [];
   try { news = getAvvisiPubblici(); } catch (e) { }
 
-  // Recupera stato voto
   var voto = { status: "CHIUSE" };
   try { voto = checkStatoVoto(email); } catch (e) { }
+  var actionCenter = costruisciActionCenter_(email, user, oggi);
 
   // Restituiamo un pacchetto unico al sito
   var result = {
     utente: user,
     avvisi: news,
-    statoVoto: voto
+    statoVoto: voto,
+    actionCenter: actionCenter
   };
 
   cache.put(cacheKey, JSON.stringify(result), 30);

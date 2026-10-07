@@ -367,30 +367,84 @@ function nav(viewId, el) {
     }
 }
 
+function escapeActionCenterText(value) {
+    return String(value === undefined || value === null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 function renderHomeView() {
-    var list = document.getElementById('homeList');
-    if (!list) return;
+    var data = window.__gensAppData || {};
+    var center = data.actionCenter || {};
+    var user = data.utente || {};
+    var counters = center.counters || {};
+    var tessera = center.tessera || {};
+    var eventi = center.eventi && Array.isArray(center.eventi.prossimi) ? center.eventi.prossimi : [];
+    var azioni = Array.isArray(center.azioni) ? center.azioni : [];
 
-    var attivita = [
-        { titolo: 'Votazioni aperte', dettaglio: 'Consulta le consultazioni in corso', tag: 'Attive' },
-        { titolo: 'Documenti da verificare', dettaglio: 'Archivi e modulistica aggiornata', tag: 'Nuovo' },
-        { titolo: 'Prossimo evento', dettaglio: 'Riunione associativa del mese', tag: 'Agenda' }
-    ];
+    var stato = document.getElementById('homeTesseraStato');
+    var scadenza = document.getElementById('homeTesseraScadenza');
+    var azioniUrgenti = document.getElementById('homeAzioniUrgenti');
+    var prossimoEvento = document.getElementById('homeProssimoEvento');
+    var prossimoEventoMeta = document.getElementById('homeProssimoEventoMeta');
+    if (stato) stato.innerText = tessera.stato || (user.scadenza ? 'ATTIVA' : '-');
+    if (scadenza) scadenza.innerText = 'Scadenza ' + (tessera.scadenza || user.scadenza || '-');
+    if (azioniUrgenti) azioniUrgenti.innerText = String(counters.azioniUrgenti || 0);
+    if (prossimoEvento) prossimoEvento.innerText = eventi.length ? (eventi[0].titolo || 'Evento') : '-';
+    if (prossimoEventoMeta) prossimoEventoMeta.innerText = eventi.length
+        ? ((eventi[0].data || '') + (eventi[0].ora ? ' · ' + eventi[0].ora : ''))
+        : 'Nessun evento in programma';
 
-    document.getElementById('homeVotazioni').innerText = '3';
-    document.getElementById('homeDocumenti').innerText = '12';
-    document.getElementById('homeEventi').innerText = '5';
+    var actionList = document.getElementById('homeActionList');
+    if (actionList) {
+        actionList.innerHTML = azioni.length ? azioni.map(function (azione) {
+            return '<button type="button" class="action-center-item ' + escapeActionCenterText(azione.priorita || '') + '" onclick="nav(\'' + escapeActionCenterText(azione.viewId || 'viewElezioni') + '\')">' +
+                '<span class="action-center-item-icon">' + (azione.tipo === 'firma' ? '✎' : azione.tipo === 'votazione' ? '◉' : '⚙') + '</span>' +
+                '<span class="action-center-item-copy"><strong>' + escapeActionCenterText(azione.titolo) + '</strong><small>' + escapeActionCenterText(azione.dettaglio) + '</small></span>' +
+                '<span class="action-center-item-arrow" aria-hidden="true">→</span>' +
+                '</button>';
+        }).join('') : '<p class="notification-empty">Nessuna azione urgente. Sei in pari.</p>';
+    }
 
-    list.innerHTML = attivita.map(function (item) {
-        return '<article class="calendar-item">' +
-            '<div class="calendar-date-pill"><span>HP</span><strong>' + item.tag.charAt(0).toUpperCase() + '</strong></div>' +
-            '<div class="calendar-item-body">' +
-            '<span class="calendar-tag">' + item.tag + '</span>' +
-            '<h4>' + item.titolo + '</h4>' +
-            '<p>' + item.dettaglio + '</p>' +
-            '</div>' +
-            '</article>';
-    }).join('') || '<p class="notification-empty">Nessuna attività disponibile.</p>';
+    var eventsList = document.getElementById('homeEventsList');
+    if (eventsList) {
+        eventsList.innerHTML = eventi.length ? eventi.slice(0, 3).map(function (evento) {
+            return '<button type="button" class="action-center-mini-item" onclick="nav(\'viewCalendario\')">' +
+                '<span class="action-center-mini-date">' + escapeActionCenterText(evento.data || '-') + '</span>' +
+                '<span><strong>' + escapeActionCenterText(evento.titolo || 'Evento') + '</strong><small>' + escapeActionCenterText(evento.luogo || evento.ora || 'Dettagli nel calendario') + '</small></span>' +
+                '</button>';
+        }).join('') : '<p class="notification-empty">Nessun evento in programma.</p>';
+    }
+
+    var financePanel = document.getElementById('homeFinancePanel');
+    var financeInfo = document.getElementById('homeFinanceInfo');
+    if (financePanel && financeInfo) {
+        var finanze = center.finanze || {};
+        financePanel.classList.toggle('hidden', !finanze.disponibile);
+        if (finanze.disponibile) {
+            financeInfo.innerHTML = '<div class="action-center-finance-value">€ ' + Number(finanze.saldo || 0).toFixed(2) + '</div>' +
+                '<small>Entrate € ' + Number(finanze.entrate || 0).toFixed(2) + ' · Uscite € ' + Number(finanze.uscite || 0).toFixed(2) + '</small>';
+        }
+    }
+
+    var adminWidget = document.getElementById('homeAdminWidget');
+    var adminInfo = document.getElementById('homeAdminInfo');
+    if (adminWidget && adminInfo) {
+        var admin = center.admin;
+        adminWidget.classList.toggle('hidden', !admin);
+        if (admin) {
+            adminInfo.innerHTML = '<button type="button" class="action-center-admin-card" onclick="nav(\'viewAdmin\')"><strong>' + Number(admin.candidaturePendenti || 0) + '</strong><span>Candidature pendenti</span></button>' +
+                '<button type="button" class="action-center-admin-card" onclick="nav(\'viewAdmin\')"><strong>' + Number(admin.controfirmePendenti || 0) + '</strong><span>Controfirme in sospeso</span></button>';
+        }
+    }
+
+    var newsList = document.getElementById('homeNewsList');
+    if (newsList) {
+        var news = filtraAvvisiRecenti(data.avvisi || [], 90).slice(0, 5);
+        newsList.innerHTML = news.length ? news.map(function (avviso) {
+            return '<article class="calendar-item"><div class="calendar-item-body"><span class="calendar-tag">Avviso</span><h4>' + escapeActionCenterText(avviso.titolo || 'Avviso') + '</h4><p>' + escapeActionCenterText(avviso.testo || '') + '</p></div></article>';
+        }).join('') : '<p class="notification-empty">Nessun avviso recente.</p>';
+    }
 }
 
 function renderSociVolontariView() {
@@ -1020,6 +1074,7 @@ function renderStartData(data, fromCache) {
         cardVoto.style.color = "var(--primary)";
     }
 
+    renderHomeView();
 }
 
 function parseDataUtente(valore) {

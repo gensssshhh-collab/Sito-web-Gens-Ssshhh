@@ -242,34 +242,78 @@
                 <div id="viewHome" class="page-section hidden">
                     <div class="club-page-header">
                         <div>
-                            <span class="section-kicker">Overview</span>
-                            <h2>Home page</h2>
-                            <p>Panoramica rapida dell’associazione, delle attività e dei prossimi step da completare.</p>
+                            <span class="section-kicker">Action Center</span>
+                            <h2>Le tue azioni</h2>
+                            <p>Una vista unica delle attività che richiedono la tua attenzione.</p>
                         </div>
-                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Panoramica attiva</div>
+                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Stato aggiornato</div>
                     </div>
 
-                    <div class="club-summary-grid">
-                        <div class="club-summary-card">
-                            <span>Votazioni</span>
-                            <strong id="homeVotazioni">0</strong>
+                    <div class="action-center-kpis">
+                        <div class="action-center-kpi">
+                            <span class="action-center-kpi-label">Tessera</span>
+                            <strong id="homeTesseraStato">-</strong>
+                            <small id="homeTesseraScadenza">Scadenza -</small>
                         </div>
-                        <div class="club-summary-card">
-                            <span>Documenti</span>
-                            <strong id="homeDocumenti">0</strong>
+                        <div class="action-center-kpi is-accent">
+                            <span class="action-center-kpi-label">Azioni urgenti</span>
+                            <strong id="homeAzioniUrgenti">0</strong>
+                            <small>Da completare</small>
                         </div>
-                        <div class="club-summary-card">
-                            <span>Eventi</span>
-                            <strong id="homeEventi">0</strong>
+                        <div class="action-center-kpi">
+                            <span class="action-center-kpi-label">Prossimo evento</span>
+                            <strong id="homeProssimoEvento">-</strong>
+                            <small id="homeProssimoEventoMeta">Nessun evento in programma</small>
                         </div>
                     </div>
 
-                    <div class="calendar-panel">
+                    <div class="action-center-layout">
+                        <section class="calendar-panel action-center-actions">
+                            <div class="calendar-header-row">
+                                <div>
+                                    <span class="section-kicker">Priorità</span>
+                                    <h3>Azioni richieste</h3>
+                                </div>
+                                <button class="compact-action" onclick="renderHomeView()">Aggiorna</button>
+                            </div>
+                            <div id="homeActionList" class="action-center-list"></div>
+                        </section>
+
+                        <aside class="action-center-side">
+                            <div class="calendar-panel action-center-event-panel">
+                                <div class="calendar-header-row">
+                                    <h3>Prossimi eventi</h3>
+                                    <button class="compact-action" onclick="nav('viewCalendario')">Calendario</button>
+                                </div>
+                                <div id="homeEventsList" class="action-center-mini-list"></div>
+                            </div>
+                            <div id="homeFinancePanel" class="calendar-panel action-center-finance-panel hidden">
+                                <div class="calendar-header-row">
+                                    <h3>Finanze</h3>
+                                    <button class="compact-action" onclick="nav('viewAdmin')">Apri</button>
+                                </div>
+                                <div id="homeFinanceInfo"></div>
+                            </div>
+                        </aside>
+                    </div>
+
+                    <div id="homeAdminWidget" class="calendar-panel action-center-admin-panel hidden">
                         <div class="calendar-header-row">
-                            <h3>Attività principali</h3>
+                            <div>
+                                <span class="section-kicker">Amministrazione</span>
+                                <h3>Attività del direttivo</h3>
+                            </div>
+                            <button class="compact-action" onclick="nav('viewAdmin')">Apri amministrazione</button>
+                        </div>
+                        <div id="homeAdminInfo" class="action-center-admin-grid"></div>
+                    </div>
+
+                    <div class="calendar-panel action-center-news-panel">
+                        <div class="calendar-header-row">
+                            <h3>Avvisi recenti</h3>
                             <button class="compact-action" onclick="renderHomeView()">Aggiorna</button>
                         </div>
-                        <div id="homeList" class="calendar-list"></div>
+                        <div id="homeNewsList" class="calendar-list"></div>
                     </div>
                 </div>
 
