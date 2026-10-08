@@ -545,6 +545,7 @@ function adminGestisciAmmissione(adminEmail, emailCandidato, azione) {
   }
 
   if (azione === "CHIUDI_VOTO") {
+    if (String(datiAmm[rigaTarget - 1][7] || "") !== "IN VOTAZIONE") return "VOTAZIONE_NON_APERTA";
     // CALCOLO SPOGLIO E QUORUM 2/3 (Art. 7 Statuto)
     var foglioVoti = ss.getSheetByName("VotiAmmissioni");
     var datiVoti = foglioVoti.getDataRange().getValues();
@@ -567,13 +568,28 @@ function adminGestisciAmmissione(adminEmail, emailCandidato, azione) {
       esito = "AMMESSO";
     }
 
+    var statoAccount = "";
+    if (esito === "AMMESSO" && datiAmm[rigaTarget - 1][9]) {
+      try {
+        statoAccount = creaAccountSocioDaAmmissione_({
+          nome: datiAmm[rigaTarget - 1][1],
+          cognome: datiAmm[rigaTarget - 1][2],
+          email: datiAmm[rigaTarget - 1][3],
+          telefono: datiAmm[rigaTarget - 1][4]
+        });
+      } catch (erroreAccount) {
+        statoAccount = "ERRORE_CREAZIONE_ACCOUNT";
+        console.log("Errore creazione account ammesso " + emailCandidato + ": " + erroreAccount);
+      }
+    }
+
     // Imposta lo Stato a VOTAZIONE_CHIUSA (Colonna H -> colonna 8)
     foglioAmm.getRange(rigaTarget, 8).setValue("VOTAZIONE_CHIUSA");
     // Scrive l'Esito Assemblea in colonna I (Colonna I -> colonna 9)
-    foglioAmm.getRange(rigaTarget, 9).setValue(esito + " (" + votiFavorevoli + "/" + votiTotali + ")");
+    foglioAmm.getRange(rigaTarget, 9).setValue(esito + " (" + votiFavorevoli + "/" + votiTotali + ")" + (statoAccount ? " | ACCOUNT: " + statoAccount : ""));
 
     scriviLog(adminEmail, "CHIUSURA_VOTO_AMMISSIONE", nomeCandidato + ": " + esito);
-    return "OK_SPOGLIO|" + esito + "|" + votiFavorevoli + "|" + votiTotali + "|" + quorumRichiesto;
+    return "OK_SPOGLIO|" + esito + "|" + votiFavorevoli + "|" + votiTotali + "|" + quorumRichiesto + "|" + statoAccount;
   }
 }
 

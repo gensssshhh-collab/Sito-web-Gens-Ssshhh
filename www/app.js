@@ -3845,6 +3845,7 @@ function adminChiudiSpoglioAmmissione(emailCandidato) {
             var favorevoli = pezzi[2];
             var totali = pezzi[3];
             var quorum = pezzi[4];
+            var statoAccount = pezzi[5] || '';
 
             var icona = esito === "AMMESSO" ? "✅" : "❌";
             var messaggio = icona + " SPOGLIO CONCLUSO\n\n" +
@@ -3852,6 +3853,13 @@ function adminChiudiSpoglioAmmissione(emailCandidato) {
                 "Quorum (2/3) Richiesto: " + quorum + "\n" +
                 "Voti Favorevoli: " + favorevoli + "\n\n" +
                 "ESITO ASSEMBLEA: " + esito;
+            if (esito === "AMMESSO" && statoAccount === "LINK_INVIATO") {
+                messaggio += "\n\nAccount creato. Il nuovo socio riceverà un link e-mail per impostare la password; la segreteria dovrà attivare l'account dopo la verifica della quota.";
+            } else if (esito === "AMMESSO" && statoAccount === "ACCOUNT_ESISTENTE") {
+                messaggio += "\n\nEsiste già un account con questa e-mail: non ne è stato creato un duplicato.";
+            } else if (esito === "AMMESSO" && statoAccount) {
+                messaggio += "\n\nAttenzione: account non creato o link non inviato (" + statoAccount + ").";
+            }
 
             // Usiamo un alert classico in modo che l'Admin sia obbligato a leggerlo e cliccare OK
             showToast(messaggio, "info");

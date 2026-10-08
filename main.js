@@ -94,7 +94,7 @@ function doPost(e) {
 
     // 3. PONTE UNIVERSALE DINAMICO
     // Cerca una funzione nel backend che si chiami esattamente come l'azione richiesta
-    if (typeof this[azione] === 'function') {
+    if (typeof this[azione] === 'function' && !/_$/.test(azione)) {
       // Estrae i parametri in modo flessibile a seconda di come li invia l'app
       var param = richiesta.payload !== undefined ? richiesta.payload :
         richiesta.email !== undefined ? richiesta.email :

@@ -119,7 +119,7 @@ function eseguiResetPassword(emailInput) {
   return "EMAIL_NON_TROVATA";
 }
 
-function inviaLinkReset(email) {
+function inviaLinkReset(email, attivazioneIniziale) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioSoci = ss.getSheetByName("soci");
   var dati = foglioSoci.getDataRange().getValues();
@@ -146,19 +146,58 @@ function inviaLinkReset(email) {
       try {
         MailApp.sendEmail({
           to: emailTarget,
-          subject: "🔐 Reimposta la tua Password",
-          htmlBody: "<h3>Richiesta di cambio password</h3>" +
-            "<p>Hai richiesto di reimpostare la password. Clicca sul link qui sotto per sceglierne una nuova:</p>" +
-            "<p><a href='" + link + "' style='background:#3b82f6; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>IMPOSTA NUOVA PASSWORD</a></p>" +
+          subject: attivazioneIniziale ? "Attiva il tuo account Gens Ssshhh" : "🔐 Reimposta la tua Password",
+          htmlBody: "<h3>" + (attivazioneIniziale ? "Account associativo creato" : "Richiesta di cambio password") + "</h3>" +
+            (attivazioneIniziale
+              ? "<p>La tua candidatura è stata approvata. Clicca sul link qui sotto per impostare la password. La segreteria completerà l'attivazione del tuo account dopo la verifica della quota associativa.</p>"
+              : "<p>Hai richiesto di reimpostare la password. Clicca sul link qui sotto per sceglierne una nuova:</p>") +
+            "<p><a href='" + link + "' style='background:#3b82f6; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>" + (attivazioneIniziale ? "IMPOSTA LA PASSWORD" : "IMPOSTA NUOVA PASSWORD") + "</a></p>" +
             "<p><small>Se non sei stato tu, ignora questa mail. Il link scade tra 1 ora.</small></p>"
         });
-        inviaNotificaPushUtente(emailTarget, "Reimpostazione password", "È disponibile il link per reimpostare la password.", "viewProf");
+        if (!attivazioneIniziale) inviaNotificaPushUtente(emailTarget, "Reimpostazione password", "È disponibile il link per reimpostare la password.", "viewProf");
         return "LINK_INVIATO";
       } catch (e) { return "ERRORE_MAIL"; }
     }
   }
   // Per sicurezza non diciamo se l'email non esiste
   return "LINK_INVIATO";
+}
+
+function creaAccountSocioDaAmmissione_(richiesta) {
+  richiesta = richiesta || {};
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("soci");
+  if (!sheet) return "FOGLIO_SOCI_MANCANTE";
+
+  var email = String(richiesta.email || "").trim().toLowerCase();
+  if (!email) return "EMAIL_MANCANTE";
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows.length ? rows[0].map(function (value) { return String(value).trim().toLowerCase(); }) : [];
+  var emailColumn = headers.indexOf("email");
+  if (emailColumn < 0) emailColumn = 2;
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][emailColumn] || "").trim().toLowerCase() === email) return "ACCOUNT_ESISTENTE";
+  }
+
+  var newRow = Array(Math.max(headers.length, 21)).fill("");
+  function setValue(header, fallback, value) {
+    var index = headers.indexOf(header.toLowerCase());
+    if (index < 0) index = fallback;
+    newRow[index] = value;
+  }
+  setValue("nome", 0, String(richiesta.nome || "").trim());
+  setValue("password", 1, creaHash(Utilities.getUuid()));
+  setValue("email", 2, email);
+  setValue("cognome", 4, String(richiesta.cognome || "").trim());
+  setValue("telefono", 5, String(richiesta.telefono || "").trim());
+  setValue("numero tessera", 9, "");
+  setValue("data scadenza", 10, "");
+  setValue("stato socio", 11, "non attivo");
+  setValue("carica sociale", 12, "Socio semplice");
+  setValue("id_univoco", 18, Utilities.getUuid());
+  sheet.appendRow(newRow);
+  scriviLog(email, "ACCOUNT_CREATO_DOPO_AMMISSIONE", "Password da impostare via link e-mail");
+  return inviaLinkReset(email, true);
 }
 
 function completaResetPassword(token, nuovaPass) {

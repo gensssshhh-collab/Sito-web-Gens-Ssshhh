@@ -56,7 +56,10 @@
                         onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); togglePass('logPass'); }">👁️</span>
                 </div>
 
-                <button id="loginButton" class="btn-primary auth-login-btn" onclick="faiLogin()">ACCEDI</button>
+                <div class="auth-actions">
+                    <button id="loginButton" class="btn-primary auth-login-btn" onclick="faiLogin()">ACCEDI</button>
+                    <a class="btn-secondary auth-signup-btn" href="?iscrizione=1">ISCRIVITI</a>
+                </div>
 
                 <div id="loginMsg" style="margin-top:15px; font-size:13px; min-height:18px;"></div>
 
@@ -68,7 +71,6 @@
                     <span class="link-text" role="button" tabindex="0" onclick="toggleView('viewCambio')"
                         onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleView('viewCambio'); }">Cambia
                         Password</span>
-                    <a class="link-text" href="?iscrizione=1">Richiedi iscrizione</a>
                 </div>
             </div>
 

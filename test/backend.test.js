@@ -61,6 +61,98 @@ test('login: accetta credenziali corrette e blocca dopo cinque errori', () => {
   assert.ok(logRows.some(row => row[2] === 'LOGIN_OK'));
 });
 
+test('account ammissione: crea socio non attivo e invia link per impostare password', () => {
+  const headers = ['Nome', 'Password', 'Email', 'ID Cartella Personale', 'Cognome', 'Telefono', 'Indirizzo', 'ResetToken', 'ResetTime', 'Numero Tessera', 'Data Scadenza', 'Stato Socio', 'Carica sociale', 'Sesso', 'Codice Fiscale', 'Data Nascita', 'Comune Nascita', 'Versione Accettata', 'ID_Univoco', 'CAP res', 'Comune res'];
+  const rows = [headers, ['Mario', 'old-hash', 'mario@example.it']];
+  const sociSheet = dataSheet(rows);
+  sociSheet.getRange = (row, column) => ({
+    setValue(value) { rows[row - 1][column - 1] = value; },
+    getValue() { return rows[row - 1][column - 1]; }
+  });
+  const messages = [];
+  let id = 0;
+  const logSheet = dataSheet([['Data', 'Email', 'Azione', 'Info']]);
+  const context = {
+    SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: name => name === 'soci' ? sociSheet : name === 'Log' ? logSheet : null }) },
+    Utilities: { getUuid: () => 'uuid-' + (++id) },
+    MailApp: { sendEmail: message => messages.push(message) },
+    creaHash: value => 'hash:' + value,
+    scriviLog() { }
+  };
+  loadScript('Auth.js', context);
+
+  assert.equal(context.creaAccountSocioDaAmmissione_({ email: 'giulia@example.net', nome: 'Giulia', cognome: 'Neri', telefono: '123' }), 'LINK_INVIATO');
+  const newMember = rows[2];
+  assert.equal(newMember[0], 'Giulia');
+  assert.equal(newMember[1], 'hash:uuid-1');
+  assert.equal(newMember[2], 'giulia@example.net');
+  assert.equal(newMember[7], 'uuid-3');
+  assert.equal(newMember[11], 'non attivo');
+  assert.equal(newMember[18], 'uuid-2');
+  assert.match(messages[0].subject, /Attiva il tuo account/);
+  assert.equal(context.creaAccountSocioDaAmmissione_({ email: 'GIULIA@example.net', nome: 'Giulia', cognome: 'Neri' }), 'ACCOUNT_ESISTENTE');
+  assert.equal(rows.length, 3);
+});
+
+test('ammissione: crea account solo dopo esito favorevole dei 2/3', () => {
+  const headersSoci = ['Nome', 'Password', 'Email', 'ID Cartella Personale', 'Cognome', 'Telefono', 'Indirizzo', 'ResetToken', 'ResetTime', 'Numero Tessera', 'Data Scadenza', 'Stato Socio', 'Carica sociale', 'Sesso', 'Codice Fiscale', 'Data Nascita', 'Comune Nascita', 'Versione Accettata', 'ID_Univoco', 'CAP res', 'Comune res'];
+  const sociRows = [headersSoci, ['Luca', 'hash:admin', 'admin@example.it', '', 'Germandi', '', '', '', '', '1', '', 'ATTIVO', 'Presidente', '', '', '', '', '', 'uuid-admin']];
+  const ammissioniRows = [
+    ['Data', 'Nome', 'Cognome', 'Email', 'Telefono', 'Sponsor 1', 'Sponsor 2', 'Stato', 'Esito', 'ID Richiesta', 'Presentazione', 'Scadenza Avvalli', 'Data Voto Prevista', 'Voto Notificato Il'],
+    [new Date(), 'Giulia', 'Neri', 'giulia@example.net', '123', '', '', 'IN VOTAZIONE', 'DA VOTARE', 'request-1', 'Presentazione', new Date(), new Date(), '']
+  ];
+  const votiRows = [
+    ['Timestamp', 'HashSocio', 'CandidatoEmail', 'Voto'],
+    [new Date(), 'hash-1', 'giulia@example.net', 'FAVOREVOLE'],
+    [new Date(), 'hash-2', 'giulia@example.net', 'FAVOREVOLE'],
+    [new Date(), 'hash-3', 'giulia@example.net', 'CONTRARIO']
+  ];
+  const sociSheet = dataSheet(sociRows);
+  const ammissioniSheet = dataSheet(ammissioniRows);
+  const votiSheet = dataSheet(votiRows);
+  [sociSheet, ammissioniSheet].forEach(sheet => {
+    sheet.getRange = (row, column) => ({
+      getValue: () => (sheet === sociSheet ? sociRows : ammissioniRows)[row - 1][column - 1],
+      setValue(value) { (sheet === sociSheet ? sociRows : ammissioniRows)[row - 1][column - 1] = value; }
+    });
+  });
+  const sheets = { soci: sociSheet, Ammissioni: ammissioniSheet, VotiAmmissioni: votiSheet, Log: null };
+  const messages = [];
+  let uuid = 0;
+  const context = {
+    SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: name => sheets[name] || null }) },
+    Utilities: { getUuid: () => 'new-uuid-' + (++uuid) },
+    MailApp: { sendEmail: message => messages.push(message) },
+    creaHash: value => 'hash:' + value,
+    scriviLog() { },
+    LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) }
+  };
+  loadScript('Auth.js', context);
+  loadScript('user.js', context);
+  loadScript('Admin.js', context);
+
+  const result = context.adminGestisciAmmissione('admin@example.it', 'giulia@example.net', 'CHIUDI_VOTO');
+  assert.equal(result, 'OK_SPOGLIO|AMMESSO|2|3|2|LINK_INVIATO');
+  assert.equal(sociRows.length, 3);
+  assert.equal(sociRows[2][2], 'giulia@example.net');
+  assert.equal(sociRows[2][11], 'non attivo');
+  assert.ok(sociRows[2][1]);
+  assert.ok(sociRows[2][7]);
+  assert.match(messages[0].subject, /Attiva il tuo account/);
+  assert.equal(ammissioniRows[1][8], 'AMMESSO (2/3) | ACCOUNT: LINK_INVIATO');
+
+  ammissioniRows.push([new Date(), 'Paolo', 'Blu', 'paolo@example.net', '', '', '', 'IN VOTAZIONE', 'DA VOTARE', 'request-2', '', new Date(), new Date(), '']);
+  votiRows.push(
+    [new Date(), 'hash-4', 'paolo@example.net', 'FAVOREVOLE'],
+    [new Date(), 'hash-5', 'paolo@example.net', 'CONTRARIO'],
+    [new Date(), 'hash-6', 'paolo@example.net', 'CONTRARIO']
+  );
+  const rejected = context.adminGestisciAmmissione('admin@example.it', 'paolo@example.net', 'CHIUDI_VOTO');
+  assert.equal(rejected, 'OK_SPOGLIO|RESPINTO|1|3|2|');
+  assert.equal(sociRows.length, 3);
+  assert.equal(messages.length, 1);
+});
+
 test('notifiche: registra un token una sola volta e invia il canale Android', () => {
   const properties = new Map();
   const requests = [];
@@ -311,9 +403,14 @@ test('eventi: il dispatcher serve il link pubblico e registra il voto esterno', 
     }
   };
   loadScript('Eventi.js', context);
+  let helperInvoked = false;
+  context.creaAccountSocioDaAmmissione_ = () => { helperInvoked = true; };
   loadScript('main.js', context);
 
   const rispostaEndpoint = richiesta => JSON.parse(context.doPost({ postData: { contents: JSON.stringify(richiesta) } }).getContent());
+  const azionePrivata = rispostaEndpoint({ azione: 'creaAccountSocioDaAmmissione_', payload: { email: 'evil@example.net' } });
+  assert.equal(azionePrivata.status, 'ERROR');
+  assert.equal(helperInvoked, false);
   const proposta = rispostaEndpoint({ azione: 'getPropostaEventoPubblica', payload: { id: 'evento-web' } });
   assert.equal(proposta.status, 'SUCCESS');
   assert.equal(proposta.data.titolo, 'Passeggiata');
