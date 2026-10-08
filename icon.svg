@@ -1,13 +1,165 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Sfondo Avorio Premium -->
-  <rect width="1024" height="1024" fill="#FCFBF8" />
-  
-  <!-- Gruppo Testo Centrato -->
-  <g font-family="Georgia, Times New Roman, serif" font-weight="bold">
-    <!-- Lettera G (Oro) -->
-    <text x="420" y="600" font-size="520" fill="#D4AF37" text-anchor="middle">G</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <!-- 1. GRADIENTI ORO (Multilivello per l'effetto metallo riflettente) -->
+    <linearGradient id="gold-face" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCEABB" />
+      <stop offset="25%" stop-color="#DCA84D" />
+      <stop offset="50%" stop-color="#FFF3D0" />
+      <stop offset="75%" stop-color="#9B6C23" />
+      <stop offset="100%" stop-color="#FCEABB" />
+    </linearGradient>
+
+    <linearGradient id="gold-extrusion" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5A3A0B" />
+      <stop offset="50%" stop-color="#A87B2D" />
+      <stop offset="100%" stop-color="#3A2203" />
+    </linearGradient>
+
+    <!-- 2. SFONDO BLU NOTTE TEXTURIZZATO -->
+    <linearGradient id="bg-navy" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1F2B40" />
+      <stop offset="50%" stop-color="#121A2A" />
+      <stop offset="100%" stop-color="#080C14" />
+    </linearGradient>
+
+    <filter id="leather-texture">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 0.15 0" />
+    </filter>
+
+    <!-- 3. GESTIONE OMBRE E 3D -->
+    <filter id="heavy-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="15" flood-color="#000000" flood-opacity="0.9"/>
+    </filter>
+
+    <filter id="bevel-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+
+    <!-- 4. FOGLIE DI ALLORO VETTORIALI -->
+    <!-- Foglia Destra (Senso Orario) -->
+    <g id="leaf-r">
+      <path d="M 400 135 Q 412 120 435 128 Q 418 148 400 135" fill="url(#gold-face)"/>
+      <path d="M 400 135 L 420 130" stroke="url(#gold-extrusion)" stroke-width="1.5"/>
+    </g>
+    <!-- Foglia Sinistra (Senso Antiorario) -->
+    <g id="leaf-l">
+      <path d="M 400 135 Q 388 120 365 128 Q 382 148 400 135" fill="url(#gold-face)"/>
+      <path d="M 400 135 L 380 130" stroke="url(#gold-extrusion)" stroke-width="1.5"/>
+    </g>
+
+    <!-- 5. MASCHERA PER L'INCASTRO DELLE LETTERE -->
+    <!-- Taglia a metà la S per farla passare sia SOPRA che SOTTO la G -->
+    <clipPath id="clip-bottom-s">
+      <rect x="0" y="380" width="800" height="400" />
+    </clipPath>
+  </defs>
+
+  <!-- ================= BACKGROUND ================= -->
+  <rect width="800" height="800" fill="url(#bg-navy)" />
+  <rect width="800" height="800" filter="url(#leather-texture)" opacity="0.6" style="pointer-events:none;" />
+
+  <!-- ================= SIGILLO CENTRALE ================= -->
+  <g filter="url(#heavy-shadow)">
     
-    <!-- Lettera S (Navy) sfalsata in basso a destra -->
-    <text x="640" y="720" font-size="520" fill="#111827" text-anchor="middle">S</text>
+    <!-- A. Bordo a conchiglia (Scallops calcolati matematicamente) -->
+    <circle cx="400" cy="340" r="245" fill="none" stroke="url(#gold-face)" stroke-width="32" stroke-linecap="round" stroke-dasharray="0 64.14" />
+    <!-- B. Copertura Navy per formare le onde interne -->
+    <circle cx="400" cy="340" r="242" fill="url(#bg-navy)" />
+
+    <!-- C. Anelli d'oro concentrici esterni -->
+    <circle cx="400" cy="340" r="230" fill="none" stroke="url(#gold-face)" stroke-width="5" />
+    <circle cx="400" cy="340" r="224" fill="none" stroke="url(#gold-extrusion)" stroke-width="2" />
+
+    <!-- D. Corona d'Alloro (Laurel Wreath) -->
+    <g filter="url(#bevel-shadow)">
+      <!-- Ramo Destro -->
+      <use href="#leaf-r" transform="rotate(12 400 340)" />
+      <use href="#leaf-r" transform="rotate(24 400 340)" />
+      <use href="#leaf-r" transform="rotate(36 400 340)" />
+      <use href="#leaf-r" transform="rotate(48 400 340)" />
+      <use href="#leaf-r" transform="rotate(60 400 340)" />
+      <use href="#leaf-r" transform="rotate(72 400 340)" />
+      <use href="#leaf-r" transform="rotate(84 400 340)" />
+      <use href="#leaf-r" transform="rotate(96 400 340)" />
+      <use href="#leaf-r" transform="rotate(108 400 340)" />
+      <use href="#leaf-r" transform="rotate(120 400 340)" />
+      <use href="#leaf-r" transform="rotate(132 400 340)" />
+      <use href="#leaf-r" transform="rotate(144 400 340)" />
+      <use href="#leaf-r" transform="rotate(156 400 340)" />
+      <use href="#leaf-r" transform="rotate(168 400 340)" />
+      
+      <!-- Ramo Sinistro -->
+      <use href="#leaf-l" transform="rotate(-12 400 340)" />
+      <use href="#leaf-l" transform="rotate(-24 400 340)" />
+      <use href="#leaf-l" transform="rotate(-36 400 340)" />
+      <use href="#leaf-l" transform="rotate(-48 400 340)" />
+      <use href="#leaf-l" transform="rotate(-60 400 340)" />
+      <use href="#leaf-l" transform="rotate(-72 400 340)" />
+      <use href="#leaf-l" transform="rotate(-84 400 340)" />
+      <use href="#leaf-l" transform="rotate(-96 400 340)" />
+      <use href="#leaf-l" transform="rotate(-108 400 340)" />
+      <use href="#leaf-l" transform="rotate(-120 400 340)" />
+      <use href="#leaf-l" transform="rotate(-132 400 340)" />
+      <use href="#leaf-l" transform="rotate(-144 400 340)" />
+      <use href="#leaf-l" transform="rotate(-156 400 340)" />
+      <use href="#leaf-l" transform="rotate(-168 400 340)" />
+
+      <!-- Diamanti di chiusura (Top & Bottom) -->
+      <polygon points="400,125 408,135 400,145 392,135" fill="url(#gold-face)"/>
+      <polygon points="400,535 408,545 400,555 392,545" fill="url(#gold-face)"/>
+    </g>
+
+    <!-- E. Anelli Interni -->
+    <circle cx="400" cy="340" r="185" fill="none" stroke="url(#gold-face)" stroke-width="4" />
+    
+    <!-- F. Anello intrecciato (Corda / ZigZag) -->
+    <circle cx="400" cy="340" r="172" fill="none" stroke="url(#gold-face)" stroke-width="8" stroke-dasharray="6 6" />
+    <circle cx="400" cy="340" r="172" fill="none" stroke="url(#gold-extrusion)" stroke-width="8" stroke-dasharray="0 12" stroke-linecap="round" />
+    
+    <!-- G. Ultimo anello d'oro e piatto centrale -->
+    <circle cx="400" cy="340" r="160" fill="url(#bg-navy)" stroke="url(#gold-face)" stroke-width="2" />
   </g>
+
+  <!-- ================= MONOGRAMMA 3D INCASTRATO ================= -->
+  <g font-family="Georgia, 'Times New Roman', serif" font-weight="bold" filter="url(#bevel-shadow)">
+    
+    <!-- LIVELLO 1: La 'S' intera (Sta dietro alla G) -->
+    <!-- Base scura 3D (Estrusione) -->
+    <text x="445" y="445" font-size="240" fill="url(#gold-extrusion)" text-anchor="middle">S</text>
+    <!-- Faccia luminosa -->
+    <text x="440" y="440" font-size="240" fill="url(#gold-face)" text-anchor="middle">S</text>
+
+    <!-- LIVELLO 2: La 'G' intera (Copre la parte superiore della S) -->
+    <!-- Base scura 3D (Estrusione) -->
+    <text x="355" y="425" font-size="280" fill="url(#gold-extrusion)" text-anchor="middle">G</text>
+    <!-- Faccia luminosa -->
+    <text x="350" y="420" font-size="280" fill="url(#gold-face)" text-anchor="middle">G</text>
+
+    <!-- LIVELLO 3: La parte inferiore della 'S' (Tagliata col Clip Path per coprire la parte bassa della G) -->
+    <g clip-path="url(#clip-bottom-s)">
+      <!-- Base scura 3D (Estrusione) -->
+      <text x="445" y="445" font-size="240" fill="url(#gold-extrusion)" text-anchor="middle">S</text>
+      <!-- Faccia luminosa -->
+      <text x="440" y="440" font-size="240" fill="url(#gold-face)" text-anchor="middle">S</text>
+    </g>
+
+  </g>
+
+  <!-- ================= TESTO INFERIORE E FREGI ================= -->
+  <g filter="url(#bevel-shadow)">
+    <!-- Base scura 3D -->
+    <text x="403" y="683" font-family="Georgia, 'Times New Roman', serif" font-size="88" fill="url(#gold-extrusion)" text-anchor="middle" letter-spacing="1">Gens Ssshhh</text>
+    <!-- Faccia luminosa -->
+    <text x="400" y="680" font-family="Georgia, 'Times New Roman', serif" font-size="88" fill="url(#gold-face)" text-anchor="middle" letter-spacing="1">Gens Ssshhh</text>
+    
+    <!-- Fregio a lancia sottostante -->
+    <path d="M 280 720 L 385 720 M 415 720 L 520 720" stroke="url(#gold-face)" stroke-width="3" stroke-linecap="round"/>
+    <!-- Diamante centrale -->
+    <polygon points="400,712 408,720 400,728 392,720" fill="url(#gold-face)"/>
+    <!-- Piccoli diamanti laterali -->
+    <polygon points="380,717 383,720 380,723 377,720" fill="url(#gold-face)"/>
+    <polygon points="420,717 423,720 420,723 417,720" fill="url(#gold-face)"/>
+  </g>
+
 </svg>
