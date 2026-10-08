@@ -235,8 +235,8 @@ function nav(viewId, el) {
 
     // 2. TITOLI
     var titles = {
-        'viewHome': 'Home page',
-        'viewDash': 'Dashboard',
+        'viewHome': 'Dashboard',
+        'viewDash': 'Home page',
         'viewClub': 'Il Club',
         'viewCalendario': 'Calendario',
         'viewComunicazioni': 'Comunicazioni',
@@ -265,8 +265,8 @@ function nav(viewId, el) {
         if (el.classList.contains('bottom-nav-item')) el.classList.add('active');
     } else {
         var mapping = {
-            'viewHome': 0,
-            'viewDash': 1,
+            'viewDash': 0,
+            'viewHome': 1,
             'viewClub': 2,
             'viewCalendario': 3,
             'viewComunicazioni': 5,
@@ -380,6 +380,7 @@ function renderHomeView() {
     var counters = center.counters || {};
     var tessera = center.tessera || {};
     var eventi = center.eventi && Array.isArray(center.eventi.prossimi) ? center.eventi.prossimi : [];
+    var proposteDaVotare = Number(center.eventi && center.eventi.proposteDaVotare || 0);
     var azioni = Array.isArray(center.azioni) ? center.azioni : [];
 
     var stato = document.getElementById('homeTesseraStato');
@@ -390,16 +391,14 @@ function renderHomeView() {
     if (stato) stato.innerText = tessera.stato || (user.scadenza ? 'ATTIVA' : '-');
     if (scadenza) scadenza.innerText = 'Scadenza ' + (tessera.scadenza || user.scadenza || '-');
     if (azioniUrgenti) azioniUrgenti.innerText = String(counters.azioniUrgenti || 0);
-    if (prossimoEvento) prossimoEvento.innerText = eventi.length ? (eventi[0].titolo || 'Evento') : '-';
-    if (prossimoEventoMeta) prossimoEventoMeta.innerText = eventi.length
-        ? ((eventi[0].data || '') + (eventi[0].ora ? ' · ' + eventi[0].ora : ''))
-        : 'Nessun evento in programma';
+    if (prossimoEvento) prossimoEvento.innerText = String(proposteDaVotare);
+    if (prossimoEventoMeta) prossimoEventoMeta.innerText = proposteDaVotare ? 'Aperte al voto nel calendario' : 'Nessuna proposta aperta';
 
     var actionList = document.getElementById('homeActionList');
     if (actionList) {
         actionList.innerHTML = azioni.length ? azioni.map(function (azione) {
             return '<button type="button" class="action-center-item ' + escapeActionCenterText(azione.priorita || '') + '" onclick="nav(\'' + escapeActionCenterText(azione.viewId || 'viewElezioni') + '\')">' +
-                '<span class="action-center-item-icon">' + (azione.tipo === 'firma' ? '✎' : azione.tipo === 'votazione' ? '◉' : '⚙') + '</span>' +
+                '<span class="action-center-item-icon">' + (azione.tipo === 'firma' ? '✎' : azione.tipo === 'votazione' ? '◉' : azione.tipo === 'evento' ? '▦' : '⚙') + '</span>' +
                 '<span class="action-center-item-copy"><strong>' + escapeActionCenterText(azione.titolo) + '</strong><small>' + escapeActionCenterText(azione.dettaglio) + '</small></span>' +
                 '<span class="action-center-item-arrow" aria-hidden="true">→</span>' +
                 '</button>';
@@ -751,58 +750,11 @@ function renderComunicazioniView() {
 }
 
 async function renderCalendarioView() {
-    var list = document.getElementById('calendarEventsList');
+    var list = document.getElementById('eventiPropostiList');
     if (!list) return;
 
     list.innerHTML = '<div class="loader"></div>';
-
-    try {
-        var proposte = await chiamaServer('getProposteEventi', curEmail);
-        var eventi = [];
-
-        if (Array.isArray(proposte)) {
-            proposte.forEach(function (proposta) {
-                var opzioni = Array.isArray(proposta.opzioni) ? proposta.opzioni : [];
-                opzioni.forEach(function (opzione) {
-                    var data = (opzione.data || '').trim();
-                    if (!data) return;
-                    eventi.push({
-                        titolo: proposta.titolo || 'Evento proposto',
-                        data: data,
-                        luogo: (opzione.luogo || 'Sede associativa').trim() || 'Sede associativa',
-                        tipo: 'Evento',
-                        descrizione: proposta.descrizione || ''
-                    });
-                });
-            });
-        }
-
-        if (!eventi.length) {
-            list.innerHTML = '<p class="notification-empty">Nessun evento in agenda.</p>';
-            return;
-        }
-
-        list.innerHTML = eventi.map(function (evento) {
-            var dataFormattata = parseDataUtente(evento.data);
-            var dataLabel = dataFormattata ? dataFormattata.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : evento.data;
-            var parti = dataLabel.split(' ');
-            var giorno = parti[0] || '01';
-            var mese = parti[1] || 'SET';
-
-            return '<article class="calendar-item">' +
-                '<div class="calendar-date-pill"><span>' + mese + '</span><strong>' + giorno + '</strong></div>' +
-                '<div class="calendar-item-body">' +
-                '<span class="calendar-tag">' + (evento.tipo || 'Evento') + '</span>' +
-                '<h4>' + (evento.titolo || 'Evento') + '</h4>' +
-                '<p>' + (evento.luogo || 'Sede associativa') + '</p>' +
-                (evento.descrizione ? '<p style="font-size: 11px; color: #64748b; margin-top: 4px;">' + evento.descrizione + '</p>' : '') +
-                '</div>' +
-                '</article>';
-        }).join('');
-    } catch (error) {
-        console.error('Errore nel caricamento eventi calendario:', error);
-        list.innerHTML = '<p class="notification-empty">Impossibile caricare gli eventi.</p>';
-    }
+    await caricaProposteEventi();
 }
 
 function formattaDataSmart(value) {
@@ -1961,6 +1913,12 @@ function salvaModificheSocioAdmin() {
 /* --- AUTO START E GESTIONE SESSIONE --- */
 window.onload = function () {
     aggiornaStatoRete();
+    var propostaPubblicaId = new URLSearchParams(window.location.search).get('evento');
+    if (propostaPubblicaId) {
+        apriVotoPubblicoEvento(propostaPubblicaId);
+        return;
+    }
+
     // 1. Intercetta il token prima dell'autologin e mostra solo il reset.
     if (gestisciTokenReset()) return;
 
@@ -4642,61 +4600,189 @@ function aggiungiOpzioneEvento() {
     });
 }
 
+function escapeTestoEvento(valore) {
+    return String(valore == null ? '' : valore).replace(/[&<>"']/g, function (carattere) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[carattere];
+    });
+}
+
 function renderProposteEventi(proposte) {
     var list = document.getElementById('eventiPropostiList');
     if (!list) return;
 
     proposte = Array.isArray(proposte) ? proposte : [];
-
     if (!proposte.length) {
-        list.innerHTML = '<p style="margin: 0; color: #64748b; font-size: 13px;">Nessuna proposta ancora inviata.</p>';
+        list.innerHTML = '<p class="notification-empty">Non ci sono proposte aperte al voto.</p>';
         return;
     }
 
-    var html = proposte.map(function (proposta) {
-        var opzioniHtml = (proposta.opzioni || []).map(function (opzione, idx) {
-            var votoCount = proposta.voti && proposta.voti[idx] ? Number(proposta.voti[idx]) : 0;
-            return `
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <div>
-                        <strong style="font-size: 12px; color: #0f172a;">${opzione.data || '-'}</strong>
-                        <div style="font-size: 11px; color: #475569;">${opzione.ora || '-'} · ${opzione.luogo || '-'}</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 11px; color: #475569; font-weight: bold;">${votoCount} voti</span>
-                        <button type="button" onclick="votaPropostaEvento('${proposta.id}', ${idx})" style="background: #2563eb; color: white; border: none; border-radius: 6px; padding: 7px 10px; font-size: 11px; font-weight: bold; cursor: pointer;">Vota</button>
-                    </div>
-                </div>
-            `;
+    list.innerHTML = proposte.map(function (proposta) {
+        var id = escapeTestoEvento(proposta.id);
+        var voti = proposta.voti || {};
+        var interesse = voti.interesse || { si: 0, no: 0 };
+        var preferenze = Array.isArray(voti.opzioni) ? voti.opzioni : [];
+        var opzioni = Array.isArray(proposta.opzioni) ? proposta.opzioni : [];
+        var opzioniHtml = opzioni.map(function (opzione, indice) {
+            return '<label class="event-vote-option"><input type="checkbox" data-role="preferenza" value="' + indice + '">' +
+                '<span><strong>' + escapeTestoEvento(opzione.data || 'Data da definire') + ' · ' + escapeTestoEvento(opzione.ora || 'Ora da definire') +
+                '</strong><small>' + escapeTestoEvento(opzione.luogo || 'Luogo da definire') + ' · ' + Number(preferenze[indice] || 0) + ' preferenze</small></span></label>';
         }).join('');
+        var votoEsistente = proposta.mioVoto
+            ? '<p class="event-vote-confirmation" role="status">Hai già risposto a questa proposta.</p>'
+            : '<div class="event-vote-form" data-event-id="' + id + '">' +
+            '<fieldset class="event-interest-fieldset"><legend>Ti interessa partecipare?</legend>' +
+            '<label><input type="radio" name="interesse-' + id + '" data-role="interesse" value="si"> Sì</label>' +
+            '<label><input type="radio" name="interesse-' + id + '" data-role="interesse" value="no"> No</label></fieldset>' +
+            '<div class="event-preferences" hidden><strong>Quali date e orari preferisci?</strong>' + opzioniHtml + '</div>' +
+            '<button type="button" class="btn-primary event-submit-vote">Invia risposta</button></div>';
 
-        return `
-            <div style="padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(15,23,42,0.04);">
-                <div style="margin-bottom: 10px;">
-                    <div style="font-size: 14px; font-weight: bold; color: #0f172a;">${proposta.titolo || 'Evento proposto'}</div>
-                    <div style="font-size: 12px; color: #475569; margin-top: 4px;">${proposta.descrizione || 'Nessuna descrizione'}</div>
-                </div>
-                <div style="display: grid; gap: 8px;">${opzioniHtml}</div>
-            </div>
-        `;
+        return '<article class="event-proposal-card" data-proposal-id="' + id + '">' +
+            '<header class="event-proposal-heading"><div><h4>' + escapeTestoEvento(proposta.titolo || 'Evento proposto') + '</h4>' +
+            '<p>' + escapeTestoEvento(proposta.descrizione || '') + '</p></div>' +
+            '<button type="button" class="compact-action event-share-link">Condividi con esterni</button></header>' +
+            '<div class="event-proposal-counts"><span><strong>' + Number(interesse.si || 0) + '</strong> interessati</span>' +
+            '<span><strong>' + Number(interesse.no || 0) + '</strong> non interessati</span></div>' + votoEsistente + '</article>';
     }).join('');
 
-    list.innerHTML = html;
+    list.querySelectorAll('.event-vote-form').forEach(function (form) {
+        form.querySelectorAll('[data-role="interesse"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                form.querySelector('.event-preferences').hidden = radio.value !== 'si';
+            });
+        });
+        form.querySelector('.event-submit-vote').addEventListener('click', function () {
+            votaPropostaEvento(form.getAttribute('data-event-id'), form);
+        });
+    });
+    list.querySelectorAll('.event-share-link').forEach(function (button) {
+        button.addEventListener('click', function () {
+            condividiPropostaEvento(button.closest('.event-proposal-card').getAttribute('data-proposal-id'));
+        });
+    });
 }
 
-async function votaPropostaEvento(propostaId, optionIndex) {
-    var result = await chiamaServer('votaPropostaEvento', [curEmail, propostaId, optionIndex], true).catch(function (error) {
-        showToast(error.message || 'Impossibile registrare il voto.', 'error');
+function messaggioErroreVotoEvento(messaggio) {
+    if (/opzione non valida|azione .* non trovata/i.test(String(messaggio || ''))) {
+        return 'Il servizio votazioni non è aggiornato. Pubblica l’ultima versione di Apps Script e riprova.';
+    }
+    return messaggio || 'Risposta non registrata.';
+}
+
+async function votaPropostaEvento(propostaId, form) {
+    var interesse = form.querySelector('[data-role="interesse"]:checked');
+    var opzioni = interesse && interesse.value === 'si'
+        ? Array.prototype.map.call(form.querySelectorAll('[data-role="preferenza"]:checked'), function (input) { return Number(input.value); })
+        : [];
+    if (!interesse) return showToast('Indica se ti interessa partecipare.', 'error');
+    if (interesse.value === 'si' && !opzioni.length) return showToast('Scegli almeno una data e un orario.', 'error');
+
+    var result = await chiamaServer('votaPropostaEvento', [curEmail, propostaId, { interesse: interesse.value, opzioni: opzioni }], true).catch(function (error) {
+        showToast(error.message || 'Impossibile registrare la risposta.', 'error');
         return null;
     });
     if (!result) return;
     if (!result.ok) {
-        showToast(result.messaggio || 'Voto non registrato.', 'error');
+        showToast(messaggioErroreVotoEvento(result.messaggio), 'error');
         return;
     }
 
-    showToast('Voto registrato con successo.', 'success');
+    showToast('Risposta registrata con successo.', 'success');
     caricaProposteEventi();
+}
+
+async function condividiPropostaEvento(propostaId) {
+    var link = new URL('https://gensssshhh-collab.github.io/Sito-web-Gens-Ssshhh/index.html');
+    link.searchParams.set('evento', propostaId);
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: 'Proposta evento Gens Ssshhh', url: link.href });
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(link.href);
+            showToast('Link per gli esterni copiato.', 'success');
+        } else {
+            var campoCopia = document.createElement('textarea');
+            campoCopia.value = link.href;
+            campoCopia.setAttribute('readonly', '');
+            campoCopia.style.position = 'fixed';
+            campoCopia.style.opacity = '0';
+            document.body.appendChild(campoCopia);
+            campoCopia.select();
+            var copiato = document.execCommand('copy');
+            campoCopia.remove();
+            if (!copiato) throw new Error('Copia non supportata');
+            showToast('Link per gli esterni copiato.', 'success');
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') showToast('Non è stato possibile condividere il link.', 'error');
+    }
+}
+
+async function apriVotoPubblicoEvento(propostaId) {
+    document.querySelectorAll('.fullscreen-view').forEach(function (vista) { vista.classList.add('hidden'); });
+    document.getElementById('publicEventVoteView').classList.remove('hidden');
+    var contenuto = document.getElementById('publicEventVoteContent');
+    contenuto.innerHTML = '<div class="loader"></div>';
+    var proposta = await chiamaServer('getPropostaEventoPubblica', { id: propostaId });
+    if (!proposta) {
+        contenuto.innerHTML = '<h1>Proposta non disponibile</h1><p>Il link potrebbe essere scaduto o la votazione conclusa.</p>';
+        return;
+    }
+
+    var preferenze = (proposta.opzioni || []).map(function (opzione, indice) {
+        var conteggio = proposta.voti && proposta.voti.opzioni ? Number(proposta.voti.opzioni[indice] || 0) : 0;
+        return '<label class="event-vote-option"><input type="checkbox" data-role="preferenza" value="' + indice + '">' +
+            '<span><strong>' + escapeTestoEvento(opzione.data || 'Data da definire') + ' · ' + escapeTestoEvento(opzione.ora || 'Ora da definire') +
+            '</strong><small>' + escapeTestoEvento(opzione.luogo || 'Luogo da definire') + ' · ' + conteggio + ' preferenze</small></span></label>';
+    }).join('');
+    var interesse = proposta.voti && proposta.voti.interesse || { si: 0, no: 0 };
+    contenuto.innerHTML = '<span class="section-kicker">Proposta evento</span><h1>' + escapeTestoEvento(proposta.titolo) + '</h1>' +
+        '<p class="public-event-description">' + escapeTestoEvento(proposta.descrizione) + '</p>' +
+        '<p class="public-event-totals">' + Number(interesse.si || 0) + ' interessati · ' + Number(interesse.no || 0) + ' non interessati</p>' +
+        '<form id="publicEventVoteForm" data-event-id="' + escapeTestoEvento(proposta.id) + '">' +
+        '<label class="public-event-field">Nome<input name="nome" autocomplete="name" required maxlength="100"></label>' +
+        '<label class="public-event-field">E-mail<input name="email" type="email" autocomplete="email" required maxlength="254"></label>' +
+        '<fieldset class="event-interest-fieldset"><legend>Ti interessa partecipare?</legend>' +
+        '<label><input type="radio" name="interesse" value="si" required> Sì</label>' +
+        '<label><input type="radio" name="interesse" value="no"> No</label></fieldset>' +
+        '<div class="event-preferences" hidden><strong>Quali date e orari preferisci?</strong>' + preferenze + '</div>' +
+        '<button class="btn-primary" type="submit">Invia risposta</button><p class="public-event-privacy">L’e-mail serve solo a impedire voti duplicati e non viene mostrata agli altri partecipanti.</p></form>';
+
+    var form = document.getElementById('publicEventVoteForm');
+    form.querySelectorAll('[name="interesse"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            form.querySelector('.event-preferences').hidden = radio.value !== 'si';
+        });
+    });
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        inviaVotoPubblicoEvento(form);
+    });
+}
+
+async function inviaVotoPubblicoEvento(form) {
+    var interesse = form.querySelector('[name="interesse"]:checked');
+    var opzioni = interesse && interesse.value === 'si'
+        ? Array.prototype.map.call(form.querySelectorAll('[data-role="preferenza"]:checked'), function (input) { return Number(input.value); })
+        : [];
+    if (!interesse) return showToast('Indica se ti interessa partecipare.', 'error');
+    if (interesse.value === 'si' && !opzioni.length) return showToast('Scegli almeno una data e un orario.', 'error');
+
+    var dati = {
+        nome: form.elements.nome.value.trim(),
+        email: form.elements.email.value.trim(),
+        interesse: interesse.value,
+        opzioni: opzioni
+    };
+    var result = await chiamaServer('votaPropostaEvento', ['', form.getAttribute('data-event-id'), dati], true).catch(function (error) {
+        showToast(error.message || 'Impossibile registrare la risposta.', 'error');
+        return null;
+    });
+    if (!result) return;
+    if (!result.ok) {
+        showToast(messaggioErroreVotoEvento(result.messaggio), 'error');
+        return;
+    }
+    form.innerHTML = '<p class="event-vote-confirmation" role="status">Grazie, la tua risposta è stata registrata.</p>';
 }
 
 async function inviaPropostaEvento() {
@@ -5332,26 +5418,26 @@ function caricaGraficoOverview() {
 }
 
 function renderGraficoOverview(dati) {
-        var box = document.getElementById('boxOverviewBilancio');
-        if (!box) return;
-        // Grafico a BARRE Orizzontali (Sintesi)
-        var config = {
-            type: 'horizontalBar',
-            data: {
-                labels: ['Flussi €'],
-                datasets: [
-                    { label: 'Entrate', data: [dati.totEntrate], backgroundColor: '#16a34a' },
-                    { label: 'Uscite', data: [dati.totUscite], backgroundColor: '#dc2626' }
-                ]
-            },
-            options: {
-                legend: { position: 'bottom', labels: { boxWidth: 10, fontSize: 11 } },
-                scales: { xAxes: [{ ticks: { beginAtZero: true, display: false }, gridLines: { display: false } }] },
-                plugins: { datalabels: { display: true, color: 'white', font: { weight: 'bold' } } }
-            }
-        };
-        var url = "https://quickchart.io/chart?c=" + encodeURIComponent(JSON.stringify(config)) + "&h=120";
-        box.innerHTML = `<img src="${url}" loading="lazy" decoding="async" alt="Sintesi bilancio" style="width:100%; max-height:120px; object-fit:contain;">`;
+    var box = document.getElementById('boxOverviewBilancio');
+    if (!box) return;
+    // Grafico a BARRE Orizzontali (Sintesi)
+    var config = {
+        type: 'horizontalBar',
+        data: {
+            labels: ['Flussi €'],
+            datasets: [
+                { label: 'Entrate', data: [dati.totEntrate], backgroundColor: '#16a34a' },
+                { label: 'Uscite', data: [dati.totUscite], backgroundColor: '#dc2626' }
+            ]
+        },
+        options: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, fontSize: 11 } },
+            scales: { xAxes: [{ ticks: { beginAtZero: true, display: false }, gridLines: { display: false } }] },
+            plugins: { datalabels: { display: true, color: 'white', font: { weight: 'bold' } } }
+        }
+    };
+    var url = "https://quickchart.io/chart?c=" + encodeURIComponent(JSON.stringify(config)) + "&h=120";
+    box.innerHTML = `<img src="${url}" loading="lazy" decoding="async" alt="Sintesi bilancio" style="width:100%; max-height:120px; object-fit:contain;">`;
 }
 
 // Funzione per APRIRE il dettaglio del bilancio

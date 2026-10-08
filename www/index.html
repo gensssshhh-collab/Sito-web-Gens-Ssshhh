@@ -113,6 +113,16 @@
         </div>
     </div>
 
+    <div id="publicEventVoteView" class="fullscreen-view public-event-vote-view hidden">
+        <main class="public-event-card">
+            <div class="public-event-brand">Gens Ssshhh <span>Consultazione eventi</span></div>
+            <div id="publicEventVoteContent" aria-live="polite">
+                <div class="loader"></div>
+            </div>
+            <a class="public-event-back" href="./">Area soci</a>
+        </main>
+    </div>
+
 
     <div id="appInterface" class="app-container hidden">
 
@@ -130,66 +140,84 @@
 
             <nav class="nav-links" aria-label="Navigazione principale">
                 <div class="nav-section-label">Dashboard</div>
-                <div class="nav-item active" role="button" tabindex="0" onclick="nav('viewHome', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewHome', this); }">
-                    <span class="nav-icon" aria-hidden="true">⌂</span><span>Home page</span></div>
-                <div class="nav-item" role="button" tabindex="0" onclick="nav('viewDash', this)"
+                <div class="nav-item active" role="button" tabindex="0" onclick="nav('viewDash', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDash', this); }">
-                    <span class="nav-icon" aria-hidden="true">▣</span><span>Dashboard</span></div>
+                    <span class="nav-icon" aria-hidden="true">▣</span><span>Home page</span>
+                </div>
+                <div class="nav-item" role="button" tabindex="0" onclick="nav('viewHome', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewHome', this); }">
+                    <span class="nav-icon" aria-hidden="true">⌂</span><span>Dashboard</span>
+                </div>
                 <div id="adminNavItem" class="nav-item" role="button" tabindex="0" onclick="nav('viewAdmin', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewAdmin', this); }">
-                    <span class="nav-icon" aria-hidden="true">⚙</span><span>Amministrazione</span></div>
+                    <span class="nav-icon" aria-hidden="true">⚙</span><span>Amministrazione</span>
+                </div>
 
                 <div class="nav-section-label nav-section-secondary">La tua società</div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewClub', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewClub', this); }">
-                    <span class="nav-icon" aria-hidden="true">◫</span><span>Club</span></div>
+                    <span class="nav-icon" aria-hidden="true">◫</span><span>Club</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewCalendario', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewCalendario', this); }">
-                    <span class="nav-icon" aria-hidden="true">◌</span><span>Calendario</span></div>
+                    <span class="nav-icon" aria-hidden="true">◌</span><span>Calendario</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewElezioni', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewElezioni', this); }">
-                    <span class="nav-icon" aria-hidden="true">◉</span><span>Consultazioni</span></div>
+                    <span class="nav-icon" aria-hidden="true">◉</span><span>Consultazioni</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewComunicazioni', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewComunicazioni', this); }">
-                    <span class="nav-icon" aria-hidden="true">✉</span><span>Comunicazioni</span></div>
+                    <span class="nav-icon" aria-hidden="true">✉</span><span>Comunicazioni</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewSociVolontari', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSociVolontari', this); }">
-                    <span class="nav-icon" aria-hidden="true">◎</span><span>Soci e volontari</span></div>
+                    <span class="nav-icon" aria-hidden="true">◎</span><span>Soci e volontari</span>
+                </div>
 
                 <div class="nav-section-label nav-section-secondary">Documenti e contabilità</div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewArchivio', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewArchivio', this); }">
-                    <span class="nav-icon" aria-hidden="true">▣</span><span>Archivio</span></div>
+                    <span class="nav-icon" aria-hidden="true">▣</span><span>Archivio</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewListinoPrezzi', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewListinoPrezzi', this); }">
-                    <span class="nav-icon" aria-hidden="true">↕</span><span>Listino prezzi</span></div>
+                    <span class="nav-icon" aria-hidden="true">↕</span><span>Listino prezzi</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewFornitoriClienti', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewFornitoriClienti', this); }">
-                    <span class="nav-icon" aria-hidden="true">◫</span><span>Fornitori e clienti</span></div>
+                    <span class="nav-icon" aria-hidden="true">◫</span><span>Fornitori e clienti</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewMovimenti', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewMovimenti', this); }">
-                    <span class="nav-icon" aria-hidden="true">⤴</span><span>Movimenti</span></div>
+                    <span class="nav-icon" aria-hidden="true">⤴</span><span>Movimenti</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewSpese', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSpese', this); }">
-                    <span class="nav-icon" aria-hidden="true">◌</span><span>Spese condivise</span></div>
+                    <span class="nav-icon" aria-hidden="true">◌</span><span>Spese condivise</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDocumenti', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocumenti', this); }">
-                    <span class="nav-icon" aria-hidden="true">▤</span><span>Documenti</span></div>
+                    <span class="nav-icon" aria-hidden="true">▤</span><span>Documenti</span>
+                </div>
 
                 <div class="nav-section-label nav-section-secondary">Gestione</div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewFirma', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewFirma', this); }">
-                    <span class="nav-icon" aria-hidden="true">✎</span><span>Firma Digitale</span></div>
+                    <span class="nav-icon" aria-hidden="true">✎</span><span>Firma Digitale</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewConfigurazione', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewConfigurazione', this); }">
-                    <span class="nav-icon" aria-hidden="true">⚙</span><span>Configurazione</span></div>
+                    <span class="nav-icon" aria-hidden="true">⚙</span><span>Configurazione</span>
+                </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewReport', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewReport', this); }">
-                    <span class="nav-icon" aria-hidden="true">◬</span><span>Report</span></div>
+                    <span class="nav-icon" aria-hidden="true">◬</span><span>Report</span>
+                </div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewProf', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewProf', this); }">
-                    <span class="nav-icon" aria-hidden="true">♙</span><span>Profilo</span></div>
+                    <span class="nav-icon" aria-hidden="true">♙</span><span>Profilo</span>
+                </div>
             </nav>
 
             <div class="sidebar-footer">
@@ -207,7 +235,7 @@
                         onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleSidebar(); }"
                         style="color: #0f172a; margin-right: 0;">☰</div>
                     <div class="page-title" id="pageTitle"
-                        style="color: #0f172a; margin: 0; font-size: 18px; font-weight: 700;">Dashboard</div>
+                        style="color: #0f172a; margin: 0; font-size: 18px; font-weight: 700;">Home page</div>
                 </div>
 
                 <div class="user-menu" role="button" tabindex="0" aria-label="Apri menu utente"
@@ -261,9 +289,9 @@
                             <small>Da completare</small>
                         </div>
                         <div class="action-center-kpi">
-                            <span class="action-center-kpi-label">Prossimo evento</span>
+                            <span class="action-center-kpi-label">Proposte eventi</span>
                             <strong id="homeProssimoEvento">-</strong>
-                            <small id="homeProssimoEventoMeta">Nessun evento in programma</small>
+                            <small id="homeProssimoEventoMeta">Nessuna proposta aperta</small>
                         </div>
                     </div>
 
@@ -457,9 +485,11 @@
                         <div>
                             <span class="section-kicker">Prossimo passo</span>
                             <h3>Partecipa alla vita associativa</h3>
-                            <p>Consulta le attività aperte, firma i documenti richiesti e tieni aggiornato il tuo profilo.</p>
+                            <p>Consulta le attività aperte, firma i documenti richiesti e tieni aggiornato il tuo
+                                profilo.</p>
                         </div>
-                        <button class="btn-primary club-action" onclick="nav('viewElezioni')">Vai alle attività <span aria-hidden="true">→</span></button>
+                        <button class="btn-primary club-action" onclick="nav('viewElezioni')">Vai alle attività <span
+                                aria-hidden="true">→</span></button>
                     </div>
                 </div>
 
@@ -475,10 +505,10 @@
 
                     <div class="calendar-panel">
                         <div class="calendar-header-row">
-                            <h3>Programma del mese</h3>
+                            <h3>Proposte aperte al voto</h3>
                             <button class="compact-action" onclick="renderCalendarioView()">Aggiorna</button>
                         </div>
-                        <div id="calendarEventsList" class="calendar-list"></div>
+                        <div id="eventiPropostiList" class="calendar-list"></div>
                     </div>
 
                     <div class="calendar-panel" style="margin-top: 20px;">
@@ -488,28 +518,44 @@
 
                         <div style="display: grid; gap: 15px;">
                             <div>
-                                <label style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Titolo evento</label>
-                                <input type="text" id="eventoNome" placeholder="Es. Calcetto serale, Cena sociale, Escape room..."
+                                <label
+                                    style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Titolo
+                                    evento</label>
+                                <input type="text" id="eventoNome"
+                                    placeholder="Es. Calcetto serale, Cena sociale, Escape room..."
                                     style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
                             </div>
 
                             <div>
-                                <label style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Descrizione</label>
-                                <textarea id="eventoDescrizione" rows="3" placeholder="Spiega di cosa si tratta, il tipo di attività e il target..."
+                                <label
+                                    style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Descrizione</label>
+                                <textarea id="eventoDescrizione" rows="3"
+                                    placeholder="Spiega di cosa si tratta, il tipo di attività e il target..."
                                     style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; font-size: 14px;"></textarea>
                             </div>
 
                             <div>
-                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                                    <label style="display: block; font-size: 13px; font-weight: bold; color: #334155;">Possibili date / orari / luoghi</label>
-                                    <button type="button" onclick="aggiungiOpzioneEvento()" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: bold; color: #0f172a; cursor: pointer;">+ aggiungi</button>
+                                <div
+                                    style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                    <label
+                                        style="display: block; font-size: 13px; font-weight: bold; color: #334155;">Possibili
+                                        date / orari / luoghi</label>
+                                    <button type="button" onclick="aggiungiOpzioneEvento()"
+                                        style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: bold; color: #0f172a; cursor: pointer;">+
+                                        aggiungi</button>
                                 </div>
 
                                 <div id="eventOptionsList" style="display: grid; gap: 10px;">
-                                    <div class="event-option-row" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
-                                        <input type="text" data-role="data" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                        <input type="text" data-role="ora" inputmode="numeric" maxlength="5" placeholder="hh:mm" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                        <input type="text" data-role="luogo" placeholder="Luogo" style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                    <div class="event-option-row"
+                                        style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
+                                        <input type="text" data-role="data" inputmode="numeric" maxlength="10"
+                                            placeholder="dd/mm/aaaa"
+                                            style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                        <input type="text" data-role="ora" inputmode="numeric" maxlength="5"
+                                            placeholder="hh:mm"
+                                            style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                        <input type="text" data-role="luogo" placeholder="Luogo"
+                                            style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
                                     </div>
                                 </div>
                             </div>
@@ -521,14 +567,6 @@
                         </div>
                     </div>
 
-                    <div class="calendar-panel" style="margin-top: 20px;">
-                        <div class="calendar-header-row">
-                            <h3>Eventi proposti</h3>
-                        </div>
-                        <div id="eventiPropostiList" style="display: grid; gap: 12px;">
-                            <p style="margin: 0; color: #64748b; font-size: 13px;">Nessuna proposta ancora inviata.</p>
-                        </div>
-                    </div>
                 </div>
 
                 <div id="viewComunicazioni" class="page-section hidden">
@@ -765,7 +803,8 @@
                                 style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px;">
                                 <div style="display: flex; align-items: center; gap: 15px;">
                                     <div style="background: #1e40af; padding: 12px; border-radius: 10px; color: white;">
-                                        <span style="font-size: 28px; line-height: 1;">🗳️</span></div>
+                                        <span style="font-size: 28px; line-height: 1;">🗳️</span>
+                                    </div>
                                     <div>
                                         <h2 style="margin: 0; color: #0f172a; font-size: 24px;">Centro Elettorale
                                             Generale</h2>
@@ -859,7 +898,8 @@
                             <h2>Fornitori e clienti</h2>
                             <p>Panoramica dei rapporti commerciali e della rete di partners dell’associazione.</p>
                         </div>
-                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Gestione commerciale</div>
+                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Gestione commerciale
+                        </div>
                     </div>
 
                     <div class="club-summary-grid">
@@ -927,7 +967,8 @@
                             <h2>Movimenti</h2>
                             <p>Ultime entrate e uscite dell’associazione per una lettura immediata del saldo.</p>
                         </div>
-                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Monitoraggio finanziario</div>
+                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Monitoraggio finanziario
+                        </div>
                     </div>
 
                     <div class="club-summary-grid">
@@ -1098,7 +1139,8 @@
                             <h2>Documenti</h2>
                             <p>Archivio dei file principali, aggiornamenti e documenti da esaminare in ogni momento.</p>
                         </div>
-                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Archivio consultabile</div>
+                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Archivio consultabile
+                        </div>
                     </div>
 
                     <div class="club-summary-grid">

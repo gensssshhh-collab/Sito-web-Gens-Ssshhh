@@ -156,6 +156,91 @@ test('eventi: condivide la proposta e rifiuta il doppio voto', () => {
   assert.equal(context.votaPropostaEvento('mario@example.it', 'evento-1', 0).messaggio, 'Hai già votato questa proposta.');
 });
 
+test('eventi: ospiti votano interesse e più preferenze senza esporre le email', () => {
+  const sociSheet = dataSheet([['Nome', 'Password', 'Email'], ['Mario', 'hash', 'mario@example.it']]);
+  const eventiRows = [['ID', 'CreatoIl', 'CreatoreEmail', 'Titolo', 'Descrizione', 'OpzioniJson', 'VotiJson', 'Stato']];
+  const eventiSheet = dataSheet(eventiRows);
+  eventiSheet.getRange = (row, column) => ({
+    setValue(value) { eventiRows[row - 1][column - 1] = value; }
+  });
+  const spreadsheet = {
+    getSheetByName: name => name === 'soci' ? sociSheet : name === 'ProposteEventi' ? eventiSheet : null,
+    insertSheet: () => eventiSheet
+  };
+  const context = {
+    SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
+    Utilities: {
+      getUuid: () => 'evento-ospiti',
+      DigestAlgorithm: { SHA_256: 'SHA_256' },
+      computeDigest: (algorithm, value) => Array.from(Buffer.from(value, 'utf8').subarray(0, 4))
+    },
+    LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) }
+  };
+
+  loadScript('Eventi.js', context);
+  context.creaPropostaEvento('mario@example.it', {
+    titolo: 'Gita',
+    descrizione: 'Scegli quando partecipare',
+    opzioni: [
+      { data: '10/10/2026', ora: '09:00', luogo: 'Centro' },
+      { data: '11/10/2026', ora: '10:00', luogo: 'Centro' }
+    ]
+  });
+
+  const risposta = { nome: 'Giulia', email: 'ospite@example.net', interesse: 'si', opzioni: [0, 1] };
+  assert.equal(context.votaPropostaEvento('', 'evento-ospiti', risposta).ok, true);
+  assert.equal(context.votaPropostaEvento('', 'evento-ospiti', Object.assign({}, risposta, { email: 'OSPITE@example.net' })).messaggio, 'Hai già votato questa proposta.');
+  assert.equal(context.votaPropostaEvento('', 'evento-ospiti', { nome: 'Paolo', email: 'paolo@example.net', interesse: 'no', opzioni: [] }).ok, true);
+
+  const propostaPubblica = context.getPropostaEventoPubblica('evento-ospiti');
+  assert.deepEqual(JSON.parse(JSON.stringify(propostaPubblica.voti)), {
+    interesse: { si: 1, no: 1 },
+    opzioni: [1, 1]
+  });
+  assert.equal(JSON.stringify(propostaPubblica).includes('ospite@example.net'), false);
+  assert.equal(propostaPubblica.mioVoto, null);
+  assert.deepEqual(context.getProposteEventi('').length, 0);
+});
+
+test('eventi: il dispatcher serve il link pubblico e registra il voto esterno', () => {
+  const sociSheet = dataSheet([['Nome', 'Password', 'Email'], ['Mario', 'hash', 'mario@example.it']]);
+  const eventiRows = [
+    ['ID', 'CreatoIl', 'CreatoreEmail', 'Titolo', 'Descrizione', 'OpzioniJson', 'VotiJson', 'Stato'],
+    ['evento-web', new Date(), 'mario@example.it', 'Passeggiata', 'Percorso cittadino', JSON.stringify([{ data: '10/11/2026', ora: '10:00', luogo: 'Centro' }]), '{}', 'ATTIVA']
+  ];
+  const eventiSheet = dataSheet(eventiRows);
+  eventiSheet.getRange = (row, column) => ({ setValue(value) { eventiRows[row - 1][column - 1] = value; } });
+  const spreadsheet = {
+    getSheetByName: name => name === 'soci' ? sociSheet : name === 'ProposteEventi' ? eventiSheet : null,
+    insertSheet: () => eventiSheet
+  };
+  const context = {
+    SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
+    Utilities: {
+      DigestAlgorithm: { SHA_256: 'SHA_256' },
+      computeDigest: (algorithm, value) => Array.from(Buffer.from(value, 'utf8').subarray(0, 4))
+    },
+    LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) },
+    ContentService: {
+      MimeType: { JSON: 'JSON' },
+      createTextOutput: content => ({ getContent: () => content, setMimeType() { return this; } })
+    }
+  };
+  loadScript('Eventi.js', context);
+  loadScript('main.js', context);
+
+  const rispostaEndpoint = richiesta => JSON.parse(context.doPost({ postData: { contents: JSON.stringify(richiesta) } }).getContent());
+  const proposta = rispostaEndpoint({ azione: 'getPropostaEventoPubblica', payload: { id: 'evento-web' } });
+  assert.equal(proposta.status, 'SUCCESS');
+  assert.equal(proposta.data.titolo, 'Passeggiata');
+
+  const voto = rispostaEndpoint({
+    azione: 'votaPropostaEvento',
+    payload: ['', 'evento-web', { nome: 'Giulia', email: 'giulia@example.net', interesse: 'si', opzioni: [0] }]
+  });
+  assert.equal(voto.data.ok, true);
+});
+
 test('ruoli: riconosce come amministrativi presidente, vicepresidente e segretario ma non consiglieri', () => {
   const context = {};
   loadScript('user.js', context);

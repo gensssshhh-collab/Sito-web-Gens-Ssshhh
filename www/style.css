@@ -21,8 +21,10 @@
 .action-center-kpis {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px; /* Più spazio tra una card e l'altra */
-  margin-bottom: 32px; /* Più spazio prima di iniziare la lista sottostante */
+  gap: 20px;
+  /* Più spazio tra una card e l'altra */
+  margin-bottom: 32px;
+  /* Più spazio prima di iniziare la lista sottostante */
 }
 
 .action-center-kpi {
@@ -70,7 +72,7 @@
   display: grid;
   /* Dà 2/3 dello spazio alle azioni principali e fissa la spalla destra in modo armonioso */
   grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
-  gap: 28px; 
+  gap: 28px;
   align-items: start;
 }
 
@@ -183,7 +185,7 @@
   font-weight: 700;
 }
 
-.action-center-mini-item > span:last-child {
+.action-center-mini-item>span:last-child {
   display: grid;
   min-width: 0;
   gap: 3px;
@@ -232,6 +234,7 @@
 }
 
 @media (max-width: 768px) {
+
   .action-center-kpis,
   .action-center-layout {
     grid-template-columns: 1fr;
@@ -243,6 +246,308 @@
 
   .action-center-admin-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 981px) {
+  #viewHome.active {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    column-gap: 22px;
+    row-gap: 20px;
+    align-content: start;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding-bottom: 28px;
+  }
+
+  #viewHome>.club-page-header,
+  #viewHome>.action-center-kpis,
+  #viewHome>.action-center-layout {
+    grid-column: 1 / -1;
+  }
+
+  #viewHome>.club-page-header {
+    align-items: center;
+    margin-bottom: 0;
+  }
+
+  #viewHome>.action-center-kpis {
+    gap: 16px;
+    margin-bottom: 0;
+  }
+
+  #viewHome .action-center-kpi {
+    min-height: 112px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px 22px;
+  }
+
+  #viewHome>.action-center-layout {
+    grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr);
+    gap: 22px;
+  }
+
+  #viewHome .action-center-side {
+    gap: 16px;
+  }
+
+  #viewHome>.action-center-admin-panel {
+    grid-column: 1;
+    margin-top: 0;
+  }
+
+  #viewHome>.action-center-news-panel {
+    grid-column: 2;
+    margin-top: 0;
+  }
+
+  #viewHome>#homeAdminWidget.hidden+.action-center-news-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+.event-proposal-card {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(26, 41, 69, 0.04);
+}
+
+.event-proposal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.event-proposal-heading h4 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 17px;
+}
+
+.event-proposal-heading p,
+.public-event-description {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.event-proposal-counts,
+.event-interest-fieldset {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.event-proposal-counts span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.event-proposal-counts strong {
+  color: var(--navy);
+}
+
+.event-vote-form,
+.public-event-vote-view form {
+  display: grid;
+  gap: 14px;
+}
+
+.event-interest-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.event-interest-fieldset legend,
+.event-preferences>strong {
+  padding: 0 4px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.event-interest-fieldset label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.event-interest-fieldset input,
+.event-vote-option input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--navy);
+}
+
+.event-preferences {
+  display: grid;
+  gap: 8px;
+}
+
+.event-preferences[hidden] {
+  display: none;
+}
+
+.event-vote-option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-warm);
+  cursor: pointer;
+}
+
+.event-vote-option span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.event-vote-option strong {
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.event-vote-option small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.event-vote-form .btn-primary {
+  width: auto;
+  justify-self: start;
+  padding: 10px 16px;
+}
+
+.event-vote-confirmation {
+  margin: 0;
+  color: #277d53;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.public-event-vote-view {
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.public-event-card {
+  width: min(720px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.public-event-brand {
+  margin-bottom: 24px;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.public-event-brand span {
+  display: block;
+  margin-top: 4px;
+  color: var(--gold-strong);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.public-event-vote-view h1 {
+  margin: 6px 0;
+  color: var(--navy);
+  font-size: 26px;
+}
+
+.public-event-totals,
+.public-event-privacy {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.public-event-field {
+  display: grid;
+  gap: 6px;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.public-event-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+}
+
+.public-event-vote-view .btn-primary {
+  width: auto;
+  justify-self: start;
+  padding: 11px 18px;
+}
+
+.public-event-privacy {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.public-event-back {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .event-proposal-heading {
+    flex-direction: column;
+  }
+
+  .event-proposal-heading .compact-action {
+    width: 100%;
+  }
+
+  .public-event-vote-view {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .public-event-card {
+    max-height: none;
+    padding: 20px;
   }
 }
 
@@ -739,7 +1044,7 @@ textarea {
   padding-bottom: 12px;
 }
 
-#viewAdmin > div:first-of-type {
+#viewAdmin>div:first-of-type {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -748,24 +1053,24 @@ textarea {
   padding: 18px 20px;
   border: 1px solid rgba(26, 41, 69, 0.08);
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(247,240,228,0.9));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(247, 240, 228, 0.9));
   box-shadow: 0 12px 28px rgba(17, 24, 39, 0.04);
 }
 
-#viewAdmin > div:first-of-type h2 {
+#viewAdmin>div:first-of-type h2 {
   margin: 0;
   color: var(--navy);
   font-size: clamp(28px, 3vw, 38px);
   letter-spacing: -0.05em;
 }
 
-#viewAdmin > div:first-of-type span {
+#viewAdmin>div:first-of-type span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 7px 12px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(254,226,226,0.9), rgba(254,242,242,0.75));
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.9), rgba(254, 242, 242, 0.75));
   color: #dc2626;
   font-size: 11px;
   font-weight: 800;
@@ -801,7 +1106,7 @@ textarea {
 }
 
 #viewAdmin .admin-tab-content .stat-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(246,241,233,0.9));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(246, 241, 233, 0.9));
   border-color: rgba(26, 41, 69, 0.08);
   box-shadow: 0 16px 30px rgba(17, 24, 39, 0.04);
 }
@@ -822,8 +1127,8 @@ textarea {
   padding-top: 4px;
 }
 
-#tabSoci > div:first-of-type {
-  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(244,240,230,0.96));
+#tabSoci>div:first-of-type {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 240, 230, 0.96));
   border: 1px solid rgba(26, 41, 69, 0.08);
   border-radius: 16px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.04);
@@ -1531,7 +1836,8 @@ textarea {
 
 #viewDash {
   max-width: 1180px;
-  margin: 0 auto; /* Questo centra tutto l'Action Center nello schermo del PC */
+  margin: 0 auto;
+  /* Questo centra tutto l'Action Center nello schermo del PC */
   padding-bottom: 28px;
 }
 
@@ -3823,6 +4129,7 @@ textarea {
 }
 
 @media (max-width: 640px) {
+
   .club-page-header,
   .club-next-panel {
     align-items: stretch;

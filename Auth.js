@@ -152,7 +152,7 @@ function inviaLinkReset(email) {
             "<p><a href='" + link + "' style='background:#3b82f6; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>IMPOSTA NUOVA PASSWORD</a></p>" +
             "<p><small>Se non sei stato tu, ignora questa mail. Il link scade tra 1 ora.</small></p>"
         });
-          inviaNotificaPushUtente(emailTarget, "Reimpostazione password", "È disponibile il link per reimpostare la password.", "viewProf");
+        inviaNotificaPushUtente(emailTarget, "Reimpostazione password", "È disponibile il link per reimpostare la password.", "viewProf");
         return "LINK_INVIATO";
       } catch (e) { return "ERRORE_MAIL"; }
     }
@@ -553,24 +553,7 @@ function costruisciActionCenter_(email, user, oggi) {
   try { proposte = getProposteEventi(email) || []; } catch (e) { }
 
   var eventi = [];
-  proposte.forEach(function (proposta) {
-    (proposta.opzioni || []).forEach(function (opzione) {
-      var dataEvento = parseDataActionCenter_(opzione.data);
-      if (!dataEvento || dataEvento < oggi) return;
-      eventi.push({
-        id: proposta.id,
-        titolo: proposta.titolo || "Evento proposto",
-        descrizione: proposta.descrizione || "",
-        data: opzione.data || "",
-        ora: opzione.ora || "",
-        luogo: opzione.luogo || ""
-      });
-    });
-  });
-  eventi.sort(function (a, b) {
-    return parseDataActionCenter_(a.data).getTime() - parseDataActionCenter_(b.data).getTime();
-  });
-
+  var proposteDaVotare = proposte.filter(function (proposta) { return !proposta.mioVoto; });
   var azioni = [];
   if (firme.length) azioni.push({
     id: "firme",
@@ -592,6 +575,15 @@ function costruisciActionCenter_(email, user, oggi) {
     count: votazioniPendenti.length,
     viewId: "viewElezioni",
     priorita: "urgente"
+  });
+  if (proposteDaVotare.length) azioni.push({
+    id: "proposte-eventi",
+    tipo: "evento",
+    titolo: "Proposte eventi da votare",
+    dettaglio: "Hai " + proposteDaVotare.length + " proposta/e da valutare.",
+    count: proposteDaVotare.length,
+    viewId: "viewCalendario",
+    priorita: "media"
   });
 
   var isAdmin = isRuoloAmministrativo(user.ruolo);
@@ -659,7 +651,8 @@ function costruisciActionCenter_(email, user, oggi) {
     azioni: azioni,
     eventi: {
       prossimi: eventi.slice(0, 5),
-      proposteAttive: proposte.length
+      proposteAttive: proposte.length,
+      proposteDaVotare: proposteDaVotare.length
     },
     finanze: finanze,
     admin: adminData
