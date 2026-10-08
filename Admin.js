@@ -484,8 +484,9 @@ function getAmmissioniAdmin(adminEmail) {
   var user = getDatiUtente(adminEmail);
   if (!user || !isRuoloAmministrativo(user.ruolo)) return [];
 
+  processaScadenzeAmmissioni();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var foglioAmm = ss.getSheetByName("Ammissioni");
+  var foglioAmm = getFoglioRichiesteIscrizione_();
   if (!foglioAmm) return [];
 
   var datiAmm = foglioAmm.getDataRange().getValues();
@@ -495,15 +496,18 @@ function getAmmissioniAdmin(adminEmail) {
     // Prende il valore, lo trasforma in stringa, toglie gli spazi vuoti all'inizio/fine e lo fa maiuscolo
     var stato = datiAmm[i][7] ? datiAmm[i][7].toString().trim().toUpperCase() : "";
 
-    // Mostra all'admin solo chi ha già i due garanti (pronto) o chi è in votazione
-    if (stato === "SOSTENUTO (PRONTO PER ASSEMBLEA)" || stato === "IN VOTAZIONE") {
+    if (["RACCOLTA AVVALLI", "AVVALLATA - ATTESA VOTO", "SOSTENUTO (PRONTO PER ASSEMBLEA)", "IN VOTAZIONE"].indexOf(stato) >= 0) {
       var nomeCompleto = (datiAmm[i][1] || "") + " " + (datiAmm[i][2] || "");
       lista.push({
         nome: nomeCompleto.trim(),
         email: datiAmm[i][3],     // Email Candidato è in colonna D (indice 3)
         sponsor1: datiAmm[i][5],  // Sponsor 1 è in colonna F (indice 5)
         sponsor2: datiAmm[i][6],  // Sponsor 2 è in colonna G (indice 6)
-        stato: stato
+        stato: stato,
+        richiestaNuova: Boolean(datiAmm[i][9]),
+        avvalli: (datiAmm[i][5] ? 1 : 0) + (datiAmm[i][6] ? 1 : 0),
+        scadenzaAvvalli: datiAmm[i][11] || "",
+        votoPrevisto: datiAmm[i][12] || ""
       });
     }
   }
@@ -533,6 +537,7 @@ function adminGestisciAmmissione(adminEmail, emailCandidato, azione) {
   if (rigaTarget === -1) return "CANDIDATO_NON_TROVATO";
 
   if (azione === "APRI_VOTO") {
+    if (datiAmm[rigaTarget - 1][9]) return "VOTO_PROGRAMMATO_AUTOMATICAMENTE";
     // Aggiorna lo Stato Sostegno in colonna H (indice 7, quindi rigaTarget e colonna 8)
     foglioAmm.getRange(rigaTarget, 8).setValue("IN VOTAZIONE");
     scriviLog(adminEmail, "APERTURA_VOTO_AMMISSIONE", nomeCandidato);

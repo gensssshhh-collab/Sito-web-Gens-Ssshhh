@@ -298,14 +298,197 @@ function sostieniCandidato(emailCandidato, emailSponsor2) {
   return "ERRORE";
 }
 
+function getFoglioRichiesteIscrizione_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Ammissioni");
+  if (!sheet) {
+    sheet = ss.insertSheet("Ammissioni");
+    sheet.appendRow(["Data Richiesta", "Nome Candidato", "Cognome Candidato", "Email Candidato", "Telefono", "Sponsor 1 (Proponente)", "Sponsor 2 (Richiesto)", "Stato Sostegno", "Esito Assemblea"]);
+  }
+
+  ["ID Richiesta", "Presentazione", "Scadenza Avvalli", "Data Voto Prevista", "Voto Notificato Il"].forEach(function (header, index) {
+    var column = 10 + index;
+    var current = sheet.getRange(1, column).getValue();
+    if (String(current || "").trim() !== header) sheet.getRange(1, column).setValue(header);
+  });
+  return sheet;
+}
+
+function isSocioAttivoPerEmail_(email) {
+  var target = String(email || "").trim().toLowerCase();
+  if (!target) return false;
+  return getListaSociPerSponsor().some(function (socio) {
+    return String(socio.email || "").trim().toLowerCase() === target;
+  });
+}
+
+function richiediIscrizioneSocio(dati) {
+  dati = dati || {};
+  var nome = String(dati.nome || "").trim();
+  var cognome = String(dati.cognome || "").trim();
+  var email = String(dati.email || "").trim().toLowerCase();
+  var telefono = String(dati.telefono || "").trim();
+  var presentazione = String(dati.presentazione || "").trim();
+  if (!nome || !cognome || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, messaggio: "Inserisci nome, cognome e un indirizzo e-mail valido." };
+  }
+  if (dati.consensoPrivacy !== true) return { ok: false, messaggio: "Per inviare la richiesta devi accettare l'informativa privacy." };
+  if (isSocioAttivoPerEmail_(email)) return { ok: false, messaggio: "Questa e-mail risulta già associata a un socio." };
+
+  var sheet = getFoglioRichiesteIscrizione_();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][3] || "").trim().toLowerCase() === email) {
+      var statoEsistente = String(rows[i][7] || "").trim().toUpperCase();
+      if (["SCADUTA", "RESPINTA", "VOTAZIONE_CHIUSA"].indexOf(statoEsistente) < 0) {
+        return { ok: false, messaggio: "Esiste già una richiesta aperta con questa e-mail." };
+      }
+    }
+  }
+
+  var richiestaId = Utilities.getUuid();
+  var richiestaIl = new Date();
+  var scadenzaAvvalli = new Date(richiestaIl.getTime() + 3 * 86400000);
+  var votoPrevisto = new Date(richiestaIl.getTime() + 10 * 86400000);
+  sheet.appendRow([
+    richiestaIl, nome, cognome, email, telefono, "", "", "RACCOLTA AVVALLI", "DA VOTARE",
+    richiestaId, presentazione, scadenzaAvvalli, votoPrevisto, ""
+  ]);
+
+  try {
+    MailApp.sendEmail(email, "Richiesta di iscrizione ricevuta", "La tua richiesta è stata ricevuta. Entro 3 giorni almeno due soci dovranno avvallarla. Se raggiunge i due avvalli, la votazione si aprirà il " + votoPrevisto.toLocaleDateString("it-IT") + ".");
+  } catch (e) { }
+  try {
+    var membri = getListaSociPerSponsor();
+    membri.forEach(function (socio) {
+      MailApp.sendEmail(socio.email, "Nuova richiesta di iscrizione", nome + " " + cognome + " ha chiesto di diventare socio. Puoi esaminare e avvallare la candidatura nella sezione Consultazioni entro 3 giorni.");
+    });
+    inviaNotificaPush("Nuova richiesta di iscrizione", "Una candidatura è in attesa di almeno due avvalli entro 3 giorni.", null, "viewElezioni");
+  } catch (e) { }
+
+  return { ok: true, richiestaId: richiestaId, votoPrevisto: votoPrevisto.toISOString() };
+}
+
+function getRichiesteIscrizioneDaAvvallare(emailSocio) {
+  var email = String(emailSocio || "").trim().toLowerCase();
+  if (!isSocioAttivoPerEmail_(email)) return [];
+  processaScadenzeAmmissioni();
+
+  var rows = getFoglioRichiesteIscrizione_().getDataRange().getValues();
+  var now = new Date().getTime();
+  var richieste = [];
+  for (var i = 1; i < rows.length; i++) {
+    var row = rows[i];
+    if (String(row[9] || "") === "" || String(row[7] || "") !== "RACCOLTA AVVALLI") continue;
+    if (String(row[3] || "").trim().toLowerCase() === email) continue;
+    if (new Date(row[11]).getTime() <= now) continue;
+    if (String(row[5] || "").trim().toLowerCase() === email || String(row[6] || "").trim().toLowerCase() === email) continue;
+    richieste.push({
+      id: String(row[9]),
+      nome: (String(row[1] || "") + " " + String(row[2] || "")).trim(),
+      presentazione: String(row[10] || ""),
+      richiestaIl: row[0],
+      avvalli: (row[5] ? 1 : 0) + (row[6] ? 1 : 0),
+      avvalliRichiesti: 2,
+      scadenza: row[11]
+    });
+  }
+  return richieste;
+}
+
+function avvallaRichiestaIscrizione(emailSocio, richiestaId) {
+  var email = String(emailSocio || "").trim().toLowerCase();
+  if (!isSocioAttivoPerEmail_(email)) return { ok: false, messaggio: "Solo i soci attivi possono avvallare una richiesta." };
+  processaScadenzeAmmissioni();
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getFoglioRichiesteIscrizione_();
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      var row = rows[i];
+      if (String(row[9] || "") !== String(richiestaId)) continue;
+      if (String(row[7] || "") !== "RACCOLTA AVVALLI" || new Date(row[11]).getTime() <= new Date().getTime()) {
+        return { ok: false, messaggio: "La raccolta degli avvalli è chiusa." };
+      }
+      if (String(row[3] || "").trim().toLowerCase() === email) return { ok: false, messaggio: "Non puoi avvallare la tua richiesta." };
+      if (String(row[5] || "").trim().toLowerCase() === email || String(row[6] || "").trim().toLowerCase() === email) {
+        return { ok: false, messaggio: "Hai già avvallato questa richiesta." };
+      }
+      var conteggio = (row[5] ? 1 : 0) + (row[6] ? 1 : 0) + 1;
+      if (!row[5]) sheet.getRange(i + 1, 6).setValue(email);
+      else if (!row[6]) sheet.getRange(i + 1, 7).setValue(email);
+      else return { ok: false, messaggio: "La candidatura ha già ricevuto due avvalli." };
+
+      if (conteggio >= 2) sheet.getRange(i + 1, 8).setValue("AVVALLATA - ATTESA VOTO");
+      return { ok: true, avvalli: conteggio, votoPrevisto: row[12] };
+    }
+    return { ok: false, messaggio: "Richiesta non trovata." };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function processaScadenzeAmmissioni() {
+  var sheet = getFoglioRichiesteIscrizione_();
+  var lock = LockService.getScriptLock();
+  var daNotificare = [];
+  lock.waitLock(10000);
+  try {
+    var rows = sheet.getDataRange().getValues();
+    var now = new Date();
+    for (var i = 1; i < rows.length; i++) {
+      var row = rows[i];
+      if (!row[9]) continue;
+      var stato = String(row[7] || "");
+      var avvalli = (row[5] ? 1 : 0) + (row[6] ? 1 : 0);
+      if (stato === "RACCOLTA AVVALLI" && new Date(row[11]).getTime() <= now.getTime() && avvalli < 2) {
+        sheet.getRange(i + 1, 8).setValue("SCADUTA");
+        sheet.getRange(i + 1, 9).setValue("SCADUTA - MENO DI DUE AVVALLI");
+      } else if ((stato === "RACCOLTA AVVALLI" || stato === "AVVALLATA - ATTESA VOTO") && avvalli >= 2 && new Date(row[12]).getTime() <= now.getTime()) {
+        sheet.getRange(i + 1, 8).setValue("IN VOTAZIONE");
+        sheet.getRange(i + 1, 14).setValue(now);
+        daNotificare.push({ nome: (String(row[1] || "") + " " + String(row[2] || "")).trim(), email: String(row[3] || "") });
+      }
+    }
+  } finally {
+    lock.releaseLock();
+  }
+
+  if (daNotificare.length) {
+    var membri = getListaSociPerSponsor();
+    daNotificare.forEach(function (candidato) {
+      membri.forEach(function (socio) {
+        try { MailApp.sendEmail(socio.email, "Voto ammissione socio aperto", "È aperta la votazione sulla richiesta di iscrizione di " + candidato.nome + ". Accedi alla sezione Consultazioni per esprimere il tuo voto."); } catch (e) { }
+      });
+    });
+    inviaNotificaPush("Voto ammissione aperto", daNotificare.length === 1 ? "È aperta una nuova mozione di ammissione." : "Sono aperte nuove mozioni di ammissione.", null, "viewElezioni");
+  }
+  return daNotificare.length;
+}
+
+function configuraTriggerAmmissioni(adminEmail) {
+  var user = getDatiUtente(adminEmail);
+  if (!user || !isRuoloAmministrativo(user.ruolo)) return "NO_AUTH";
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() === "processaScadenzeAmmissioni") ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger("processaScadenzeAmmissioni").timeBased().everyHours(1).create();
+  return "TRIGGER_AMMISSIONI_CONFIGURATO";
+}
+
 // ==========================================
 // VOTAZIONI ASSEMBLEARI PER AMMISSIONE (Art. 7)
 // ==========================================
 
 // 1. L'utente richiede le ammissioni attualmente aperte al voto
 function getAmmissioniInVoto(emailSocio) {
+  processaScadenzeAmmissioni();
+  if (!isSocioAttivoPerEmail_(emailSocio)) return [];
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var foglioAmm = ss.getSheetByName("Ammissioni");
+  var foglioAmm = getFoglioRichiesteIscrizione_();
   var foglioVotiAmm = ss.getSheetByName("VotiAmmissioni");
 
   // Se non c'è, crea il foglio per lo spoglio segreto
@@ -349,7 +532,14 @@ function getAmmissioniInVoto(emailSocio) {
 }
 
 function votaAmmissioneSocio(dati) {
+  if (!isSocioAttivoPerEmail_(dati.email)) return "ERR_USER";
   if (verificaLogin({ email: dati.email, password: dati.password }) !== "OK_LOGIN") return "ERR_AUTH";
+
+  var richiesteAmm = getFoglioRichiesteIscrizione_().getDataRange().getValues();
+  var mozioneAperta = richiesteAmm.some(function (row, index) {
+    return index > 0 && String(row[3] || "").trim().toLowerCase() === String(dati.emailCandidato || "").trim().toLowerCase() && String(row[7] || "") === "IN VOTAZIONE";
+  });
+  if (!mozioneAperta) return "ERR_VOTAZIONE_CHIUSA";
 
   var hashUtente = getHashUnivoco(dati.email);
   if (!hashUtente) return "ERR_USER";
@@ -359,6 +549,10 @@ function votaAmmissioneSocio(dati) {
     lock.waitLock(10000);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var foglioVoti = ss.getSheetByName("VotiAmmissioni");
+    if (!foglioVoti) {
+      foglioVoti = ss.insertSheet("VotiAmmissioni");
+      foglioVoti.appendRow(["Timestamp", "HashSocio", "CandidatoEmail", "Voto"]);
+    }
 
     // Doppio controllo anti-frode
     var datiVoti = foglioVoti.getDataRange().getValues();

@@ -88,6 +88,10 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: risultatoVoto })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (azione === "processaScadenzeAmmissioni") {
+      return ContentService.createTextOutput(JSON.stringify({ status: "ERROR", messaggio: "Azione interna non invocabile via API." })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 3. PONTE UNIVERSALE DINAMICO
     // Cerca una funzione nel backend che si chiami esattamente come l'azione richiesta
     if (typeof this[azione] === 'function') {

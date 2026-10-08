@@ -60,13 +60,15 @@
 
                 <div id="loginMsg" style="margin-top:15px; font-size:13px; min-height:18px;"></div>
 
-                <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+                <div
+                    style="margin-top: 20px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                     <span class="link-text" role="button" tabindex="0" onclick="toggleView('viewRecupero')"
                         onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleView('viewRecupero'); }">Recupera
                         Password</span>
                     <span class="link-text" role="button" tabindex="0" onclick="toggleView('viewCambio')"
                         onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleView('viewCambio'); }">Cambia
                         Password</span>
+                    <a class="link-text" href="?iscrizione=1">Richiedi iscrizione</a>
                 </div>
             </div>
 
@@ -77,6 +79,37 @@
                 <div class="login-brand-caption">Gens Ssshhh</div>
             </div>
         </div>
+    </div>
+
+    <div id="publicAdmissionView" class="fullscreen-view public-event-vote-view hidden">
+        <main class="public-event-card">
+            <div class="public-event-brand">Gens Ssshhh <span>Richiesta di iscrizione</span></div>
+            <div>
+                <h1>Richiedi di diventare socio</h1>
+                <p class="public-event-description">La richiesta sarà valutata dai soci: servono due avvalli entro 3
+                    giorni. Se approvata per il voto, la mozione sarà sottoposta a tutti i soci dopo 10 giorni dalla
+                    richiesta.</p>
+                <form id="publicAdmissionForm" class="public-event-form">
+                    <label class="public-event-field">Nome<input name="nome" autocomplete="given-name" required
+                            maxlength="80"></label>
+                    <label class="public-event-field">Cognome<input name="cognome" autocomplete="family-name" required
+                            maxlength="80"></label>
+                    <label class="public-event-field">E-mail<input name="email" type="email" autocomplete="email"
+                            required maxlength="254"></label>
+                    <label class="public-event-field">Telefono<input name="telefono" type="tel" autocomplete="tel"
+                            maxlength="40"></label>
+                    <label class="public-event-field">Presentazione<textarea name="presentazione" rows="3"
+                            maxlength="1000"
+                            placeholder="Raccontaci brevemente perché vuoi unirti all’associazione."></textarea></label>
+                    <label class="public-admission-consent"><input name="consensoPrivacy" type="checkbox" required>
+                        Acconsento all’uso dei dati inseriti per gestire la richiesta di iscrizione e le relative
+                        comunicazioni.</label>
+                    <button class="btn-primary" type="submit">Invia richiesta</button>
+                    <p id="publicAdmissionMessage" class="public-event-privacy" role="status" aria-live="polite"></p>
+                </form>
+            </div>
+            <a class="public-event-back" href="./">Torna all’accesso soci</a>
+        </main>
     </div>
 
     <div id="viewRecupero" class="fullscreen-view hidden">
@@ -708,12 +741,16 @@
                                 <!-- ================= COLONNA DESTRA ================= -->
                                 <div style="display: flex; flex-direction: column; gap: 25px;">
 
-                                    <!-- BOX SOSTIENI CANDIDATI (Appare se si è Secondo Garante) -->
-                                    <div id="boxSostieniCandidati"
-                                        style="display:none; background:#fff7ed; padding:20px; border-radius:12px; border:1px solid #fed7aa; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                                        <h3 style="margin-top:0; font-size:16px; color:#c2410c;">⚠️ Candidature in
-                                            attesa del tuo sostegno</h3>
-                                        <div id="listaDaSostenere"></div>
+                                    <div id="boxRichiesteIscrizione" class="calendar-panel hidden">
+                                        <div class="calendar-header-row">
+                                            <div>
+                                                <span class="section-kicker">Iscrizioni</span>
+                                                <h3>Richieste da avvallare</h3>
+                                            </div>
+                                            <button class="compact-action"
+                                                onclick="caricaRichiesteIscrizione()">Aggiorna</button>
+                                        </div>
+                                        <div id="listaRichiesteIscrizione" class="calendar-list"></div>
                                     </div>
 
                                     <!-- CARD LA TUA CANDIDATURA -->
@@ -739,53 +776,14 @@
                                         </div>
                                     </div>
 
-                                    <div
-                                        style="background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                                        <div
-                                            style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                                            <span style="font-size: 20px;">👤</span>
-                                            <h3 style="margin: 0; font-size: 16px; color: #0f172a;">Presenta nuovo socio
-                                            </h3>
-                                        </div>
-                                        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Ai sensi dello
-                                            Statuto, indica i dati del candidato e seleziona il Secondo Garante.</p>
-
-                                        <div id="formAmmissioneContent">
-                                            <div style="margin-bottom: 15px;">
-                                                <label
-                                                    style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Nome
-                                                    Candidato</label>
-                                                <input type="text" id="candNome" placeholder="Es. Mario"
-                                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
-                                            </div>
-                                            <div style="margin-bottom: 15px;">
-                                                <label
-                                                    style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Cognome
-                                                    Candidato</label>
-                                                <input type="text" id="candCognome" placeholder="Es. Rossi"
-                                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
-                                            </div>
-                                            <div style="margin-bottom: 15px;">
-                                                <label
-                                                    style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Email
-                                                    Candidato</label>
-                                                <input type="email" id="candEmail" placeholder="mario.rossi@email.it"
-                                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
-                                            </div>
-                                            <div style="margin-bottom: 20px;">
-                                                <label
-                                                    style="display: block; font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 5px;">Seleziona
-                                                    il Secondo Garante</label>
-                                                <select id="candSponsor2"
-                                                    style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
-                                                    <option value="">Caricamento soci...</option>
-                                                </select>
-                                            </div>
-                                            <button onclick="inviaPropostaAmmissione()"
-                                                style="background: #2563eb; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer;">
-                                                INVIA PROPOSTA
-                                            </button>
-                                        </div>
+                                    <div class="calendar-panel">
+                                        <span class="section-kicker">Nuovi soci</span>
+                                        <h3>Condividi il modulo di iscrizione</h3>
+                                        <p class="public-event-description">Chi vuole iscriversi può inviare la propria
+                                            richiesta senza un account. I soci attivi potranno avvallarla entro 3
+                                            giorni.</p>
+                                        <button type="button" class="btn-primary"
+                                            onclick="condividiModuloIscrizione()">Copia link iscrizione</button>
                                     </div>
 
                                 </div> <!-- Fine Colonna Destra -->
@@ -1823,11 +1821,15 @@
                                 <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Crea referendum o votazioni
                                     per cariche sociali indipendenti.</p>
                             </div>
-                            <button class="btn-primary"
-                                style="width:auto; padding:10px 20px; background:#10b981; font-weight:bold; font-size:13px;"
-                                onclick="apriModaleCreaElezione()">
-                                + NUOVA CONSULTAZIONE
-                            </button>
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <button type="button" class="compact-action"
+                                    onclick="configuraTriggerAmmissioniUI()">Attiva automazioni iscrizioni</button>
+                                <button class="btn-primary"
+                                    style="width:auto; padding:10px 20px; background:#10b981; font-weight:bold; font-size:13px;"
+                                    onclick="apriModaleCreaElezione()">
+                                    + NUOVA CONSULTAZIONE
+                                </button>
+                            </div>
                         </div>
 
                         <!-- LISTA DELLE ELEZIONI CREATE -->
@@ -1849,12 +1851,15 @@
                         <div id="boxGestioneAmmissioni"
                             style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border); margin-top:20px; display:none;">
                             <div
-                                style="display:flex; align-items:center; gap:10px; margin-bottom:15px; border-bottom:1px solid #f1f5f9; padding-bottom:15px;">
-                                <span style="font-size:24px;">⚖️</span>
-                                <div>
-                                    <h3 style="margin:0; font-size:16px; color:#c2410c;">Ammissioni in Assemblea</h3>
-                                    <p style="margin:0; font-size:12px; color:#64748b;">Candidati che hanno ottenuto i
-                                        due garanti statutari.</p>
+                                style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; border-bottom:1px solid #f1f5f9; padding-bottom:15px; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span style="font-size:24px;">⚖️</span>
+                                    <div>
+                                        <h3 style="margin:0; font-size:16px; color:#c2410c;">Richieste di iscrizione
+                                        </h3>
+                                        <p style="margin:0; font-size:12px; color:#64748b;">Avvalli, scadenze e
+                                            votazioni programmate.</p>
+                                    </div>
                                 </div>
                             </div>
                             <div id="listaAmmissioniAdmin" style="display:grid; gap:10px;"></div>

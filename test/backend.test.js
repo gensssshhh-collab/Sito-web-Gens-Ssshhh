@@ -102,6 +102,22 @@ test('notifiche: registra un token una sola volta e invia il canale Android', ()
 test('votazioni: salva il voto e rifiuta un secondo voto dello stesso socio', () => {
   const rows = [['Timestamp', 'HashSocio', 'CandidatoEmail', 'Voto']];
   const voteSheet = dataSheet(rows);
+  const ammissioniRows = [
+    ['Data', 'Nome', 'Cognome', 'Email', 'Telefono', 'Sponsor 1', 'Sponsor 2', 'Stato', 'Esito'],
+    [new Date(), 'Anna', 'Bianchi', 'anna@example.it', '', '', '', 'IN VOTAZIONE', 'DA VOTARE']
+  ];
+  const ammissioniSheet = dataSheet(ammissioniRows);
+  ammissioniSheet.getRange = (row, column) => ({
+    getValue: () => ammissioniRows[row - 1] && ammissioniRows[row - 1][column - 1],
+    setValue(value) {
+      while (ammissioniRows.length < row) ammissioniRows.push([]);
+      ammissioniRows[row - 1][column - 1] = value;
+    }
+  });
+  const sociSheet = dataSheet([
+    ['Nome', 'Cognome', 'Password', 'Email', 'Stato Socio'],
+    ['Mario', 'Rossi', 'hash', 'mario@example.it', 'ATTIVO']
+  ]);
   const context = {
     verificaLogin: () => 'OK_LOGIN',
     getHashUnivoco: () => 'hash-socio',
@@ -109,7 +125,7 @@ test('votazioni: salva il voto e rifiuta un secondo voto dello stesso socio', ()
       getScriptLock: () => ({ waitLock() { }, releaseLock() { } })
     },
     SpreadsheetApp: {
-      getActiveSpreadsheet: () => ({ getSheetByName: () => voteSheet })
+      getActiveSpreadsheet: () => ({ getSheetByName: name => name === 'soci' ? sociSheet : name === 'Ammissioni' ? ammissioniSheet : voteSheet })
     },
     scriviLog() { },
     Date
@@ -121,6 +137,74 @@ test('votazioni: salva il voto e rifiuta un secondo voto dello stesso socio', ()
   assert.equal(context.votaAmmissioneSocio(voto), 'OK');
   assert.equal(context.votaAmmissioneSocio(voto), 'GIA_VOTATO');
   assert.equal(rows.length, 2);
+});
+
+test('iscrizioni: richiesta pubblica, due avvalli e voto programmato al decimo giorno', () => {
+  const sociRows = [
+    ['Nome', 'Cognome', 'Password', 'Email', 'Stato Socio'],
+    ['Mario', 'Rossi', 'hash', 'mario@example.it', 'ATTIVO'],
+    ['Anna', 'Bianchi', 'hash', 'anna@example.it', 'ATTIVO'],
+    ['Luca', 'Verdi', 'hash', 'luca@example.it', 'NON ATTIVO']
+  ];
+  const ammissioniRows = [['Data Richiesta', 'Nome Candidato', 'Cognome Candidato', 'Email Candidato', 'Telefono', 'Sponsor 1', 'Sponsor 2', 'Stato Sostegno', 'Esito Assemblea']];
+  const sociSheet = dataSheet(sociRows);
+  const ammissioniSheet = dataSheet(ammissioniRows);
+  ammissioniSheet.getRange = (row, column) => ({
+    getValue() { return ammissioniRows[row - 1] ? ammissioniRows[row - 1][column - 1] : undefined; },
+    setValue(value) {
+      while (ammissioniRows.length < row) ammissioniRows.push([]);
+      ammissioniRows[row - 1][column - 1] = value;
+    }
+  });
+  const votiSheet = dataSheet([['Timestamp', 'HashSocio', 'CandidatoEmail', 'Voto']]);
+  const sheets = { soci: sociSheet, Ammissioni: ammissioniSheet, VotiAmmissioni: votiSheet };
+  let uuid = 0;
+  const sentEmails = [];
+  const context = {
+    SpreadsheetApp: {
+      getActiveSpreadsheet: () => ({ getSheetByName: name => sheets[name] || null, insertSheet: name => (sheets[name] = dataSheet([[]])) })
+    },
+    Utilities: { getUuid: () => 'richiesta-' + (++uuid) },
+    LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) },
+    MailApp: { sendEmail: (...args) => sentEmails.push(args) },
+    inviaNotificaPush() { },
+    getHashUnivoco: email => 'hash:' + email,
+    verificaLogin: () => 'OK_LOGIN',
+    scriviLog() { }
+  };
+  loadScript('user.js', context);
+
+  const prima = context.richiediIscrizioneSocio({
+    nome: 'Giulia', cognome: 'Neri', email: 'giulia@example.net', telefono: '12345',
+    presentazione: 'Vorrei partecipare alle attività', consensoPrivacy: true
+  });
+  assert.equal(prima.ok, true);
+  assert.equal(JSON.stringify(ammissioniRows[1].slice(5, 8)), JSON.stringify(['', '', 'RACCOLTA AVVALLI']));
+  assert.equal(context.votaAmmissioneSocio({ email: 'mario@example.it', password: 'pw', emailCandidato: 'giulia@example.net', voto: 'FAVOREVOLE' }), 'ERR_VOTAZIONE_CHIUSA');
+  assert.equal(context.getRichiesteIscrizioneDaAvvallare('luca@example.it').length, 0);
+  assert.equal(context.getRichiesteIscrizioneDaAvvallare('giulia@example.net').length, 0);
+  assert.equal(context.avvallaRichiestaIscrizione('mario@example.it', prima.richiestaId).ok, true);
+  assert.equal(ammissioniRows[1][7], 'RACCOLTA AVVALLI');
+  assert.ok(new Date(ammissioniRows[1][11]).getTime() > Date.now());
+  assert.equal(context.avvallaRichiestaIscrizione('mario@example.it', prima.richiestaId).messaggio, 'Hai già avvallato questa richiesta.');
+  assert.equal(context.avvallaRichiestaIscrizione('anna@example.it', prima.richiestaId).avvalli, 2);
+  assert.equal(ammissioniRows[1][7], 'AVVALLATA - ATTESA VOTO');
+
+  ammissioniRows[1][12] = new Date(Date.now() - 1000);
+  context.processaScadenzeAmmissioni();
+  assert.equal(ammissioniRows[1][7], 'IN VOTAZIONE');
+  assert.equal(context.getAmmissioniInVoto('mario@example.it').length, 1);
+  assert.equal(context.votaAmmissioneSocio({ email: 'mario@example.it', password: 'pw', emailCandidato: 'giulia@example.net', voto: 'FAVOREVOLE' }), 'OK');
+  assert.ok(sentEmails.length >= 3);
+
+  const seconda = context.richiediIscrizioneSocio({
+    nome: 'Paolo', cognome: 'Blu', email: 'paolo@example.net', consensoPrivacy: true
+  });
+  assert.equal(seconda.ok, true);
+  ammissioniRows[2][11] = new Date(Date.now() - 1000);
+  context.processaScadenzeAmmissioni();
+  assert.equal(ammissioniRows[2][7], 'SCADUTA');
+  assert.equal(context.avvallaRichiestaIscrizione('mario@example.it', seconda.richiestaId).messaggio, 'La raccolta degli avvalli è chiusa.');
 });
 
 test('eventi: condivide la proposta e rifiuta il doppio voto', () => {

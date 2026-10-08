@@ -367,6 +367,27 @@
   gap: 14px;
 }
 
+.public-admission-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.public-admission-consent input {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  accent-color: var(--navy);
+}
+
+.public-event-form .btn-primary {
+  width: 100%;
+}
+
 .event-interest-fieldset {
   min-width: 0;
   margin: 0;

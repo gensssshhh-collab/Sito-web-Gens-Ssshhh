@@ -319,22 +319,9 @@ function nav(viewId, el) {
         // Carica la nuova Cabina Elettorale multi-campagna e le candidature aperte
         caricaCentroElettorale();
 
-        // Manteniamo le funzioni di supporto per le ammissioni soci se ti servono
-        caricaAmmissioni();
+        caricaRichiesteIscrizione();
         caricaVotiAmmissioni();
 
-        // Carica i nomi dei soci per il menu a tendina "Sponsor 2"
-        chiamaServer("getListaSociPerSponsor").then(function (soci) {
-            var sel = document.getElementById('candSponsor2');
-            if (!sel) return;
-            sel.innerHTML = "<option value=''>Seleziona un socio...</option>";
-
-            soci.forEach(function (s) {
-                if (s.email !== curEmail) {
-                    sel.innerHTML += `<option value="${s.email}">${s.nomeCompleto}</option>`;
-                }
-            });
-        });
     }
 
     if (viewId === 'viewArchivio') renderArchivioView();
@@ -1913,6 +1900,12 @@ function salvaModificheSocioAdmin() {
 /* --- AUTO START E GESTIONE SESSIONE --- */
 window.onload = function () {
     aggiornaStatoRete();
+    if (new URLSearchParams(window.location.search).get('iscrizione') === '1') {
+        document.getElementById('viewLogin').classList.add('hidden');
+        document.getElementById('publicAdmissionView').classList.remove('hidden');
+        document.getElementById('publicAdmissionForm').addEventListener('submit', inviaRichiestaIscrizione);
+        return;
+    }
     var propostaPubblicaId = new URLSearchParams(window.location.search).get('evento');
     if (propostaPubblicaId) {
         apriVotoPubblicoEvento(propostaPubblicaId);
@@ -3529,6 +3522,104 @@ function tornaAiGruppi() {
     gruppoAttivo = "";
 }
 
+async function inviaRichiestaIscrizione(event) {
+    event.preventDefault();
+    var form = event.currentTarget;
+    var messaggio = document.getElementById('publicAdmissionMessage');
+    var submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    messaggio.textContent = 'Invio della richiesta in corso...';
+
+    var dati = {
+        nome: form.elements.nome.value.trim(),
+        cognome: form.elements.cognome.value.trim(),
+        email: form.elements.email.value.trim(),
+        telefono: form.elements.telefono.value.trim(),
+        presentazione: form.elements.presentazione.value.trim(),
+        consensoPrivacy: form.elements.consensoPrivacy.checked
+    };
+    var result = await chiamaServer('richiediIscrizioneSocio', dati, true).catch(function (error) {
+        messaggio.textContent = error.message || 'Non è stato possibile inviare la richiesta.';
+        return null;
+    });
+    submit.disabled = false;
+    if (!result) return;
+    if (!result.ok) {
+        messaggio.textContent = result.messaggio || 'Richiesta non inviata.';
+        return;
+    }
+
+    form.reset();
+    submit.disabled = true;
+    var dataVoto = new Date(result.votoPrevisto).toLocaleDateString('it-IT');
+    messaggio.textContent = 'Richiesta ricevuta. Entro 3 giorni almeno due soci dovranno avvallarla. Se riceve i due avvalli, la votazione inizierà il ' + dataVoto + '.';
+}
+
+async function condividiModuloIscrizione() {
+    var link = new URL('https://gensssshhh-collab.github.io/Sito-web-Gens-Ssshhh/index.html');
+    link.searchParams.set('iscrizione', '1');
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: 'Richiesta di iscrizione Gens Ssshhh', url: link.href });
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(link.href);
+            showToast('Link di iscrizione copiato.', 'success');
+        } else {
+            var campo = document.createElement('textarea');
+            campo.value = link.href;
+            campo.setAttribute('readonly', '');
+            campo.style.position = 'fixed';
+            campo.style.opacity = '0';
+            document.body.appendChild(campo);
+            campo.select();
+            var copiato = document.execCommand('copy');
+            campo.remove();
+            if (!copiato) throw new Error('Copia non supportata');
+            showToast('Link di iscrizione copiato.', 'success');
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') showToast('Non è stato possibile condividere il link.', 'error');
+    }
+}
+
+async function caricaRichiesteIscrizione() {
+    var box = document.getElementById('boxRichiesteIscrizione');
+    var lista = document.getElementById('listaRichiesteIscrizione');
+    if (!box || !lista) return;
+    lista.innerHTML = '<div class="loader"></div>';
+
+    var richieste = await chiamaServer('getRichiesteIscrizioneDaAvvallare', curEmail);
+    richieste = Array.isArray(richieste) ? richieste : [];
+    box.classList.toggle('hidden', richieste.length === 0);
+    if (!richieste.length) return;
+
+    lista.innerHTML = richieste.map(function (richiesta) {
+        var scadenza = new Date(richiesta.scadenza).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+        return '<article class="calendar-item"><div class="calendar-item-body"><h4>' + escapeTestoEvento(richiesta.nome) + '</h4>' +
+            '<p>' + escapeTestoEvento(richiesta.presentazione || 'Richiesta di iscrizione presentata.') + '</p>' +
+            '<p class="event-vote-confirmation">Avvalli: ' + Number(richiesta.avvalli || 0) + ' di 2 · Scadenza ' + escapeTestoEvento(scadenza) + '</p>' +
+            '</div><button type="button" class="btn-primary" data-endorse-id="' + escapeTestoEvento(richiesta.id) + '">Avvalla</button></article>';
+    }).join('');
+    lista.querySelectorAll('[data-endorse-id]').forEach(function (button) {
+        button.addEventListener('click', function () { avvallaRichiestaIscrizione(button.getAttribute('data-endorse-id')); });
+    });
+}
+
+async function avvallaRichiestaIscrizione(richiestaId) {
+    if (!confirm('Confermi di avvallare questa richiesta di iscrizione?')) return;
+    var result = await chiamaServer('avvallaRichiestaIscrizione', [curEmail, richiestaId], true).catch(function (error) {
+        showToast(error.message || 'Avvallo non registrato.', 'error');
+        return null;
+    });
+    if (!result) return;
+    if (!result.ok) {
+        showToast(result.messaggio || 'Avvallo non registrato.', 'error');
+        return;
+    }
+    showToast(result.avvalli >= 2 ? 'Secondo avvallo registrato. Il voto si aprirà al decimo giorno.' : 'Primo avvallo registrato.', 'success');
+    caricaRichiesteIscrizione();
+}
+
 function inviaPropostaAmmissione() {
     var nome = document.getElementById('candNome').value;
     var cognome = document.getElementById('candCognome').value.trim();
@@ -3673,6 +3764,18 @@ function adminChiudiSpoglioAmmissione(emailCandidato) {
     });
 }
 
+function configuraTriggerAmmissioniUI() {
+    chiamaServer('configuraTriggerAmmissioni', curEmail, true).then(function (result) {
+        if (result === 'TRIGGER_AMMISSIONI_CONFIGURATO') {
+            showToast('Controllo automatico attivato: scadenze e aperture saranno verificate ogni ora.', 'success');
+        } else {
+            showToast(result === 'NO_AUTH' ? 'Solo un amministratore può attivare le automazioni.' : 'Non è stato possibile attivare il controllo automatico.', 'error');
+        }
+    }).catch(function (error) {
+        showToast(error.message || 'Non è stato possibile attivare il controllo automatico.', 'error');
+    });
+}
+
 function caricaAmmissioniAdmin() {
     var box = document.getElementById('boxGestioneAmmissioni');
     var lista = document.getElementById('listaAmmissioniAdmin');
@@ -3689,19 +3792,22 @@ function caricaAmmissioniAdmin() {
         dati.forEach(c => {
             var btnAzione = "";
 
-            // Bottone verde per Aprire il voto, Rosso per chiudere e scrutinare
-            if (c.stato === "SOSTENUTO (PRONTO PER ASSEMBLEA)") {
+            if (c.stato === "IN VOTAZIONE") {
+                btnAzione = `<button class="btn-primary" style="background:#ef4444; width:auto; padding:8px 15px; font-size:12px;" onclick="adminChiudiSpoglioAmmissione('${escapeTestoEvento(c.email)}')">CHIUDI VOTO E SCRUTINA</button>`;
+            } else if (!c.richiestaNuova && c.stato === "SOSTENUTO (PRONTO PER ASSEMBLEA)") {
                 btnAzione = `<button class="btn-primary" style="background:#10b981; width:auto; padding:8px 15px; font-size:12px;" onclick="adminApriVotoAmmissione('${c.email}')">🟢 APRI VOTO IN ASSEMBLEA</button>`;
-            } else if (c.stato === "IN VOTAZIONE") {
-                btnAzione = `<button class="btn-primary" style="background:#ef4444; width:auto; padding:8px 15px; font-size:12px;" onclick="adminChiudiSpoglioAmmissione('${c.email}')">🔴 CHIUDI VOTO E CALCOLA QUORUM (2/3)</button>`;
             }
+
+            var dettaglio = c.richiestaNuova
+                ? 'Avvalli: ' + Number(c.avvalli || 0) + '/2 · Voto previsto: ' + (c.votoPrevisto ? new Date(c.votoPrevisto).toLocaleDateString('it-IT') : 'da programmare')
+                : 'Garantito da: ' + escapeTestoEvento(c.sponsor1 || '-') + ' e ' + escapeTestoEvento(c.sponsor2 || '-');
 
             html += `
             <div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div>
-                    <div style="font-weight:bold; color:#0f172a; font-size:15px;">${c.nome}</div>
-                    <div style="font-size:12px; color:#64748b;">Garantito da: <b>${c.sponsor1}</b> e <b>${c.sponsor2}</b></div>
-                    <div style="font-size:11px; font-weight:bold; color:#c2410c; margin-top:4px;">Stato: ${c.stato}</div>
+                    <div style="font-weight:bold; color:#0f172a; font-size:15px;">${escapeTestoEvento(c.nome)}</div>
+                    <div style="font-size:12px; color:#64748b;">${dettaglio}</div>
+                    <div style="font-size:11px; font-weight:bold; color:#c2410c; margin-top:4px;">Stato: ${escapeTestoEvento(c.stato)}</div>
                 </div>
                 <div>
                     ${btnAzione}
