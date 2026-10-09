@@ -573,17 +573,20 @@
                                         aggiungi</button>
                                 </div>
 
-                                <div id="eventOptionsList" style="display: grid; gap: 10px;">
-                                    <div class="event-option-row"
-                                        style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
-                                        <input type="text" data-role="data" inputmode="numeric" maxlength="10"
-                                            placeholder="dd/mm/aaaa"
-                                            style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                        <input type="text" data-role="ora" inputmode="numeric" maxlength="5"
-                                            placeholder="hh:mm"
-                                            style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                        <input type="text" data-role="luogo" placeholder="Luogo"
-                                            style="width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                <div id="eventOptionsList" class="event-options-editor">
+                                    <div class="event-option-row">
+                                        <div class="event-option-fields">
+                                            <input type="text" data-role="data" inputmode="numeric" maxlength="10"
+                                                placeholder="dd/mm/aaaa">
+                                            <input type="text" data-role="ora" inputmode="numeric" maxlength="5"
+                                                placeholder="hh:mm">
+                                        </div>
+                                        <div class="event-option-actions">
+                                            <button type="button" data-action="luogo"
+                                                onclick="toggleLuogoOpzione(this)">Aggiungi luogo</button>
+                                            <button type="button" data-action="rimuovi"
+                                                onclick="rimuoviOpzioneEvento(this)" disabled>Rimuovi</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

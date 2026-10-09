@@ -1,4 +1,5 @@
 var EVENTI_SHEET_NAME = 'ProposteEventi';
+var EVENTI_CALENDAR_ID = 'gens.ssshhh@gmail.com';
 
 function getFoglioProposteEventi_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -7,6 +8,10 @@ function getFoglioProposteEventi_() {
     sheet = ss.insertSheet(EVENTI_SHEET_NAME);
     sheet.appendRow(['ID', 'CreatoIl', 'CreatoreEmail', 'Titolo', 'Descrizione', 'OpzioniJson', 'VotiJson', 'Stato']);
   }
+  var headers = sheet.getDataRange().getValues()[0] || [];
+  [['EventoCalendarId', 8], ['OpzioneConfermataJson', 9]].forEach(function (item) {
+    if (String(headers[item[1]] || '') !== item[0]) sheet.getRange(1, item[1] + 1).setValue(item[0]);
+  });
   return sheet;
 }
 
@@ -18,8 +23,12 @@ function verificaSocioEvento_(email) {
   if (!sheet) return false;
 
   var rows = sheet.getDataRange().getValues();
+  var headers = rows.length ? rows[0].map(function (value) { return String(value).trim().toLowerCase(); }) : [];
+  var statusColumn = headers.indexOf('stato socio');
   return rows.slice(1).some(function (row) {
-    return String(row[2] || '').trim().toLowerCase() === target;
+    var matches = String(row[2] || '').trim().toLowerCase() === target;
+    if (!matches || statusColumn < 0) return matches;
+    return String(row[statusColumn] || '').trim().toLowerCase() === 'attivo';
   });
 }
 
@@ -32,8 +41,17 @@ function normalizzaOpzioniEvento_(opzioni) {
       luogo: String(opzione.luogo || '').trim()
     };
   }).filter(function (opzione) {
-    return opzione.data || opzione.ora || opzione.luogo;
+    return opzione.data && opzione.ora;
   });
+}
+
+function dataOraEvento_(opzione) {
+  var matchData = String(opzione.data || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  var matchOra = String(opzione.ora || '').match(/^(\d{2}):(\d{2})$/);
+  if (!matchData || !matchOra) return null;
+  var data = new Date(Number(matchData[3]), Number(matchData[2]) - 1, Number(matchData[1]), Number(matchOra[1]), Number(matchOra[2]), 0, 0);
+  if (data.getFullYear() !== Number(matchData[3]) || data.getMonth() !== Number(matchData[2]) - 1 || data.getDate() !== Number(matchData[1]) || data.getHours() !== Number(matchOra[1]) || data.getMinutes() !== Number(matchOra[2])) return null;
+  return data;
 }
 
 function hashEmailEvento_(email) {
@@ -94,7 +112,8 @@ function preparaPropostaEvento_(row, email) {
     descrizione: String(row[4] || ''),
     opzioni: opzioni,
     voti: voti.riepilogo,
-    mioVoto: voti.mioVoto
+    mioVoto: voti.mioVoto,
+    creatore: String(row[2] || '').trim().toLowerCase() === String(email || '').trim().toLowerCase()
   };
 }
 
@@ -117,15 +136,18 @@ function getPropostaEventoPubblica(payload) {
   return row ? preparaPropostaEvento_(row, '') : null;
 }
 
-function creaPropostaEvento(email, proposta) {
-  if (!verificaSocioEvento_(email)) return { ok: false, messaggio: 'Socio non autorizzato.' };
+function creaPropostaEvento(email, password, proposta) {
+  if (!password || typeof verificaLogin !== 'function' || verificaLogin({ email: email, password: password }) !== 'OK_LOGIN') {
+    return { ok: false, messaggio: 'Accedi al portale per proporre un evento.' };
+  }
+  if (!verificaSocioEvento_(email)) return { ok: false, messaggio: 'Solo i soci attivi possono proporre eventi.' };
   proposta = proposta || {};
 
   var titolo = String(proposta.titolo || '').trim();
   var descrizione = String(proposta.descrizione || '').trim();
   var opzioni = normalizzaOpzioniEvento_(proposta.opzioni);
-  if (!titolo || !descrizione || !opzioni.length) {
-    return { ok: false, messaggio: 'Titolo, descrizione e almeno una opzione sono obbligatori.' };
+  if (!titolo || !opzioni.length || opzioni.some(function (opzione) { return !dataOraEvento_(opzione); })) {
+    return { ok: false, messaggio: 'Titolo e almeno una opzione di data/ora/luogo sono obbligatori.' };
   }
 
   var id = Utilities.getUuid();
@@ -198,7 +220,7 @@ function votaPropostaEvento(email, propostaId, risposta) {
     var interesse = votiEsistenti.riepilogo.interesse;
     interesse[interessato]++;
     scelte.forEach(function (indice) { votiEsistenti.riepilogo.opzioni[indice]++; });
-    votanti[chiaveVotante] = { interesse: interessato, opzioni: scelte };
+    votanti[chiaveVotante] = { interesse: interessato, opzioni: scelte, email: emailOspite || socio };
 
     var datiSalvati = {
       interesse: interesse,
@@ -207,6 +229,112 @@ function votaPropostaEvento(email, propostaId, risposta) {
     };
     sheet.getRange(rowIndex + 1, 7).setValue(JSON.stringify(datiSalvati));
     return { ok: true, voti: votiEsistenti.riepilogo };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function aggiungiOpzionePropostaEvento(email, propostaId, opzione) {
+  var socio = String(email || '').trim().toLowerCase();
+  opzione = opzione || {};
+  var emailOspite = String(opzione.email || '').trim().toLowerCase();
+  var nomeOspite = String(opzione.nome || '').trim();
+  if (!verificaSocioEvento_(socio)) {
+    if (!nomeOspite || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailOspite)) return { ok: false, messaggio: 'Per aggiungere una data come ospite inserisci nome ed e-mail validi.' };
+    if (verificaSocioEvento_(emailOspite)) return { ok: false, messaggio: 'Questa e-mail appartiene a un socio: accedi al portale.' };
+  }
+  var nuove = normalizzaOpzioniEvento_([opzione]);
+  if (!nuove.length || !dataOraEvento_(nuove[0])) return { ok: false, messaggio: 'Inserisci una data e un orario validi.' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getFoglioProposteEventi_();
+    var values = sheet.getDataRange().getValues();
+    var rowIndex = values.findIndex(function (row, index) {
+      return index > 0 && String(row[0]) === String(propostaId) && String(row[7] || 'ATTIVA') === 'ATTIVA';
+    });
+    if (rowIndex < 1) return { ok: false, messaggio: 'Proposta non trovata o già confermata.' };
+    var row = values[rowIndex];
+    var options = JSON.parse(row[5] || '[]');
+    if (options.length >= 20) return { ok: false, messaggio: 'La proposta ha già raggiunto il limite di 20 opzioni.' };
+    if (options.some(function (existing) {
+      return existing.data === nuove[0].data && existing.ora === nuove[0].ora;
+    })) return { ok: false, messaggio: 'Questa data e ora sono già state proposte.' };
+
+    options.push(nuove[0]);
+    var votes = leggiVotiEvento_(row[6], options.slice(0, -1), socio);
+    votes.riepilogo.opzioni.push(0);
+    sheet.getRange(rowIndex + 1, 6).setValue(JSON.stringify(options));
+    sheet.getRange(rowIndex + 1, 7).setValue(JSON.stringify({
+      interesse: votes.riepilogo.interesse,
+      opzioni: votes.riepilogo.opzioni,
+      _votanti: votes.votanti
+    }));
+    return { ok: true, indice: options.length - 1, opzione: nuove[0] };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function confermaEventoProposto(dati) {
+  dati = dati || {};
+  var email = String(dati.email || '').trim().toLowerCase();
+  if (!dati.password || typeof verificaLogin !== 'function' || verificaLogin({ email: email, password: dati.password }) !== 'OK_LOGIN') {
+    return { ok: false, messaggio: 'Accedi al portale per confermare l’evento.' };
+  }
+  if (!verificaSocioEvento_(email)) return { ok: false, messaggio: 'Solo i soci attivi possono confermare l’evento.' };
+  var propostaId = dati.propostaId;
+  var opzioneFinale = dati.opzione || {};
+  var opzioniFinali = normalizzaOpzioniEvento_([opzioneFinale]);
+  if (!opzioniFinali.length || !dataOraEvento_(opzioniFinali[0])) return { ok: false, messaggio: 'La data o l’orario dell’evento non sono validi.' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getFoglioProposteEventi_();
+    var values = sheet.getDataRange().getValues();
+    var rowIndex = values.findIndex(function (row, index) {
+      return index > 0 && String(row[0]) === String(propostaId);
+    });
+    if (rowIndex < 1) return { ok: false, messaggio: 'Proposta non trovata.' };
+    var row = values[rowIndex];
+    if (String(row[2] || '').trim().toLowerCase() !== email) return { ok: false, messaggio: 'Solo il creatore può confermare l’evento.' };
+    if (String(row[7] || 'ATTIVA') !== 'ATTIVA') return { ok: false, messaggio: 'Questa proposta è già stata chiusa.' };
+
+    var votes = {};
+    try { votes = JSON.parse(row[6] || '{}'); } catch (e) { }
+    var confirmed = votes._votanti || {};
+    var attendees = [];
+    Object.keys(confirmed).forEach(function (key) {
+      var response = confirmed[key];
+      if (typeof response === 'number') {
+        if (response < 0) return;
+      } else if (!response || response.interesse !== 'si') return;
+      var address = String(typeof response === 'number'
+        ? (key.indexOf('socio:') === 0 ? key.substring(6) : key)
+        : (response.email || (key.indexOf('socio:') === 0 ? key.substring(6) : key))).trim().toLowerCase();
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address) && attendees.indexOf(address) < 0) attendees.push(address);
+    });
+    if (!attendees.length) return { ok: false, messaggio: 'Nessun partecipante ha risposto Sì.' };
+
+    var start = dataOraEvento_(opzioniFinali[0]);
+    if (start.getTime() <= new Date().getTime()) return { ok: false, messaggio: 'Scegli una data e un orario futuri.' };
+    var end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    var calendar = CalendarApp.getCalendarById(EVENTI_CALENDAR_ID);
+    if (!calendar) return { ok: false, messaggio: 'Il calendario associativo non è accessibile all’account Apps Script.' };
+    var event = calendar.createEvent(String(row[3] || 'Evento associativo'), start, end, {
+      description: String(row[4] || ''),
+      location: opzioniFinali[0].luogo,
+      guests: attendees.join(','),
+      sendInvites: true
+    });
+    if (event.setGuestsCanSeeGuests) event.setGuestsCanSeeGuests(false);
+
+    sheet.getRange(rowIndex + 1, 8).setValue('CONFERMATA');
+    sheet.getRange(rowIndex + 1, 9).setValue(event.getId());
+    sheet.getRange(rowIndex + 1, 10).setValue(JSON.stringify(opzioniFinali[0]));
+    return { ok: true, invitati: attendees.length, idEvento: event.getId(), opzione: opzioniFinali[0] };
   } finally {
     lock.releaseLock();
   }

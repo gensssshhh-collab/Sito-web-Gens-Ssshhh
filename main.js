@@ -71,9 +71,11 @@ function doPost(e) {
     if (azione === "creaPropostaEvento") {
       var payloadEvento = richiesta.payload;
       if (Array.isArray(payloadEvento)) {
-        var risultatoCreazione = creaPropostaEvento(payloadEvento[0], payloadEvento[1] || {});
+        var risultatoCreazione = payloadEvento.length >= 3
+          ? creaPropostaEvento(payloadEvento[0], payloadEvento[1], payloadEvento[2] || {})
+          : { ok: false, messaggio: "Accedi al portale per proporre un evento." };
       } else {
-        var risultatoCreazione = creaPropostaEvento(payloadEvento.email || richiesta.email || "", payloadEvento.proposta || payloadEvento);
+        var risultatoCreazione = creaPropostaEvento(payloadEvento.email || richiesta.email || "", payloadEvento.password, payloadEvento.proposta || payloadEvento);
       }
       return ContentService.createTextOutput(JSON.stringify({ status: "SUCCESS", data: risultatoCreazione })).setMimeType(ContentService.MimeType.JSON);
     }

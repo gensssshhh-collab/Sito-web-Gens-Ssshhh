@@ -316,14 +316,14 @@ test('eventi: condivide la proposta e rifiuta il doppio voto', () => {
   const context = {
     SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
     Utilities: { getUuid: () => 'evento-1' },
+    verificaLogin: () => 'OK_LOGIN',
     LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) }
   };
 
   loadScript('Eventi.js', context);
 
-  const proposta = context.creaPropostaEvento('mario@example.it', {
+  const proposta = context.creaPropostaEvento('mario@example.it', 'pw', {
     titolo: 'Cena sociale',
-    descrizione: 'Cena tra soci',
     opzioni: [{ data: '10/10/2026', ora: '20:00', luogo: 'Centro' }]
   });
   assert.equal(proposta.ok, true);
@@ -350,11 +350,12 @@ test('eventi: ospiti votano interesse e più preferenze senza esporre le email',
       DigestAlgorithm: { SHA_256: 'SHA_256' },
       computeDigest: (algorithm, value) => Array.from(Buffer.from(value, 'utf8').subarray(0, 4))
     },
+    verificaLogin: () => 'OK_LOGIN',
     LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) }
   };
 
   loadScript('Eventi.js', context);
-  context.creaPropostaEvento('mario@example.it', {
+  context.creaPropostaEvento('mario@example.it', 'pw', {
     titolo: 'Gita',
     descrizione: 'Scegli quando partecipare',
     opzioni: [
@@ -376,6 +377,81 @@ test('eventi: ospiti votano interesse e più preferenze senza esporre le email',
   assert.equal(JSON.stringify(propostaPubblica).includes('ospite@example.net'), false);
   assert.equal(propostaPubblica.mioVoto, null);
   assert.deepEqual(context.getProposteEventi('').length, 0);
+});
+
+test('eventi: aggiunge opzioni e crea Calendar di due ore per soli interessati', () => {
+  const sociSheet = dataSheet([
+    ['Nome', 'Password', 'Email'],
+    ['Mario', 'hash', 'mario@example.it'],
+    ['Anna', 'hash', 'anna@example.it']
+  ]);
+  const eventiRows = [['ID', 'CreatoIl', 'CreatoreEmail', 'Titolo', 'Descrizione', 'OpzioniJson', 'VotiJson', 'Stato', '', '']];
+  const eventiSheet = dataSheet(eventiRows);
+  eventiSheet.getRange = (row, column) => ({
+    setValue(value) {
+      while (eventiRows[row - 1].length < column) eventiRows[row - 1].push('');
+      eventiRows[row - 1][column - 1] = value;
+    }
+  });
+  const spreadsheet = {
+    getSheetByName: name => name === 'soci' ? sociSheet : name === 'ProposteEventi' ? eventiSheet : null,
+    insertSheet: () => eventiSheet
+  };
+  let calendarOptions = null;
+  let calendarStart = null;
+  let calendarEnd = null;
+  const context = {
+    SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
+    Utilities: {
+      getUuid: () => 'evento-calendar',
+      DigestAlgorithm: { SHA_256: 'SHA_256' },
+      computeDigest: (algorithm, value) => Array.from(Buffer.from(value, 'utf8').subarray(0, 4))
+    },
+    verificaLogin: dati => dati.password === 'pw' ? 'OK_LOGIN' : 'ERR_AUTH',
+    LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) },
+    CalendarApp: {
+      getCalendarById: calendarId => {
+        assert.equal(calendarId, 'gens.ssshhh@gmail.com');
+        return {
+        createEvent: (title, start, end, options) => {
+          calendarStart = start;
+          calendarEnd = end;
+          calendarOptions = options;
+          return { getId: () => 'calendar-event-1', setGuestsCanSeeGuests(value) { this.guestsVisible = value; } };
+        }
+        };
+      }
+    }
+  };
+  loadScript('Eventi.js', context);
+
+  context.creaPropostaEvento('mario@example.it', 'pw', {
+    titolo: 'Sushi', descrizione: '', opzioni: [{ data: '20/11/2026', ora: '12:00', luogo: '' }]
+  });
+  assert.equal(context.aggiungiOpzionePropostaEvento('', 'evento-calendar', {
+    nome: 'Paolo', email: 'paolo@example.net', data: '21/11/2026', ora: '13:00', luogo: ''
+  }).ok, true);
+  assert.equal(context.votaPropostaEvento('mario@example.it', 'evento-calendar', { interesse: 'si', opzioni: [0] }).ok, true);
+  assert.equal(context.votaPropostaEvento('', 'evento-calendar', {
+    nome: 'Paolo', email: 'paolo@example.net', interesse: 'si', opzioni: [1]
+  }).ok, true);
+  assert.equal(context.votaPropostaEvento('', 'evento-calendar', {
+    nome: 'Lucia', email: 'lucia@example.net', interesse: 'no', opzioni: []
+  }).ok, true);
+  assert.equal(context.confermaEventoProposto({ email: 'anna@example.it', password: 'pw', propostaId: 'evento-calendar', opzione: {
+    data: '21/11/2026', ora: '14:30', luogo: 'Centro'
+  } }).messaggio, 'Solo il creatore può confermare l’evento.');
+
+  const conferma = context.confermaEventoProposto({ email: 'mario@example.it', password: 'pw', propostaId: 'evento-calendar', opzione: {
+    data: '21/11/2026', ora: '14:30', luogo: 'Centro'
+  } });
+  assert.equal(conferma.ok, true);
+  assert.equal(conferma.invitati, 2);
+  assert.equal(calendarEnd.getTime() - calendarStart.getTime(), 2 * 60 * 60 * 1000);
+  assert.deepEqual(calendarOptions.guests.split(','), ['mario@example.it', 'paolo@example.net']);
+  assert.equal(calendarOptions.sendInvites, true);
+  assert.equal(eventiRows[1][7], 'CONFERMATA');
+  assert.equal(eventiRows[1][8], 'calendar-event-1');
 });
 
 test('eventi: il dispatcher serve il link pubblico e registra il voto esterno', () => {

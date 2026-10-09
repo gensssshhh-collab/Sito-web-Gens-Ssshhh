@@ -320,6 +320,108 @@
   box-shadow: 0 8px 22px rgba(26, 41, 69, 0.04);
 }
 
+.event-options-editor,
+.event-option-row,
+.event-add-option-editor,
+.event-confirm-panel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.event-option-row,
+.event-add-option-editor,
+.event-confirm-panel {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.event-option-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.event-option-fields input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.event-option-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.event-option-actions button,
+.event-add-option-toggle,
+.event-add-location-toggle {
+  width: auto;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.event-option-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.event-add-option-box {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.event-add-option-editor[hidden] {
+  display: none;
+}
+
+.event-add-option-editor .btn-secondary,
+.event-confirm-form .btn-primary {
+  width: auto;
+  height: auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 9px 13px;
+}
+
+.event-confirm-panel h5 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 14px;
+}
+
+.event-confirm-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.event-confirm-form {
+  display: grid;
+  gap: 10px;
+}
+
 .event-proposal-heading {
   display: flex;
   align-items: flex-start;
@@ -569,6 +671,10 @@
   .public-event-card {
     max-height: none;
     padding: 20px;
+  }
+
+  .event-option-fields {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
