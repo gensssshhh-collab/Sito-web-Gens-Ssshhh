@@ -164,6 +164,103 @@ function creaPropostaEvento(email, password, proposta) {
   return { ok: true, proposta: { id: id, titolo: titolo, descrizione: descrizione, opzioni: opzioni, voti: {} } };
 }
 
+function modificaPropostaEvento(dati) {
+  dati = dati || {};
+  var email = String(dati.email || '').trim().toLowerCase();
+  if (!dati.password || typeof verificaLogin !== 'function' || verificaLogin({ email: email, password: dati.password }) !== 'OK_LOGIN') {
+    return { ok: false, messaggio: 'Accedi al portale per modificare la proposta.' };
+  }
+  if (!verificaSocioEvento_(email)) return { ok: false, messaggio: 'Solo i soci attivi possono modificare le proposte.' };
+
+  var proposta = dati.proposta || {};
+  var titolo = String(proposta.titolo || '').trim();
+  var descrizione = String(proposta.descrizione || '').trim();
+  var opzioniNuove = normalizzaOpzioniEvento_(proposta.opzioni);
+  if (!titolo || !opzioniNuove.length || opzioniNuove.some(function (opzione) { return !dataOraEvento_(opzione); })) {
+    return { ok: false, messaggio: 'Inserisci titolo e almeno una data e un’ora valide.' };
+  }
+  if (opzioniNuove.length > 20) return { ok: false, messaggio: 'La proposta può contenere al massimo 20 opzioni.' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getFoglioProposteEventi_();
+    var values = sheet.getDataRange().getValues();
+    var rowIndex = values.findIndex(function (row, index) { return index > 0 && String(row[0]) === String(dati.propostaId); });
+    if (rowIndex < 1) return { ok: false, messaggio: 'Proposta non trovata.' };
+    var row = values[rowIndex];
+    if (String(row[2] || '').trim().toLowerCase() !== email) return { ok: false, messaggio: 'Solo il creatore può modificare questa proposta.' };
+    if (String(row[7] || 'ATTIVA') !== 'ATTIVA') return { ok: false, messaggio: 'La proposta non è più modificabile.' };
+
+    var oldOptions = [];
+    try { oldOptions = JSON.parse(row[5] || '[]'); } catch (e) { }
+    var votes = {};
+    try { votes = JSON.parse(row[6] || '{}'); } catch (e) { }
+    var oldSummary = leggiVotiEvento_(row[6], oldOptions, '').riepilogo;
+    for (var votedIndex = 0; votedIndex < oldOptions.length; votedIndex++) {
+      if (Number(oldSummary.opzioni[votedIndex] || 0) === 0) continue;
+      var preserved = opzioniNuove.some(function (newOption) {
+        return newOption.data === oldOptions[votedIndex].data && newOption.ora === oldOptions[votedIndex].ora;
+      });
+      if (!preserved) return { ok: false, messaggio: 'Non puoi cambiare o rimuovere una data/ora che ha già ricevuto preferenze. Aggiungi una nuova opzione oppure modifica solo il luogo.' };
+    }
+    var mapping = oldOptions.map(function (oldOption) {
+      var index = opzioniNuove.findIndex(function (newOption) {
+        return newOption.data === oldOption.data && newOption.ora === oldOption.ora;
+      });
+      return index;
+    });
+    var counts = opzioniNuove.map(function () { return 0; });
+    oldSummary.opzioni.forEach(function (count, oldIndex) {
+      if (mapping[oldIndex] >= 0) counts[mapping[oldIndex]] += Number(count || 0);
+    });
+
+    var votanti = votes._votanti && typeof votes._votanti === 'object' ? votes._votanti : {};
+    Object.keys(votanti).forEach(function (key) {
+      var response = votanti[key];
+      if (typeof response === 'number') response = { interesse: 'si', opzioni: [response] };
+      if (!response || typeof response !== 'object') return;
+      var oldChoices = Array.isArray(response.opzioni) ? response.opzioni : [];
+      response.opzioni = oldChoices.map(Number).filter(function (oldIndex) {
+        return Number.isInteger(oldIndex) && mapping[oldIndex] >= 0;
+      }).map(function (oldIndex) { return mapping[oldIndex]; });
+      votanti[key] = response;
+    });
+
+    var voteData = { interesse: oldSummary.interesse, opzioni: counts, _votanti: votanti };
+    sheet.getRange(rowIndex + 1, 4).setValue(titolo);
+    sheet.getRange(rowIndex + 1, 5).setValue(descrizione);
+    sheet.getRange(rowIndex + 1, 6).setValue(JSON.stringify(opzioniNuove));
+    sheet.getRange(rowIndex + 1, 7).setValue(JSON.stringify(voteData));
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function annullaPropostaEvento(dati) {
+  dati = dati || {};
+  var email = String(dati.email || '').trim().toLowerCase();
+  if (!dati.password || typeof verificaLogin !== 'function' || verificaLogin({ email: email, password: dati.password }) !== 'OK_LOGIN') {
+    return { ok: false, messaggio: 'Accedi al portale per annullare la proposta.' };
+  }
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getFoglioProposteEventi_();
+    var values = sheet.getDataRange().getValues();
+    var rowIndex = values.findIndex(function (row, index) { return index > 0 && String(row[0]) === String(dati.propostaId); });
+    if (rowIndex < 1) return { ok: false, messaggio: 'Proposta non trovata.' };
+    var row = values[rowIndex];
+    if (String(row[2] || '').trim().toLowerCase() !== email) return { ok: false, messaggio: 'Solo il creatore può annullare questa proposta.' };
+    if (String(row[7] || 'ATTIVA') !== 'ATTIVA') return { ok: false, messaggio: 'La proposta non è più aperta.' };
+    sheet.getRange(rowIndex + 1, 8).setValue('ANNULLATA');
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function votaPropostaEvento(email, propostaId, risposta) {
   var socio = String(email || '').trim().toLowerCase();
   var rispostaVoto = typeof risposta === 'number'

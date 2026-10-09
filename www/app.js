@@ -4741,11 +4741,24 @@ function renderProposteEventi(proposte) {
             '<input type="text" data-role="final-luogo" value="' + escapeTestoEvento(opzioneFinale.luogo || '') + '" placeholder="Luogo (facoltativo)"></div>' +
             '<button type="submit" class="btn-primary">Conferma e invita chi ha detto Sì</button></form></section>'
             : '';
+        var toolsHtml = '<button type="button" class="compact-action event-share-link">Condividi con esterni</button>';
+        var editorCreatore = '';
+        if (proposta.creatore) {
+            toolsHtml += '<button type="button" class="compact-action event-cancel-proposal">Elimina proposta</button>';
+            editorCreatore = '<details class="event-edit-details"><summary>Modifica proposta</summary>' +
+                '<form class="event-edit-form" data-event-id="' + id + '">' +
+                '<label class="public-event-field">Titolo<input data-role="edit-titolo" maxlength="120" value="' + escapeTestoEvento(proposta.titolo || '') + '" required></label>' +
+                '<label class="public-event-field">Descrizione<textarea data-role="edit-descrizione" rows="3" maxlength="1000">' + escapeTestoEvento(proposta.descrizione || '') + '</textarea></label>' +
+                '<strong>Opzioni data e ora</strong><div class="event-options-editor">' + opzioni.map(function (opzione, indice) {
+                    return htmlRigaModificaOpzione_(opzione, indice);
+                }).join('') + '</div>' +
+                '<button type="button" class="compact-action event-edit-add-option">+ Aggiungi opzione</button>' +
+                '<button type="submit" class="btn-primary">Salva modifiche</button></form></details>';
+        }
 
         return '<article class="event-proposal-card" data-proposal-id="' + id + '">' +
             '<header class="event-proposal-heading"><div><h4>' + escapeTestoEvento(proposta.titolo || 'Evento proposto') + '</h4>' +
-            '<p>' + escapeTestoEvento(proposta.descrizione || '') + '</p></div>' +
-            '<button type="button" class="compact-action event-share-link">Condividi con esterni</button></header>' +
+            '<p>' + escapeTestoEvento(proposta.descrizione || '') + '</p></div><div class="event-card-actions">' + toolsHtml + '</div></header>' + editorCreatore +
             '<div class="event-proposal-counts"><span><strong>' + Number(interesse.si || 0) + '</strong> interessati</span>' +
             '<span><strong>' + Number(interesse.no || 0) + '</strong> non interessati</span></div>' + votoEsistente + confermaHtml + '</article>';
     }).join('');
@@ -4771,7 +4784,98 @@ function renderProposteEventi(proposte) {
             confermaEventoProposto(form);
         });
     });
+    list.querySelectorAll('.event-edit-form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            salvaModifichePropostaEvento_(form);
+        });
+        form.querySelector('.event-edit-add-option').addEventListener('click', function () {
+            form.querySelector('.event-options-editor').insertAdjacentHTML('beforeend', htmlRigaModificaOpzione_({}, 0));
+            aggiornaRimozioneModificaProposta_(form);
+        });
+        form.addEventListener('click', function (event) {
+            var removeButton = event.target.closest('.event-edit-remove-option');
+            if (!removeButton) return;
+            var rows = form.querySelectorAll('.event-edit-option-row');
+            if (rows.length <= 1) {
+                rows[0].querySelectorAll('input').forEach(function (input) { input.value = ''; });
+            } else {
+                removeButton.closest('.event-edit-option-row').remove();
+            }
+            aggiornaRimozioneModificaProposta_(form);
+        });
+    });
+    list.querySelectorAll('.event-edit-details').forEach(function (details) {
+        aggiornaRimozioneModificaProposta_(details.querySelector('.event-edit-form'));
+    });
+    list.querySelectorAll('.event-cancel-proposal').forEach(function (button) {
+        button.addEventListener('click', function () {
+            annullaPropostaEvento(button.closest('.event-proposal-card').getAttribute('data-proposal-id'));
+        });
+    });
     collegaEditorOpzioniAggiuntive_(list);
+}
+
+function htmlRigaModificaOpzione_(opzione, index) {
+    opzione = opzione || {};
+    return '<div class="event-option-row event-edit-option-row"><div class="event-option-fields">' +
+        '<input type="text" data-role="edit-data" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" value="' + escapeTestoEvento(opzione.data || '') + '">' +
+        '<input type="text" data-role="edit-ora" inputmode="numeric" maxlength="5" placeholder="hh:mm" value="' + escapeTestoEvento(opzione.ora || '') + '">' +
+        '<input type="text" data-role="edit-luogo" placeholder="Luogo (facoltativo)" value="' + escapeTestoEvento(opzione.luogo || '') + '"></div>' +
+        '<div class="event-option-actions"><button type="button" class="event-edit-remove-option">Rimuovi opzione</button></div></div>';
+}
+
+function aggiornaRimozioneModificaProposta_(form) {
+    if (!form) return;
+    var rows = form.querySelectorAll('.event-edit-option-row');
+    rows.forEach(function (row) {
+        var button = row.querySelector('.event-edit-remove-option');
+        if (button) button.disabled = rows.length <= 1;
+    });
+}
+
+async function salvaModifichePropostaEvento_(form) {
+    var righe = Array.prototype.slice.call(form.querySelectorAll('.event-edit-option-row'));
+    var opzioni = [];
+    for (var i = 0; i < righe.length; i++) {
+        var data = righe[i].querySelector('[data-role="edit-data"]').value.trim();
+        var ora = righe[i].querySelector('[data-role="edit-ora"]').value.trim();
+        var luogo = righe[i].querySelector('[data-role="edit-luogo"]').value.trim();
+        if (!data && !ora && !luogo) continue;
+        if (!data || !ora) return showToast('Completa data e ora per ogni opzione modificata.', 'error');
+        opzioni.push({ data: data, ora: ora, luogo: luogo });
+    }
+    if (!opzioni.length) return showToast('La proposta deve mantenere almeno un’opzione.', 'error');
+
+    var result = await chiamaServer('modificaPropostaEvento', {
+        email: curEmail,
+        password: curPass,
+        propostaId: form.getAttribute('data-event-id'),
+        proposta: {
+            titolo: form.querySelector('[data-role="edit-titolo"]').value.trim(),
+            descrizione: form.querySelector('[data-role="edit-descrizione"]').value.trim(),
+            opzioni: opzioni
+        }
+    }, true).catch(function (error) {
+        showToast(error.message || 'Modifiche non salvate.', 'error');
+        return null;
+    });
+    if (!result) return;
+    if (!result.ok) return showToast(result.messaggio || 'Modifiche non salvate.', 'error');
+    showToast('Proposta aggiornata.', 'success');
+    caricaProposteEventi();
+}
+
+async function annullaPropostaEvento(propostaId) {
+    if (!confirm('Vuoi eliminare questa proposta? Verrà chiusa e non sarà più votabile.')) return;
+    var result = await chiamaServer('annullaPropostaEvento', { email: curEmail, password: curPass, propostaId: propostaId }, true).catch(function (error) {
+        showToast(error.message || 'Proposta non eliminata.', 'error');
+        return null;
+    });
+    if (!result) return;
+    if (!result.ok) return showToast(result.messaggio || 'Proposta non eliminata.', 'error');
+    showToast('Proposta eliminata.', 'success');
+    caricaProposteEventi();
 }
 
 async function confermaEventoProposto(form) {

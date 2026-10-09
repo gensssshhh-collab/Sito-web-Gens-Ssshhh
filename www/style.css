@@ -429,6 +429,62 @@
   gap: 16px;
 }
 
+.event-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.event-cancel-proposal {
+  color: #9f302b;
+}
+
+.event-edit-details {
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.event-edit-details summary {
+  width: fit-content;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.event-edit-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.event-edit-form>strong {
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.event-edit-form .public-event-field input,
+.event-edit-form .public-event-field textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+}
+
+.event-edit-form .public-event-field textarea {
+  resize: vertical;
+}
+
+.event-edit-form .btn-primary,
+.event-edit-add-option {
+  width: fit-content;
+}
+
 .event-proposal-heading h4 {
   margin: 0;
   color: var(--navy);
@@ -657,6 +713,10 @@
 @media (max-width: 600px) {
   .event-proposal-heading {
     flex-direction: column;
+  }
+
+  .event-card-actions {
+    justify-content: flex-start;
   }
 
   .event-proposal-heading .compact-action {

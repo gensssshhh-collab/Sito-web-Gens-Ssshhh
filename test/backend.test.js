@@ -458,6 +458,71 @@ test('eventi: aggiunge opzioni e crea Calendar di due ore per soli interessati',
   assert.equal(eventiRows[1][8], 'calendar-event-1');
 });
 
+test('eventi: il creatore modifica la proposta senza perdere voti e può annullarla', () => {
+  const sociSheet = dataSheet([['Nome', 'Password', 'Email'], ['Mario', 'hash', 'mario@example.it']]);
+  const originalVotes = {
+    interesse: { si: 2, no: 0 },
+    opzioni: [2, 0],
+    _votanti: {
+      'socio:mario@example.it': { interesse: 'si', opzioni: [0], email: 'mario@example.it' },
+      'ospite:guest-hash': { interesse: 'si', opzioni: [0], email: 'ospite@example.net' }
+    }
+  };
+  const eventiRows = [
+    ['ID', 'CreatoIl', 'CreatoreEmail', 'Titolo', 'Descrizione', 'OpzioniJson', 'VotiJson', 'Stato', '', ''],
+    ['evento-edit', new Date(), 'mario@example.it', 'Cena', 'Vecchia descrizione', JSON.stringify([
+      { data: '20/11/2026', ora: '18:00', luogo: 'Centro' },
+      { data: '21/11/2026', ora: '18:00', luogo: '' }
+    ]), JSON.stringify(originalVotes), 'ATTIVA']
+  ];
+  const eventiSheet = dataSheet(eventiRows);
+  eventiSheet.getRange = (row, column) => ({
+    setValue(value) {
+      while (eventiRows[row - 1].length < column) eventiRows[row - 1].push('');
+      eventiRows[row - 1][column - 1] = value;
+    }
+  });
+  const spreadsheet = {
+    getSheetByName: name => name === 'soci' ? sociSheet : name === 'ProposteEventi' ? eventiSheet : null,
+    insertSheet: () => eventiSheet
+  };
+  const context = {
+    SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
+    LockService: { getScriptLock: () => ({ waitLock() { }, releaseLock() { } }) },
+    verificaLogin: () => 'OK_LOGIN'
+  };
+  loadScript('Eventi.js', context);
+
+  const aggiornamento = context.modificaPropostaEvento({
+    email: 'mario@example.it', password: 'pw', propostaId: 'evento-edit',
+    proposta: {
+      titolo: 'Cena soci', descrizione: 'Descrizione aggiornata',
+      opzioni: [
+        { data: '20/11/2026', ora: '18:00', luogo: 'Ristorante' },
+        { data: '22/11/2026', ora: '19:00', luogo: '' }
+      ]
+    }
+  });
+  assert.equal(aggiornamento.ok, true);
+  assert.equal(eventiRows[1][3], 'Cena soci');
+  assert.equal(eventiRows[1][4], 'Descrizione aggiornata');
+  assert.deepEqual(JSON.parse(eventiRows[1][5]), [
+    { data: '20/11/2026', ora: '18:00', luogo: 'Ristorante' },
+    { data: '22/11/2026', ora: '19:00', luogo: '' }
+  ]);
+  assert.deepEqual(JSON.parse(eventiRows[1][6]).opzioni, [2, 0]);
+
+  const rimozioneVotata = context.modificaPropostaEvento({
+    email: 'mario@example.it', password: 'pw', propostaId: 'evento-edit',
+    proposta: { titolo: 'Cena soci', opzioni: [{ data: '22/11/2026', ora: '19:00' }] }
+  });
+  assert.equal(rimozioneVotata.ok, false);
+
+  assert.equal(context.annullaPropostaEvento({ email: 'other@example.net', password: 'pw', propostaId: 'evento-edit' }).ok, false);
+  assert.equal(context.annullaPropostaEvento({ email: 'mario@example.it', password: 'pw', propostaId: 'evento-edit' }).ok, true);
+  assert.equal(eventiRows[1][7], 'ANNULLATA');
+});
+
 test('eventi: il dispatcher serve il link pubblico e registra il voto esterno', () => {
   const sociSheet = dataSheet([['Nome', 'Password', 'Email'], ['Mario', 'hash', 'mario@example.it']]);
   const eventiRows = [
