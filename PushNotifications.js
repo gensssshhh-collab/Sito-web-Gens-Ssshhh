@@ -27,7 +27,8 @@ function registraTokenPush(dati) {
 }
 
 function rimuoviTokenPush(dati) {
-  if (!dati || !dati.email || !dati.token) return "DATI_MANCANTI";
+  if (!dati || !dati.email || !dati.password) return "DATI_MANCANTI";
+  if (typeof verificaLogin !== "function" || verificaLogin({ email: dati.email, password: dati.password }) !== "OK_LOGIN") return "ERR_AUTH";
 
   var email = String(dati.email).trim().toLowerCase();
   var properties = PropertiesService.getScriptProperties();
@@ -36,9 +37,13 @@ function rimuoviTokenPush(dati) {
     tokens = JSON.parse(properties.getProperty("PUSH_TOKENS") || "{}");
   } catch (e) { }
 
-  tokens[email] = (tokens[email] || []).filter(function (item) {
-    return item.token !== dati.token;
-  });
+  if (dati.token) {
+    tokens[email] = (tokens[email] || []).filter(function (item) {
+      return item.token !== dati.token;
+    });
+  } else {
+    delete tokens[email];
+  }
   properties.setProperty("PUSH_TOKENS", JSON.stringify(tokens));
   return "TOKEN_RIMOSSO";
 }

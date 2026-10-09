@@ -54,6 +54,7 @@ function getHomeSummary(email) {
   return {
     nome: user.nome,
     cognome: user.cognome,
+    stato: user.stato,
     tessera: user.tessera,
     scadenza: user.scadenza,
     votiAttivi: votiAttivi, // Mostra il numero reale di voti/assemblee in sospeso

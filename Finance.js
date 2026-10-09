@@ -8,7 +8,7 @@ function exportBilancioExcel(email, anno) {
   var ss = SpreadsheetApp.openById("1zYVY0g8nIASjbzIKlHtVbaoEhk5949ctqQemVENfSow");
   var sheet = ss.getSheetByName("bilancio");
   var dati = sheet.getDataRange().getValues();
-  
+
   // Costruiamo un CSV con separatore punto e virgola (standard Excel Italia)
   var csvContent = "Data;N. Doc;Descrizione;Conto Dare;Conto Avere;Importo;Controparte;CF/PIVA;Attivita\n";
 
@@ -16,11 +16,11 @@ function exportBilancioExcel(email, anno) {
     var r = dati[i];
     var d = new Date(r[0]);
     // Filtro per anno (se specificato)
-    if(anno && d.getFullYear() != anno) continue;
-    
+    if (anno && d.getFullYear() != anno) continue;
+
     var dataFmt = Utilities.formatDate(d, "Europe/Rome", "dd/MM/yyyy");
     var importo = r[4].toString().replace(".", ","); // Formato Italiano 10,50
-    
+
     // Gestione vecchi dati vs nuovi dati
     // Nuovi: 0=Data, 1=Desc, 2=Dare, 3=Avere, 4=Imp, 5=Contr, 6=CF, 7=Tipo, 8=Doc
     var rigaCSV = [
@@ -34,7 +34,7 @@ function exportBilancioExcel(email, anno) {
       r[6] || "",       // CF/PIVA
       r[7] || "Ist"     // Tipo
     ].join(";");
-    
+
     csvContent += rigaCSV + "\n";
   }
 
@@ -50,9 +50,9 @@ function getDatiBilancioCompleto() {
     if (!sheet || sheet.getLastRow() < 2) return null;
 
     var dati = sheet.getDataRange().getValues();
-    
+
     var res = {
-      totEntrate: 0, 
+      totEntrate: 0,
       totUscite: 0,
       dettUscite: {},
       dettEntrate: {}
@@ -70,16 +70,16 @@ function getDatiBilancioCompleto() {
 
       // Se il conto in DARE è compilato e non è liquidità, è una Spesa
       if (dare && contiLiquidita.indexOf(dare) === -1) {
-         res.totUscite += imp;
-         if(!res.dettUscite[dare]) res.dettUscite[dare] = 0;
-         res.dettUscite[dare] += imp;
+        res.totUscite += imp;
+        if (!res.dettUscite[dare]) res.dettUscite[dare] = 0;
+        res.dettUscite[dare] += imp;
       }
-      
+
       // Se il conto in AVERE è compilato e non è liquidità, è un'Entrata
       if (avere && contiLiquidita.indexOf(avere) === -1) {
-         res.totEntrate += imp;
-         if(!res.dettEntrate[avere]) res.dettEntrate[avere] = 0;
-         res.dettEntrate[avere] += imp;
+        res.totEntrate += imp;
+        if (!res.dettEntrate[avere]) res.dettEntrate[avere] = 0;
+        res.dettEntrate[avere] += imp;
       }
     }
     return res;
@@ -115,13 +115,13 @@ function getAnagrafeFornitoriDinamica() {
 function creaGruppoSpese(nomeGruppo) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglio = ss.getSheetByName("GruppiSpese");
-  
+
   // Se non esiste, crea il foglio in automatico!
   if (!foglio) {
-     foglio = ss.insertSheet("GruppiSpese");
-     foglio.appendRow(["Nome Gruppo", "Creato Il"]);
+    foglio = ss.insertSheet("GruppiSpese");
+    foglio.appendRow(["Nome Gruppo", "Creato Il"]);
   }
-  
+
   foglio.appendRow([nomeGruppo.trim(), new Date()]);
   return "OK";
 }
@@ -129,27 +129,27 @@ function creaGruppoSpese(nomeGruppo) {
 function aggiungiSpesaGruppo(dati) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglio = ss.getSheetByName("SpeseGruppo");
-  
+
   var importoTotale = parseFloat(dati.importo);
-  
+
   var stringaQuote = "";
   for (var nome in dati.quoteEsatte) {
     stringaQuote += nome + ":" + dati.quoteEsatte[nome].toFixed(2) + ",";
   }
   stringaQuote = stringaQuote.slice(0, -1);
-  
+
   foglio.appendRow([
     new Date(),
     dati.pagatoDa,
     arrotondaIT(importoTotale),
     dati.descrizione,
-    stringaQuote, 
+    stringaQuote,
     dati.esclusioniNomi || "-",
     dati.metodo,
     dati.txid || "-",
     dati.gruppo || "Generale" // SALVA IL GRUPPO NELLA COLONNA I (9a colonna)
   ]);
-  
+
   return "OK";
 }
 
@@ -157,25 +157,25 @@ function calcolaSaldiGruppo(nomeGruppo) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglio = ss.getSheetByName("SpeseGruppo");
   var dati = foglio.getDataRange().getValues();
-  
+
   var saldi = {};
-  
+
   for (var i = 1; i < dati.length; i++) {
     var gruppoRiga = dati[i][8] ? dati[i][8].toString().trim() : "Generale"; // Indice 8 è la Colonna I
-    
+
     // Ignora le spese che non appartengono al gruppo che stiamo guardando
     if (gruppoRiga !== nomeGruppo) continue;
-    
+
     var pagatoDa = dati[i][1];
     var importoTotale = parseFloat(dati[i][2]);
-    var stringaQuote = dati[i][4]; 
-    
+    var stringaQuote = dati[i][4];
+
     if (!saldi[pagatoDa]) saldi[pagatoDa] = 0;
-    saldi[pagatoDa] += importoTotale; 
-    
+    saldi[pagatoDa] += importoTotale;
+
     if (stringaQuote && stringaQuote.indexOf(':') > -1) {
       var quoteArray = stringaQuote.split(',');
-      quoteArray.forEach(function(coppia) {
+      quoteArray.forEach(function (coppia) {
         var parti = coppia.split(':');
         if (parti.length === 2) {
           var debitore = parti[0].trim();
@@ -186,7 +186,7 @@ function calcolaSaldiGruppo(nomeGruppo) {
       });
     }
   }
-  
+
   var risultato = [];
   for (var persona in saldi) {
     var saldoFinale = arrotondaIT(saldi[persona]);
@@ -194,8 +194,8 @@ function calcolaSaldiGruppo(nomeGruppo) {
       risultato.push({ nome: persona, saldo: saldoFinale, formattato: formattaValutaIT(saldoFinale) });
     }
   }
-  
-  risultato.sort(function(a, b) { return b.saldo - a.saldo; });
+
+  risultato.sort(function (a, b) { return b.saldo - a.saldo; });
   return risultato;
 }
 
@@ -203,7 +203,7 @@ function getStatisticheGruppiLive() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglioGruppi = ss.getSheetByName("GruppiSpese");
   var foglioSpese = ss.getSheetByName("SpeseGruppo");
-  
+
   var gruppiMap = {};
 
   // 1. Legge l'anagrafica dal foglio GruppiSpese (per recuperare l'anno di creazione)
@@ -215,12 +215,12 @@ function getStatisticheGruppiLive() {
 
       if (nomeGruppoRaw) {
         var nome = nomeGruppoRaw.toString().trim();
-        
+
         // Estrapola l'anno dalla data (se assente, usa il 2026 come default)
-        var anno = 2026; 
+        var anno = 2026;
         if (dataCreazione) {
-           var matchAnno = dataCreazione.toString().match(/\d{4}/);
-           if (matchAnno) anno = parseInt(matchAnno[0]);
+          var matchAnno = dataCreazione.toString().match(/\d{4}/);
+          if (matchAnno) anno = parseInt(matchAnno[0]);
         }
 
         gruppiMap[nome] = {
@@ -238,7 +238,7 @@ function getStatisticheGruppiLive() {
   // 2. Legge i movimenti dal foglio SpeseGruppo
   if (foglioSpese && foglioSpese.getLastRow() >= 2) {
     var datiSpese = foglioSpese.getDataRange().getValues();
-    
+
     // Indici delle colonne
     var idxPagatoDa = 1; // B
     var idxImporto = 2;  // C
@@ -268,7 +268,7 @@ function getStatisticheGruppiLive() {
       // Aggiorna totale e categorie
       gruppiMap[nomeSpesa].totale += importo;
       gruppiMap[nomeSpesa].transazioni++;
-      
+
       if (!gruppiMap[nomeSpesa].categorie[categoria]) gruppiMap[nomeSpesa].categorie[categoria] = 0;
       gruppiMap[nomeSpesa].categorie[categoria] += importo;
 
@@ -283,8 +283,8 @@ function getStatisticheGruppiLive() {
           if (!gruppiMap[nomeSpesa].saldi[persona]) gruppiMap[nomeSpesa].saldi[persona] = 0;
           gruppiMap[nomeSpesa].saldi[persona] -= parseFloat(quote[persona]);
         }
-      } catch(e) {
-        partecipanti = divisoTraStr.split(",").map(function(s) { return s.trim(); }).filter(function(s) { return s !== ""; });
+      } catch (e) {
+        partecipanti = divisoTraStr.split(",").map(function (s) { return s.trim(); }).filter(function (s) { return s !== ""; });
         if (partecipanti.length > 0) {
           var quotaUguale = importo / partecipanti.length;
           for (var k = 0; k < partecipanti.length; k++) {
@@ -301,21 +301,21 @@ function getStatisticheGruppiLive() {
   var risultatoFinale = [];
   for (var key in gruppiMap) {
     var gruppo = gruppiMap[key];
-    
+
     // Ignoriamo i gruppi listati in GruppiSpese che però non hanno ancora nessuna transazione
-    if (gruppo.transazioni === 0) continue; 
+    if (gruppo.transazioni === 0) continue;
 
     gruppo.totale = Math.round(gruppo.totale * 100) / 100;
-    
+
     for (var cat in gruppo.categorie) {
       gruppo.categorie[cat] = Math.round(gruppo.categorie[cat] * 100) / 100;
     }
-    
+
     for (var saldoPersona in gruppo.saldi) {
       gruppo.saldi[saldoPersona] = Math.round(gruppo.saldi[saldoPersona] * 100) / 100;
       if (Math.abs(gruppo.saldi[saldoPersona]) < 0.01) gruppo.saldi[saldoPersona] = 0;
     }
-    
+
     risultatoFinale.push(gruppo);
   }
 
@@ -391,16 +391,64 @@ function getCostiVacanzeDashboard() {
   return viaggi;
 }
 
+function getSociPerFattura(adminEmail, password) {
+  var admin = getDatiUtente(adminEmail);
+  if (!admin || !isRuoloAmministrativo(admin.ruolo) || verificaLogin({ email: adminEmail, password: password }) !== "OK_LOGIN") return [];
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("soci");
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows[0].map(function (value) { return String(value || "").trim().toLowerCase(); });
+  function index(name, fallback) {
+    var found = headers.indexOf(name.toLowerCase());
+    return found >= 0 ? found : fallback;
+  }
+  var emailIndex = index("email", 2);
+  var firstNameIndex = index("nome", 0);
+  var lastNameIndex = index("cognome", 4);
+  var statusIndex = index("stato socio", 11);
+  return rows.slice(1).filter(function (row) {
+    return String(row[emailIndex] || "").trim() && String(row[statusIndex] || "").trim().toLowerCase() === "attivo";
+  }).map(function (row) {
+    var nome = String(row[firstNameIndex] || "").trim();
+    var cognome = String(row[lastNameIndex] || "").trim();
+    return { nome: nome, cognome: cognome, nomeCompleto: (nome + " " + cognome).trim(), email: String(row[emailIndex]).trim() };
+  }).sort(function (a, b) {
+    return a.cognome.localeCompare(b.cognome, "it") || a.nome.localeCompare(b.nome, "it");
+  });
+}
+
+function inviaFatturaSocio_(dati, nomeSocio, allegatoPdf, allegatoXml) {
+  var causale = String(dati.causale || "").trim();
+  var importo = Number(dati.importo).toFixed(2);
+  MailApp.sendEmail({
+    to: dati.email,
+    subject: "Fattura " + dati.numero + " - " + nomeSocio + " - Gens Ssshhh",
+    body: "Gentile " + nomeSocio + ",\n\nIn allegato trovi la fattura di cortesia in PDF e il relativo file XML.\n\nImporto da pagare: € " + importo + "\nCausale: " + causale + "\nNumero fattura: " + dati.numero + "\n\nTi chiediamo di procedere al pagamento secondo le modalità comunicate dall’associazione. Se hai già effettuato il pagamento, puoi ignorare questo promemoria.\n\nGens Ssshhh",
+    attachments: [allegatoPdf, allegatoXml],
+    name: "Gens Ssshhh"
+  });
+  return true;
+}
+
 function generaFatturaXML(datiInput) {
-  
+  datiInput = datiInput || {};
+  var admin = getDatiUtente(datiInput.adminEmail);
+  if (!admin || !isRuoloAmministrativo(admin.ruolo) || verificaLogin({ email: datiInput.adminEmail, password: datiInput.password }) !== "OK_LOGIN") {
+    return { errore: "Non sei autorizzato a generare fatture." };
+  }
+  if (!datiInput.numero || !datiInput.importo || Number(datiInput.importo) <= 0 || !datiInput.causale) {
+    return { errore: "Numero, importo positivo e causale sono obbligatori." };
+  }
+
   // --- LE TUE CONNESSIONI ---
-  var idArchivioEsterno = "1zYVYOg8nlASjbzIKIHtVbaoEhK5949ctqQemVENfSow"; 
+  var idArchivioEsterno = "1zYVYOg8nlASjbzIKIHtVbaoEhK5949ctqQemVENfSow";
   var idCartellaDrive = "1NdZ2w4kU2WuYIj9wtA9rz3ITz08ViZje";
-  
+
   // Dati Associazione
-  var ass_piva = "01234567890"; 
+  var ass_piva = "01234567890";
   var ass_denominazione = "Gens Ssshhh";
-  var ass_regime = "RF01"; 
+  var ass_regime = "RF01";
   var ass_indirizzo = "Via dello Sport, 7";
   var ass_cap = "40065";
   var ass_comune = "Pianoro";
@@ -408,7 +456,7 @@ function generaFatturaXML(datiInput) {
 
   var xmlCessionario = "";
   var codiceDestinatario = "0000000";
-  
+
   var nomeArchivio = "";
   var identificativoArchivio = "";
   var indCompleto = ""; // Per il PDF
@@ -416,51 +464,51 @@ function generaFatturaXML(datiInput) {
   // ----------------------------------------------------
   // CASO A: SOCIO (Ricerca nel Foglio PRINCIPALE)
   // ----------------------------------------------------
-  if(datiInput.tipoCliente === "socio") {
+  if (datiInput.tipoCliente === "socio") {
     var ssMain = SpreadsheetApp.getActiveSpreadsheet();
     var fSoci = ssMain.getSheetByName("soci");
     var dati = fSoci.getDataRange().getValues();
-    
-    var socioCF = ""; 
-    var socioNome = ""; 
+
+    var socioCF = "";
+    var socioNome = "";
     var socioCognome = "";
     var socioIndirizzo = "";
     var socioCAP = "";
     var socioComune = "";
     var socioProv = "";
-      var intestazioniSoci = dati.length ? dati[0].map(function(value) {
-        return String(value || "").trim().toLowerCase();
-      }) : [];
-      function indiceSocio(nome, fallback) {
-        var indice = intestazioniSoci.indexOf(nome.toLowerCase());
-        return indice >= 0 ? indice : fallback;
-      }
-    
-    for(var i=1; i<dati.length; i++) {
-      if(dati[i][2].toString().toLowerCase() === datiInput.email.toLowerCase()) {
-         // Trovato! Estraiamo i dati basandoci sulle tue colonne esatte
-           socioNome = dati[i][indiceSocio("Nome", 0)] || "NomeSconosciuto";
-           socioCognome = dati[i][indiceSocio("Cognome", 4)] || "CognomeSconosciuto";
-           socioCF = dati[i][indiceSocio("Codice Fiscale", 14)] || "";
-           socioIndirizzo = dati[i][indiceSocio("Indirizzo", 6)] || "Indirizzo Sconosciuto";
-           socioCAP = dati[i][indiceSocio("CAP res", 19)] || "00000";
-           socioComune = dati[i][indiceSocio("Comune res", 20)] || "Comune Sconosciuto";
-           // Il foglio soci non contiene una colonna Provincia: non usare H,
-           // che e ResetToken. Per i soci dell'associazione il codice provincia e BO.
-           socioProv = dati[i][indiceSocio("Provincia", -1)] || "BO";
-         break;
+    var intestazioniSoci = dati.length ? dati[0].map(function (value) {
+      return String(value || "").trim().toLowerCase();
+    }) : [];
+    function indiceSocio(nome, fallback) {
+      var indice = intestazioniSoci.indexOf(nome.toLowerCase());
+      return indice >= 0 ? indice : fallback;
+    }
+
+    for (var i = 1; i < dati.length; i++) {
+      if (dati[i][2].toString().toLowerCase() === datiInput.email.toLowerCase()) {
+        // Trovato! Estraiamo i dati basandoci sulle tue colonne esatte
+        socioNome = dati[i][indiceSocio("Nome", 0)] || "NomeSconosciuto";
+        socioCognome = dati[i][indiceSocio("Cognome", 4)] || "CognomeSconosciuto";
+        socioCF = dati[i][indiceSocio("Codice Fiscale", 14)] || "";
+        socioIndirizzo = dati[i][indiceSocio("Indirizzo", 6)] || "Indirizzo Sconosciuto";
+        socioCAP = dati[i][indiceSocio("CAP res", 19)] || "00000";
+        socioComune = dati[i][indiceSocio("Comune res", 20)] || "Comune Sconosciuto";
+        // Il foglio soci non contiene una colonna Provincia: non usare H,
+        // che e ResetToken. Per i soci dell'associazione il codice provincia e BO.
+        socioProv = dati[i][indiceSocio("Provincia", -1)] || "BO";
+        break;
       }
     }
-    
-    if(!socioCF) return { errore: "ERRORE: Socio non trovato nel database principale." };
+
+    if (!socioCF) return { errore: "ERRORE: Socio non trovato nel database principale." };
 
     codiceDestinatario = "0000000"; // Sempre 7 zeri per i privati
     nomeArchivio = socioNome + " " + socioCognome;
     identificativoArchivio = socioCF;
-    
+
     // Assembliamo l'indirizzo bello per il PDF
     indCompleto = socioIndirizzo + " - " + socioCAP + " " + socioComune + " (" + socioProv + ")";
-    
+
     // Compiliamo il blocco XML del cliente con i dati veri!
     xmlCessionario = `
     <CessionarioCommittente>
@@ -476,16 +524,16 @@ function generaFatturaXML(datiInput) {
         <Nazione>IT</Nazione>
       </Sede>
     </CessionarioCommittente>`;
-  } 
+  }
   // --- CASO B: AZIENDA ESTERNA ---
   else {
-    if(!datiInput.piva || !datiInput.ragioneSociale) return { errore: "ERRORE: Inserisci Ragione Sociale e P.IVA." };
-    
+    if (!datiInput.piva || !datiInput.ragioneSociale) return { errore: "ERRORE: Inserisci Ragione Sociale e P.IVA." };
+
     codiceDestinatario = datiInput.sdi ? datiInput.sdi.toUpperCase() : "0000000";
     nomeArchivio = datiInput.ragioneSociale;
     identificativoArchivio = datiInput.piva;
     indCompleto = datiInput.indirizzo + " - " + datiInput.cap + " " + datiInput.comune + " (" + datiInput.prov.toUpperCase() + ")";
-    
+
     xmlCessionario = `
     <CessionarioCommittente>
       <DatiAnagrafici>
@@ -499,9 +547,9 @@ function generaFatturaXML(datiInput) {
   var dataOdierna = new Date();
   var oggiFormatoXML = Utilities.formatDate(dataOdierna, "Europe/Rome", "yyyy-MM-dd");
   var oggiFormatoPDF = Utilities.formatDate(dataOdierna, "Europe/Rome", "dd/MM/yyyy");
-  
-  var importoFmt = Number(datiInput.importo).toFixed(2); 
-  var progInvio = datiInput.numero.replace(/\D/g, ""); 
+
+  var importoFmt = Number(datiInput.importo).toFixed(2);
+  var progInvio = datiInput.numero.replace(/\D/g, "");
   var nomeFileBase = "IT" + ass_piva + "_" + progInvio.padStart(5, '0');
 
   // ==========================================
@@ -599,37 +647,37 @@ function generaFatturaXML(datiInput) {
   var urlXmlDrive = "";
   var urlPdfDrive = "";
   var blobPdf = null;
-  
+  var blobXML = Utilities.newBlob(xmlString, "text/xml", nomeFileBase + ".xml");
+
   try {
     var cartella = DriveApp.getFolderById(idCartellaDrive);
-    
+
     // Crea file XML in Drive
-    var blobXML = Utilities.newBlob(xmlString, "text/xml", nomeFileBase + ".xml");
     urlXmlDrive = cartella.createFile(blobXML).getUrl();
-    
+
     // Crea file PDF in Drive
     blobPdf = Utilities.newBlob(htmlFattura, MimeType.HTML).getAs(MimeType.PDF);
     blobPdf.setName("Fattura_" + progInvio + "_Cortesia.pdf");
     urlPdfDrive = cartella.createFile(blobPdf).getUrl();
-    
+
     // Registra riga nel Foglio Excel
     var ssArchivio = SpreadsheetApp.openById(idArchivioEsterno);
     var foglioEmesse = ssArchivio.getSheetByName("Fatture Emesse");
     var timestamp = Utilities.formatDate(dataOdierna, "Europe/Rome", "dd/MM/yyyy HH:mm:ss");
     var tipoClienteLeggibile = datiInput.tipoCliente === "socio" ? "Privato/Socio" : "Azienda/Esterno";
-    
+
     var formulaLinkXml = '=HYPERLINK("' + urlXmlDrive + '"; "🔗 Apri XML")';
     var formulaLinkPdf = '=HYPERLINK("' + urlPdfDrive + '"; "📄 Apri PDF")';
 
     // --- NUOVO: SALVA FORNITORE/CLIENTE SE NON ESISTE ---
-    if(datiInput.tipoCliente === "esterno") {
+    if (datiInput.tipoCliente === "esterno") {
       var foglioFornitori = ssArchivio.getSheetByName("Fornitori");
-      if(foglioFornitori) {
+      if (foglioFornitori) {
         var piveEsistenti = foglioFornitori.getRange("B:B").getValues().flat();
         var pivaDaCercare = datiInput.piva.toString().trim().toUpperCase();
         var esisteGia = piveEsistenti.some(p => p.toString().trim().toUpperCase() === pivaDaCercare);
-        
-        if(!esisteGia) {
+
+        if (!esisteGia) {
           foglioFornitori.appendRow([
             datiInput.ragioneSociale, // A
             datiInput.piva,           // B
@@ -642,42 +690,59 @@ function generaFatturaXML(datiInput) {
         }
       }
     }
-    
+
     foglioEmesse.appendRow([
-      timestamp, datiInput.numero, nomeArchivio, identificativoArchivio, tipoClienteLeggibile, 
-      datiInput.causale, importoFmt, datiInput.email || "-", codiceDestinatario, 
+      timestamp, datiInput.numero, nomeArchivio, identificativoArchivio, tipoClienteLeggibile,
+      datiInput.causale, importoFmt, datiInput.email || "-", codiceDestinatario,
       formulaLinkXml, formulaLinkPdf // Colonna J e Colonna K
     ]);
-  } catch(e) {
+  } catch (e) {
     console.log("Errore Drive/Fogli: " + e);
     // Se fallisce Drive (es cartella inesistente), il PDF generato esisterà comunque in memoria per il download!
   }
 
   // Se per qualche motivo il PDF non si è creato su Drive, forziamo la creazione per il download
-  if(!blobPdf) {
+  if (!blobPdf) {
     blobPdf = Utilities.newBlob(htmlFattura, MimeType.HTML).getAs(MimeType.PDF);
+    blobPdf.setName("Fattura_" + progInvio + "_Cortesia.pdf");
+  }
+
+  var emailInviata = false;
+  var erroreInvioEmail = "";
+  if (datiInput.tipoCliente === "socio") {
+    try {
+      if (!datiInput.email) throw new Error("Seleziona il socio destinatario.");
+      inviaFatturaSocio_(datiInput, nomeArchivio, blobPdf, blobXML);
+      emailInviata = true;
+    } catch (errore) {
+      erroreInvioEmail = errore.message || String(errore);
+      console.log("Fattura generata ma invio e-mail fallito: " + erroreInvioEmail);
+    }
   }
 
   // Restituiamo ENTRAMBI i file convertiti in Base64 (stringa) al browser
   return {
     errore: null,
     xmlBase64: "data:text/xml;base64," + Utilities.base64Encode(xmlString),
-    pdfBase64: "data:application/pdf;base64," + Utilities.base64Encode(blobPdf.getBytes())
+    pdfBase64: "data:application/pdf;base64," + Utilities.base64Encode(blobPdf.getBytes()),
+    emailInviata: emailInviata,
+    emailDestinatario: emailInviata ? datiInput.email : "",
+    erroreInvioEmail: erroreInvioEmail
   };
 }
 
 function getListaFornitori() {
-  var idArchivioEsterno = "1zYVYOg8nlASjbzIKIHtVbaoEhK5949ctqQemVENfSow"; 
+  var idArchivioEsterno = "1zYVYOg8nlASjbzIKIHtVbaoEhK5949ctqQemVENfSow";
   try {
     var ss = SpreadsheetApp.openById(idArchivioEsterno);
     var foglio = ss.getSheetByName("Fornitori");
-    if(!foglio) return [];
-    
+    if (!foglio) return [];
+
     var dati = foglio.getDataRange().getValues();
     var lista = [];
-    
+
     // Partiamo dalla riga 1 (saltando le intestazioni)
-    for(var i=1; i<dati.length; i++) {
+    for (var i = 1; i < dati.length; i++) {
       lista.push({
         ragioneSociale: dati[i][0], // Colonna A
         piva: dati[i][1],           // Colonna B
@@ -689,33 +754,33 @@ function getListaFornitori() {
       });
     }
     return lista;
-  } catch(e) {
+  } catch (e) {
     return [];
   }
 }
 
 function salvaFatturaRicevuta(dati) {
   var idArchivioEsterno = "1zYVYOg8nlASjbzIKIHtVbaoEhK5949ctqQemVENfSow";
-  var idCartellaDrive = "1ihhLr1RkEpU4bmZSQZiGMgMgX-BLqaR7"; 
-  
+  var idCartellaDrive = "1ihhLr1RkEpU4bmZSQZiGMgMgX-BLqaR7";
+
   try {
     var ssArchivio = SpreadsheetApp.openById(idArchivioEsterno);
     var foglioRicevute = ssArchivio.getSheetByName("Fatture Ricevute");
-    
+
     var formulaLinkAllegato = "-";
-    
+
     // 1. Se c'è un file allegato (es. scontrino in PDF o JPG), lo salva su Drive
-    if(dati.fileBase64) {
-        var cartella = DriveApp.getFolderById(idCartellaDrive);
-        var blob = Utilities.newBlob(Utilities.base64Decode(dati.fileBase64), dati.mimeType, "Spesa_" + dati.fornitore.replace(/[^a-zA-Z0-9]/g,"_") + "_" + dati.fileName);
-        var fileCreato = cartella.createFile(blob);
-        formulaLinkAllegato = '=HYPERLINK("' + fileCreato.getUrl() + '"; "📎 Apri Scontrino")';
+    if (dati.fileBase64) {
+      var cartella = DriveApp.getFolderById(idCartellaDrive);
+      var blob = Utilities.newBlob(Utilities.base64Decode(dati.fileBase64), dati.mimeType, "Spesa_" + dati.fornitore.replace(/[^a-zA-Z0-9]/g, "_") + "_" + dati.fileName);
+      var fileCreato = cartella.createFile(blob);
+      formulaLinkAllegato = '=HYPERLINK("' + fileCreato.getUrl() + '"; "📎 Apri Scontrino")';
     }
 
     // 2. Registra la riga in Excel
     var timestamp = Utilities.formatDate(new Date(), "Europe/Rome", "dd/MM/yyyy HH:mm:ss");
     var importoFmt = Number(dati.importo).toFixed(2);
-    
+
     // Ordine colonne suggerito: Timestamp | Data Doc | N. Fattura | Fornitore | Causale | Importo | Link Allegato
     foglioRicevute.appendRow([
       timestamp,
@@ -729,20 +794,20 @@ function salvaFatturaRicevuta(dati) {
 
     // 3. (OPZIONALE MA GENIALE) Se il fornitore non esiste nel database, lo aggiunge al volo!
     var foglioFornitori = ssArchivio.getSheetByName("Fornitori");
-    if(foglioFornitori) {
-        var fornitoriEsistenti = foglioFornitori.getRange("A:A").getValues().flat();
-        var esiste = fornitoriEsistenti.some(function(f) { 
-           return f.toString().trim().toLowerCase() === dati.fornitore.trim().toLowerCase(); 
-        });
-        
-        if(!esiste) {
-            // Aggiunge solo la Ragione Sociale in Colonna A, il resto potrai compilarlo dopo se serve
-            foglioFornitori.appendRow([dati.fornitore, "", "", "", "", "", ""]);
-        }
+    if (foglioFornitori) {
+      var fornitoriEsistenti = foglioFornitori.getRange("A:A").getValues().flat();
+      var esiste = fornitoriEsistenti.some(function (f) {
+        return f.toString().trim().toLowerCase() === dati.fornitore.trim().toLowerCase();
+      });
+
+      if (!esiste) {
+        // Aggiunge solo la Ragione Sociale in Colonna A, il resto potrai compilarlo dopo se serve
+        foglioFornitori.appendRow([dati.fornitore, "", "", "", "", "", ""]);
+      }
     }
-    
+
     return "OK";
-  } catch(e) {
+  } catch (e) {
     return "Errore salvataggio: " + e.toString();
   }
 }
@@ -759,14 +824,14 @@ function salvaReportArchivio(nomeFile, datiJsonStr) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var nomeFoglio = "Report_Storici";
   var foglio = ss.getSheetByName(nomeFoglio);
-  
+
   // Se il foglio non esiste, lo crea e mette le intestazioni
   if (!foglio) {
     foglio = ss.insertSheet(nomeFoglio);
     foglio.appendRow(["Timestamp", "Nome Report", "Dati JSON"]);
     foglio.getRange("A1:C1").setFontWeight("bold").setBackground("#f8fafc");
   }
-  
+
   // Salva i dati
   foglio.appendRow([new Date(), nomeFile, datiJsonStr]);
   return "Salvato con successo";
@@ -775,15 +840,15 @@ function salvaReportArchivio(nomeFile, datiJsonStr) {
 function getReportStorici() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglio = ss.getSheetByName("Report_Storici");
-  
+
   // Se il foglio non esiste o è vuoto, restituisce un array vuoto
   if (!foglio || foglio.getLastRow() < 2) {
     return [];
   }
-  
+
   var dati = foglio.getDataRange().getValues();
   var reports = [];
-  
+
   // Salta la riga 0 (le intestazioni) e legge il resto
   for (var i = 1; i < dati.length; i++) {
     reports.push({
@@ -793,7 +858,7 @@ function getReportStorici() {
       jsonDati: dati[i][2] // Il pacchetto JSON completo
     });
   }
-  
+
   // Invertiamo l'array per avere i report più recenti in alto
   return reports.reverse();
 }
@@ -801,11 +866,11 @@ function getReportStorici() {
 function eliminaReportArchivio(nomeReport) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglio = ss.getSheetByName("Report_Storici");
-  
+
   if (!foglio) return "Foglio non trovato";
-  
+
   var dati = foglio.getDataRange().getValues();
-  
+
   // Cerchiamo dal fondo verso l'inizio e cancelliamo la riga corrispondente
   for (var i = dati.length - 1; i >= 1; i--) {
     if (dati[i][1] === nomeReport) {
@@ -829,8 +894,8 @@ function getGruppiSpese() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var foglio = ss.getSheetByName("GruppiSpese");
   // Se il foglio non esiste, restituisce un gruppo di default
-  if (!foglio) return ["Generale"]; 
-  
+  if (!foglio) return ["Generale"];
+
   var dati = foglio.getDataRange().getValues();
   var gruppi = [];
   for (var i = 1; i < dati.length; i++) {
@@ -841,16 +906,16 @@ function getGruppiSpese() {
 
 function registraMovimentoCompostoServer(obj) {
   var ss = SpreadsheetApp.openById(ID_FOGLIO_CONTABILITA);
-  
+
   // 1. Registrazione nel foglio "bilancio" (come prima)
   var sheetBilancio = ss.getSheetByName("bilancio");
-  obj.righe.forEach(function(r) {
+  obj.righe.forEach(function (r) {
     sheetBilancio.appendRow([
       obj.data,
       obj.desc,
-      r.sezione === 'DARE' ? r.conto : '',  
-      r.sezione === 'AVERE' ? r.conto : '', 
-      r.importo,                             
+      r.sezione === 'DARE' ? r.conto : '',
+      r.sezione === 'AVERE' ? r.conto : '',
+      r.importo,
       obj.controparte,
       obj.piva,
       obj.tipoAtt,
@@ -858,23 +923,23 @@ function registraMovimentoCompostoServer(obj) {
       "Registrato via web"
     ]);
   });
-  
+
   // 2. Controllo e inserimento automatico in Anagrafica (Fornitori / Clienti)
   if (obj.controparte && obj.controparte.trim() !== "") {
     var nomeControparte = obj.controparte.trim();
-    
+
     // Decidiamo se è un fornitore o un cliente in base al tipo attività o ai conti toccati
     // (Di default, se c'è una spesa/costo o fattura ricevuta, lo salviamo in "fornitori", altrimenti "clienti")
     var nomeTabAnagrafica = "fornitori"; // Tab di default visibile nel tuo screenshot
-    
+
     // Se nel form distingui tra clienti e fornitori, puoi impostare la variabile dinamicamente.
     // Qui controlliamo il tab "fornitori" (Colonna A = Nome Fornitore, Colonna B = Partita IVA)
     var sheetAnagrafica = ss.getSheetByName(nomeTabAnagrafica);
-    
+
     if (sheetAnagrafica) {
       var datiAnagrafica = sheetAnagrafica.getDataRange().getValues();
       var esisteGia = false;
-      
+
       // Controlla se la controparte esiste già (partendo dalla riga 1 per saltare l'intestazione)
       for (var i = 1; i < datiAnagrafica.length; i++) {
         var nomeEsistente = datiAnagrafica[i][0] ? datiAnagrafica[i][0].toString().trim().toLowerCase() : "";
@@ -883,7 +948,7 @@ function registraMovimentoCompostoServer(obj) {
           break;
         }
       }
-      
+
       // Se non è presente nel database, lo aggiunge in automatico in fondo al tab
       if (!esisteGia) {
         sheetAnagrafica.appendRow([
@@ -898,6 +963,6 @@ function registraMovimentoCompostoServer(obj) {
       }
     }
   }
-  
+
   return "OK";
 }

@@ -1490,34 +1490,82 @@
                 <div id="viewConfigurazione" class="page-section hidden">
                     <div class="club-page-header">
                         <div>
-                            <span class="section-kicker">Gestione</span>
-                            <h2>Configurazione</h2>
-                            <p>Parametri generali del portale e impostazioni operative dell’associazione.</p>
+                            <span class="section-kicker">Il tuo account</span>
+                            <h2>Impostazioni personali</h2>
+                            <p>Gestisci i tuoi dati, l’accesso e le preferenze del dispositivo.</p>
                         </div>
-                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Sistema</div>
+                        <div class="club-status-badge"><span class="sidebar-status-dot"></span><span
+                                id="configAccountStatus">Account</span></div>
                     </div>
 
-                    <div class="club-summary-grid">
-                        <div class="club-summary-card">
-                            <span>Moduli attivi</span>
-                            <strong id="configModuli">0</strong>
+                    <div class="club-summary-grid config-summary-grid">
+                        <div class="club-summary-card"><span>Stato socio</span><strong id="configSocioStato">-</strong>
                         </div>
-                        <div class="club-summary-card">
-                            <span>Notifiche</span>
-                            <strong id="configNotifiche">0</strong>
-                        </div>
-                        <div class="club-summary-card">
-                            <span>Sync</span>
-                            <strong id="configSync">OK</strong>
-                        </div>
+                        <div class="club-summary-card"><span>Numero tessera</span><strong
+                                id="configNumeroTessera">-</strong></div>
+                        <div class="club-summary-card"><span>Scadenza</span><strong id="configScadenza">-</strong></div>
                     </div>
 
-                    <div class="calendar-panel">
-                        <div class="calendar-header-row">
-                            <h3>Impostazioni principali</h3>
-                            <button class="compact-action" onclick="renderConfigurazioneView()">Aggiorna</button>
-                        </div>
-                        <div id="configList" class="calendar-list"></div>
+                    <div class="configuration-grid">
+                        <section class="calendar-panel config-panel">
+                            <div class="calendar-header-row">
+                                <div><span class="section-kicker">Profilo</span>
+                                    <h3>Dati personali</h3>
+                                </div>
+                            </div>
+                            <p id="configProfiloRiepilogo" class="config-panel-copy">-</p>
+                            <button type="button" class="btn-primary config-action" onclick="nav('viewProf')">Visualizza
+                                e modifica profilo</button>
+                            <button type="button" class="btn-secondary config-action"
+                                onclick="scaricaTesseraPDF()">Scarica tessera PDF</button>
+                        </section>
+
+                        <section class="calendar-panel config-panel">
+                            <div class="calendar-header-row">
+                                <div><span class="section-kicker">Sicurezza</span>
+                                    <h3>Cambia password</h3>
+                                </div>
+                            </div>
+                            <form id="configPasswordForm" class="config-form">
+                                <label class="public-event-field">Password attuale<input name="oldPass" type="password"
+                                        autocomplete="current-password" required></label>
+                                <label class="public-event-field">Nuova password<input name="newPass" type="password"
+                                        autocomplete="new-password" minlength="8" required></label>
+                                <label class="public-event-field">Ripeti nuova password<input name="confirmPass"
+                                        type="password" autocomplete="new-password" minlength="8" required></label>
+                                <button type="submit" class="btn-primary config-action">Aggiorna password</button>
+                                <p id="configPasswordMessage" class="config-status-message" role="status"
+                                    aria-live="polite"></p>
+                            </form>
+                        </section>
+
+                        <section class="calendar-panel config-panel">
+                            <div class="calendar-header-row">
+                                <div><span class="section-kicker">Dispositivo</span>
+                                    <h3>Notifiche push</h3>
+                                </div>
+                            </div>
+                            <p class="config-panel-copy">Gestisce gli avvisi push su questo dispositivo. Le
+                                comunicazioni e-mail dell’associazione non cambiano.</p>
+                            <label class="config-toggle-row">
+                                <span><strong>Ricevi notifiche push</strong><small id="configPushStatus">Controllo
+                                        supporto dispositivo…</small></span>
+                                <input id="configPushToggle" type="checkbox"
+                                    onchange="impostaNotifichePush(this.checked)">
+                            </label>
+                        </section>
+
+                        <section class="calendar-panel config-panel config-account-actions">
+                            <div class="calendar-header-row">
+                                <div><span class="section-kicker">Account</span>
+                                    <h3>Gestione account</h3>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-secondary config-action"
+                                onclick="richiediDimissioni()">Richiedi dimissioni</button>
+                            <button type="button" class="btn-secondary config-action config-logout"
+                                onclick="eseguiLogout()">Esci da questo dispositivo</button>
+                        </section>
                     </div>
                 </div>
 
@@ -1578,10 +1626,18 @@
                             <div style="display:flex; flex-direction:column; gap:15px;">
 
                                 <div id="campiSocio">
-                                    <label style="font-size:12px; font-weight:bold; color:#475569;">Email del
-                                        Socio</label>
-                                    <input type="email" id="xmlEmail" class="form-input"
-                                        placeholder="es. mario.rossi@email.it" style="width:100%;">
+                                    <label for="xmlSocioSearch"
+                                        style="font-size:12px; font-weight:bold; color:#475569;">Socio
+                                        destinatario</label>
+                                    <div class="invoice-member-picker">
+                                        <input type="search" id="xmlSocioSearch" class="form-input"
+                                            placeholder="Cerca per nome, cognome o e-mail…" autocomplete="off"
+                                            aria-controls="xmlSocioSuggestions" aria-expanded="false">
+                                        <input type="hidden" id="xmlEmail">
+                                        <div id="xmlSocioSuggestions" class="invoice-member-suggestions hidden"
+                                            role="listbox"></div>
+                                    </div>
+                                    <p id="xmlSocioSelected" class="invoice-member-selected" aria-live="polite"></p>
                                 </div>
 
                                 <div id="campiAzienda"

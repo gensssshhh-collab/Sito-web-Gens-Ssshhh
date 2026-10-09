@@ -81,6 +81,7 @@ function controllaAggiornamentoApp() {
 
 function inizializzaNotifichePush() {
     if (pushNotificationsInitialized || !window.Capacitor || !window.Capacitor.Plugins) return;
+    if (curEmail && localStorage.getItem('gens_push_enabled_' + curEmail.toLowerCase()) === 'false') return;
 
     var PushNotifications = window.Capacitor.Plugins.PushNotifications;
     localNotificationsPlugin = window.Capacitor.Plugins.LocalNotifications || null;
@@ -101,6 +102,8 @@ function inizializzaNotifichePush() {
     }
 
     PushNotifications.addListener('registration', function (token) {
+        if (localStorage.getItem('gens_push_enabled_' + curEmail.toLowerCase()) === 'false') return;
+        localStorage.setItem('gens_push_token_' + curEmail.toLowerCase(), token.value);
         chiamaServer('registraTokenPush', {
             email: curEmail,
             token: token.value,
@@ -151,6 +154,7 @@ function inizializzaNotifichePush() {
             });
         }
         console.warn('Permesso notifiche non concesso.');
+        localStorage.setItem('gens_push_enabled_' + curEmail.toLowerCase(), 'false');
     }).catch(function (error) {
         console.error('Impossibile richiedere il permesso notifiche:', error);
     });
@@ -593,30 +597,119 @@ function renderReportView() {
 }
 
 function renderConfigurazioneView() {
-    var list = document.getElementById('configList');
-    if (!list) return;
+    var user = (window.__gensAppData && window.__gensAppData.utente) || {};
+    var accountStatus = document.getElementById('configAccountStatus');
+    var memberStatus = document.getElementById('configSocioStato');
+    var memberNumber = document.getElementById('configNumeroTessera');
+    var expiry = document.getElementById('configScadenza');
+    var profileSummary = document.getElementById('configProfiloRiepilogo');
+    if (accountStatus) accountStatus.innerText = user.isAdmin ? 'Amministratore' : 'Area personale';
+    if (memberStatus) memberStatus.innerText = user.stato || (user.isAdmin ? 'ATTIVO' : 'Socio');
+    if (memberNumber) memberNumber.innerText = user.tessera || '-';
+    if (expiry) expiry.innerText = user.scadenza || 'Non disponibile';
+    if (profileSummary) profileSummary.innerText = [user.nome, user.cognome, curEmail].filter(Boolean).join(' · ');
 
-    var config = [
-        { nome: 'Notifiche push', stato: 'Attive', dettaglio: 'Android e browser sincronizzati' },
-        { nome: 'Autorizzazioni documenti', stato: 'Verificate', dettaglio: 'Accesso riservato agli utenti attivi' },
-        { nome: 'Aggiornamento app', stato: 'OK', dettaglio: 'Versione installata allineata' },
-        { nome: 'Sincronizzazione calendario', stato: 'Online', dettaglio: 'Ultimo refresh 2 minuti fa' }
-    ];
+    var pushToggle = document.getElementById('configPushToggle');
+    var pushStatus = document.getElementById('configPushStatus');
+    var pushAvailable = Boolean(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications);
+    if (pushToggle) {
+        pushToggle.disabled = !pushAvailable;
+        pushToggle.checked = pushAvailable && localStorage.getItem('gens_push_enabled_' + curEmail.toLowerCase()) !== 'false';
+    }
+    if (pushStatus) {
+        pushStatus.innerText = pushAvailable
+            ? (pushToggle.checked ? 'Attive su questo dispositivo' : 'Disattivate su questo dispositivo')
+            : 'Disponibili nell’app Android installata';
+    }
 
-    document.getElementById('configModuli').innerText = String(config.length);
-    document.getElementById('configNotifiche').innerText = String(config.filter(function (item) { return item.nome.toLowerCase().indexOf('notifica') >= 0; }).length);
-    document.getElementById('configSync').innerText = 'OK';
+    var passwordForm = document.getElementById('configPasswordForm');
+    if (passwordForm && !passwordForm.dataset.handlerAttached) {
+        passwordForm.dataset.handlerAttached = 'true';
+        passwordForm.addEventListener('submit', salvaPasswordConfigurazione);
+    }
+}
 
-    list.innerHTML = config.map(function (item) {
-        return '<article class="calendar-item">' +
-            '<div class="calendar-date-pill"><span>SET</span><strong>' + item.stato.charAt(0).toUpperCase() + '</strong></div>' +
-            '<div class="calendar-item-body">' +
-            '<span class="calendar-tag">' + item.stato + '</span>' +
-            '<h4>' + item.nome + '</h4>' +
-            '<p>' + item.dettaglio + '</p>' +
-            '</div>' +
-            '</article>';
-    }).join('') || '<p class="notification-empty">Nessuna impostazione disponibile.</p>';
+async function salvaPasswordConfigurazione(event) {
+    event.preventDefault();
+    var form = event.currentTarget;
+    var message = document.getElementById('configPasswordMessage');
+    var oldPass = form.elements.oldPass.value;
+    var newPass = form.elements.newPass.value;
+    var confirmPass = form.elements.confirmPass.value;
+    if (newPass.length < 8) {
+        message.textContent = 'La nuova password deve contenere almeno 8 caratteri.';
+        return;
+    }
+    if (newPass !== confirmPass) {
+        message.textContent = 'Le nuove password non coincidono.';
+        return;
+    }
+    var button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    message.textContent = 'Aggiornamento in corso…';
+    var result = await chiamaServer('cambiaPassword', { email: curEmail, oldPass: oldPass, newPass: newPass }, true).catch(function (error) {
+        message.textContent = error.message || 'Non è stato possibile aggiornare la password.';
+        return null;
+    });
+    button.disabled = false;
+    if (result === 'CAMBIO_OK') {
+        curPass = newPass;
+        localStorage.setItem('gens_pass', newPass);
+        form.reset();
+        message.textContent = 'Password aggiornata.';
+    } else if (result === 'ERRORE_CREDENZIALI') {
+        message.textContent = 'La password attuale non è corretta.';
+    } else if (result) {
+        message.textContent = 'Non è stato possibile aggiornare la password (' + result + ').';
+    }
+}
+
+async function impostaNotifichePush(abilitate) {
+    var key = 'gens_push_enabled_' + curEmail.toLowerCase();
+    var tokenKey = 'gens_push_token_' + curEmail.toLowerCase();
+    var toggle = document.getElementById('configPushToggle');
+    var status = document.getElementById('configPushStatus');
+    if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.PushNotifications) {
+        if (toggle) toggle.checked = false;
+        if (status) status.innerText = 'Disponibili nell’app Android installata';
+        return;
+    }
+
+    localStorage.setItem(key, abilitate ? 'true' : 'false');
+    if (abilitate) {
+        if (status) status.innerText = 'Richiesta di attivazione…';
+        if (!pushNotificationsInitialized) {
+            inizializzaNotifichePush();
+            if (status) status.innerText = 'Richiesta di attivazione…';
+            return;
+        }
+        try {
+            var PushNotifications = window.Capacitor.Plugins.PushNotifications;
+            var permission = await PushNotifications.requestPermissions();
+            if (permission.receive !== 'granted') throw new Error('Permesso notifiche non concesso.');
+            if (localNotificationsPlugin) await localNotificationsPlugin.requestPermissions();
+            await PushNotifications.register();
+            if (status) status.innerText = 'Attive su questo dispositivo';
+        } catch (error) {
+            localStorage.setItem(key, 'false');
+            if (toggle) toggle.checked = false;
+            if (status) status.innerText = error.message || 'Impossibile attivare le notifiche.';
+        }
+        return;
+    }
+
+    try {
+        var result = await chiamaServer('rimuoviTokenPush', { email: curEmail, password: curPass }, true);
+        if (result !== 'TOKEN_RIMOSSO') throw new Error(result || 'Token push non rimosso.');
+        localStorage.removeItem(tokenKey);
+        if (status) status.innerText = 'Disattivate su questo dispositivo';
+        showToast('Notifiche push disattivate su questo dispositivo.', 'success');
+    } catch (error) {
+        localStorage.setItem(key, 'true');
+        if (toggle) toggle.checked = true;
+        if (status) status.innerText = 'Disattivazione non riuscita. Riprova.';
+        showToast('Non è stato possibile disattivare le notifiche push.', 'error');
+    }
 }
 
 function renderAdminView() {
@@ -1582,6 +1675,8 @@ function setVoto(nuovoStato) {
 /* --- FUNZIONI ADMIN AGGIORNATE --- */
 
 var cacheSoci = []; // Memoria temporanea per i dati dei soci
+var cacheSociFattura = [];
+var sociFatturaRequest = null;
 
 function switchAdminTab(tabId, el) {
     document.querySelectorAll('.admin-tab-content').forEach(x => x.classList.add('hidden'));
@@ -1603,6 +1698,9 @@ function switchAdminTab(tabId, el) {
     }
     if (tabId === 'tabBilancioAdmin') {
         caricaContiDalNuovoFoglio();
+    }
+    if (tabId === 'tabFatture') {
+        caricaSociFattura();
     }
 }
 
@@ -2955,14 +3053,104 @@ function creaEScaricaFattura(emailSocio, numFattura, importo, causale) {
 
 
 /* --- LOGICA GENERATORE XML FATTURE --- */
+function caricaSociFattura() {
+    var input = document.getElementById('xmlSocioSearch');
+    if (!input) return;
+    if (!input.dataset.handlerAttached) {
+        input.dataset.handlerAttached = 'true';
+        input.addEventListener('input', function () {
+            document.getElementById('xmlEmail').value = '';
+            document.getElementById('xmlSocioSelected').textContent = '';
+            aggiornaSuggerimentiSociFattura();
+        });
+        input.addEventListener('focus', aggiornaSuggerimentiSociFattura);
+        document.addEventListener('click', function (event) {
+            var picker = document.querySelector('.invoice-member-picker');
+            if (picker && !picker.contains(event.target)) chiudiSuggerimentiSociFattura();
+        });
+    }
+    if (cacheSociFattura.length) {
+        aggiornaSuggerimentiSociFattura();
+        return;
+    }
+    if (sociFatturaRequest) return;
+
+    input.placeholder = 'Caricamento soci…';
+    sociFatturaRequest = chiamaServer('getSociPerFattura', [curEmail, curPass], true).then(function (soci) {
+        cacheSociFattura = Array.isArray(soci) ? soci : [];
+        input.placeholder = 'Cerca per nome, cognome o e-mail…';
+        if (!cacheSociFattura.length) showToast('Nessun socio disponibile come destinatario.', 'info');
+        aggiornaSuggerimentiSociFattura();
+    }).catch(function (error) {
+        input.placeholder = 'Impossibile caricare i soci';
+        showToast(error.message || 'Non è stato possibile caricare i soci.', 'error');
+    }).finally(function () {
+        sociFatturaRequest = null;
+    });
+}
+
+function aggiornaSuggerimentiSociFattura() {
+    var input = document.getElementById('xmlSocioSearch');
+    var results = document.getElementById('xmlSocioSuggestions');
+    if (!input || !results) return;
+    var query = input.value.trim().toLocaleLowerCase('it-IT');
+    var matches = cacheSociFattura.filter(function (socio) {
+        var nome = String(socio.nomeCompleto || '').toLocaleLowerCase('it-IT');
+        var email = String(socio.email || '').toLocaleLowerCase('it-IT');
+        return !query || nome.indexOf(query) !== -1 || email.indexOf(query) !== -1;
+    }).slice(0, 10);
+
+    results.replaceChildren();
+    matches.forEach(function (socio) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'invoice-member-option';
+        button.setAttribute('role', 'option');
+        var name = document.createElement('strong');
+        name.textContent = socio.nomeCompleto || [socio.nome, socio.cognome].filter(Boolean).join(' ');
+        var email = document.createElement('small');
+        email.textContent = socio.email;
+        button.append(name, email);
+        button.addEventListener('click', function () {
+            selezionaSocioFattura(socio);
+        });
+        results.appendChild(button);
+    });
+
+    if (!matches.length) {
+        var empty = document.createElement('p');
+        empty.className = 'invoice-member-empty';
+        empty.textContent = 'Nessun socio trovato.';
+        results.appendChild(empty);
+    }
+    results.classList.remove('hidden');
+    input.setAttribute('aria-expanded', 'true');
+}
+
+function selezionaSocioFattura(socio) {
+    document.getElementById('xmlEmail').value = socio.email;
+    document.getElementById('xmlSocioSearch').value = socio.nomeCompleto || [socio.nome, socio.cognome].filter(Boolean).join(' ');
+    document.getElementById('xmlSocioSelected').textContent = socio.email;
+    chiudiSuggerimentiSociFattura();
+}
+
+function chiudiSuggerimentiSociFattura() {
+    var results = document.getElementById('xmlSocioSuggestions');
+    var input = document.getElementById('xmlSocioSearch');
+    if (results) results.classList.add('hidden');
+    if (input) input.setAttribute('aria-expanded', 'false');
+}
+
 function cambiaTipoFattura() {
     var tipo = document.getElementById("xmlTipoCliente").value;
     if (tipo === "socio") {
         document.getElementById("campiSocio").style.display = "block";
         document.getElementById("campiAzienda").style.display = "none";
+        caricaSociFattura();
     } else {
         document.getElementById("campiSocio").style.display = "none";
         document.getElementById("campiAzienda").style.display = "flex";
+        chiudiSuggerimentiSociFattura();
     }
 }
 
@@ -2976,6 +3164,8 @@ function avviaCreazioneXML() {
         importo: document.getElementById("xmlImporto").value,
         causale: document.getElementById("xmlCausale").value,
         email: document.getElementById("xmlEmail").value,
+        adminEmail: curEmail,
+        password: curPass,
         ragioneSociale: document.getElementById("xmlRagioneSociale").value,
         piva: document.getElementById("xmlPIVA").value,
         sdi: document.getElementById("xmlSDI").value || "0000000",
@@ -2988,6 +3178,9 @@ function avviaCreazioneXML() {
     if (!payload.numero || !payload.importo || !payload.causale) {
         return showToast("Compila Numero, Importo e Causale", "error");
     }
+    if (payload.tipoCliente === 'socio' && !payload.email) {
+        return showToast('Cerca e seleziona il socio destinatario dalla lista.', 'error');
+    }
 
     btn.disabled = true; btn.innerText = "Generazione in corso..."; btn.style.opacity = "0.7";
     showToast("Creazione XML e PDF in corso...", "info");
@@ -2996,6 +3189,10 @@ function avviaCreazioneXML() {
         btn.disabled = false; btn.innerText = "SCARICA FATTURA (XML + PDF)"; btn.style.opacity = "1";
 
         // Ora il server ci risponde con un oggetto strutturato, controlliamo se c'è un errore
+        if (!res) {
+            showToast('Fattura non generata. Controlla la connessione e riprova.', 'error');
+            return;
+        }
         if (res.errore) {
             showToast(res.errore, "error");
             return;
@@ -3020,7 +3217,13 @@ function avviaCreazioneXML() {
             aXml.click();
             document.body.removeChild(aXml);
 
-            showToast("✅ Fattura ed XML generati con successo!", "success");
+            if (payload.tipoCliente === 'socio' && res.emailInviata) {
+                showToast('Fattura inviata a ' + res.emailDestinatario + '; XML e PDF scaricati.', 'success');
+            } else if (payload.tipoCliente === 'socio') {
+                showToast('Fattura generata e scaricata, ma la mail non è partita: ' + (res.erroreInvioEmail || 'verifica il destinatario e riprova.'), 'error');
+            } else {
+                showToast('Fattura ed XML generati con successo!', 'success');
+            }
         }, 800);
 
     });

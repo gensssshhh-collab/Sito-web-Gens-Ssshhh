@@ -249,6 +249,168 @@
   }
 }
 
+.configuration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.config-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.config-panel .calendar-header-row {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.config-panel h3 {
+  margin: 2px 0 0;
+  color: var(--navy);
+  font-size: 16px;
+}
+
+.config-panel-copy {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.config-form {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+}
+
+.config-action {
+  width: auto;
+  min-height: 40px;
+  height: auto;
+  margin: 6px 0 0;
+  padding: 9px 14px;
+}
+
+.config-form .config-action {
+  justify-self: start;
+}
+
+.config-status-message {
+  min-height: 18px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.config-toggle-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  color: var(--navy);
+}
+
+.config-toggle-row span {
+  display: grid;
+  gap: 4px;
+}
+
+.config-toggle-row strong {
+  font-size: 13px;
+}
+
+.config-toggle-row small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.config-toggle-row input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: var(--navy);
+}
+
+.config-account-actions {
+  border-left: 3px solid var(--gold);
+}
+
+.config-logout {
+  color: #9f302b;
+}
+
+.invoice-member-picker {
+  position: relative;
+}
+
+.invoice-member-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(26, 41, 69, 0.14);
+}
+
+.invoice-member-option {
+  display: grid;
+  width: 100%;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  color: var(--navy);
+  text-align: left;
+  cursor: pointer;
+}
+
+.invoice-member-option:hover,
+.invoice-member-option:focus-visible {
+  background: var(--bg-warm);
+}
+
+.invoice-member-option strong {
+  font-size: 13px;
+}
+
+.invoice-member-option small,
+.invoice-member-empty,
+.invoice-member-selected {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.invoice-member-empty {
+  margin: 0;
+  padding: 12px;
+}
+
+.invoice-member-selected {
+  min-height: 16px;
+  margin: 5px 0 0;
+}
+
+@media (max-width: 768px) {
+
+  .configuration-grid,
+  .config-summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (min-width: 981px) {
   #viewHome.active {
     display: grid;

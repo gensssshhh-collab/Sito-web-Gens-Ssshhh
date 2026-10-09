@@ -153,11 +153,45 @@ test('ammissione: crea account solo dopo esito favorevole dei 2/3', () => {
   assert.equal(messages.length, 1);
 });
 
+test('fatture: admin cerca soci attivi e invia XML/PDF con sollecito pagamento', () => {
+  const rows = [
+    ['Nome', 'Password', 'Email', '', 'Cognome', '', '', '', '', '', '', 'Stato Socio'],
+    ['Mario', 'hash', 'mario@example.it', '', 'Rossi', '', '', '', '', '', '', 'ATTIVO'],
+    ['Anna', 'hash', 'anna@example.it', '', 'Bianchi', '', '', '', '', '', '', 'attivo'],
+    ['Paolo', 'hash', 'paolo@example.it', '', 'Blu', '', '', '', '', '', '', 'non attivo']
+  ];
+  const sociSheet = {
+    getLastRow: () => rows.length,
+    getDataRange: () => ({ getValues: () => rows })
+  };
+  let sent = null;
+  const context = {
+    SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: name => name === 'soci' ? sociSheet : null }) },
+    getDatiUtente: email => email === 'admin@example.it' ? { ruolo: 'Tesoriere' } : null,
+    isRuoloAmministrativo: ruolo => String(ruolo).toLowerCase() === 'tesoriere',
+    verificaLogin: dati => dati.password === 'pw' ? 'OK_LOGIN' : 'ERR_AUTH',
+    MailApp: { sendEmail: message => { sent = message; } }
+  };
+  loadScript('Finance.js', context);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(context.getSociPerFattura('admin@example.it', 'pw'))).map(socio => socio.nomeCompleto), ['Anna Bianchi', 'Mario Rossi']);
+  assert.equal(context.getSociPerFattura('admin@example.it', 'bad').length, 0);
+  assert.equal(context.getSociPerFattura('mario@example.it', 'pw').length, 0);
+
+  context.inviaFatturaSocio_({ email: 'mario@example.it', numero: '12/2026', importo: '45', causale: 'Quota associativa' }, 'Mario Rossi', { name: 'Fattura.pdf' }, { name: 'Fattura.xml' });
+  assert.equal(sent.to, 'mario@example.it');
+  assert.equal(sent.attachments.length, 2);
+  assert.match(sent.body, /45\.00/);
+  assert.match(sent.body, /Quota associativa/);
+  assert.match(sent.body, /procedere al pagamento/);
+});
+
 test('notifiche: registra un token una sola volta e invia il canale Android', () => {
   const properties = new Map();
   const requests = [];
   const context = {
     getDatiUtente: () => ({ email: 'mario@example.it' }),
+    verificaLogin: dati => dati.password === 'secret' ? 'OK_LOGIN' : 'ERR_CREDENZIALI',
     PropertiesService: {
       getScriptProperties: () => ({
         getProperty: key => properties.get(key) || null,
@@ -189,6 +223,9 @@ test('notifiche: registra un token una sola volta e invia il canale Android', ()
   const targetedPayload = JSON.parse(requests[1].options.payload);
   assert.equal(targetedPayload.message.notification.title, 'Firma');
   assert.equal(targetedPayload.message.data.viewId, 'viewFirma');
+  assert.equal(context.rimuoviTokenPush({ email: 'mario@example.it', password: 'bad' }), 'ERR_AUTH');
+  assert.equal(context.rimuoviTokenPush({ email: 'mario@example.it', password: 'secret' }), 'TOKEN_RIMOSSO');
+  assert.equal(JSON.parse(properties.get('PUSH_TOKENS'))['mario@example.it'], undefined);
 });
 
 test('votazioni: salva il voto e rifiuta un secondo voto dello stesso socio', () => {
