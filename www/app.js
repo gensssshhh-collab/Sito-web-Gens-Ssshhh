@@ -830,9 +830,9 @@ function togglePass(id) {
     x.type = (x.type === "password") ? "text" : "password";
 }
 
-async function chiamaServer(nomeAzione, parametri = {}, propagaErrore = false) {
+async function chiamaServer(nomeAzione, parametri = {}, propagaErrore = false, timeoutMs = REQUEST_TIMEOUT_MS) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs || REQUEST_TIMEOUT_MS);
     try {
         const response = await fetch(urlWebAppData, {
             method: "POST",
@@ -1701,6 +1701,7 @@ function switchAdminTab(tabId, el) {
     }
     if (tabId === 'tabFatture') {
         caricaSociFattura();
+        preparaCampiFattura();
     }
 }
 
@@ -3063,7 +3064,10 @@ function caricaSociFattura() {
             document.getElementById('xmlSocioSelected').textContent = '';
             aggiornaSuggerimentiSociFattura();
         });
-        input.addEventListener('focus', aggiornaSuggerimentiSociFattura);
+        input.addEventListener('focus', function () {
+            if (!cacheSociFattura.length) caricaSociFattura();
+            else aggiornaSuggerimentiSociFattura();
+        });
         document.addEventListener('click', function (event) {
             var picker = document.querySelector('.invoice-member-picker');
             if (picker && !picker.contains(event.target)) chiudiSuggerimentiSociFattura();
@@ -3076,7 +3080,7 @@ function caricaSociFattura() {
     if (sociFatturaRequest) return;
 
     input.placeholder = 'Caricamento soci…';
-    sociFatturaRequest = chiamaServer('getSociPerFattura', [curEmail, curPass], true).then(function (soci) {
+    sociFatturaRequest = chiamaServer('getSociPerFattura', [curEmail, curPass], true, 45000).then(function (soci) {
         cacheSociFattura = Array.isArray(soci) ? soci : [];
         input.placeholder = 'Cerca per nome, cognome o e-mail…';
         if (!cacheSociFattura.length) showToast('Nessun socio disponibile come destinatario.', 'info');
@@ -3141,6 +3145,37 @@ function chiudiSuggerimentiSociFattura() {
     if (input) input.setAttribute('aria-expanded', 'false');
 }
 
+function preparaCampiFattura() {
+    var deadline = document.getElementById('xmlScadenza');
+    if (deadline && !deadline.value) {
+        var date = new Date();
+        date.setDate(date.getDate() + 15);
+        deadline.value = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    }
+    var method = document.getElementById('xmlMetodoPagamento');
+    var details = document.getElementById('xmlDatiPagamento');
+    if (method && !method.dataset.preferenceLoaded) {
+        method.value = localStorage.getItem('gens_invoice_payment_method') || 'BONIFICO';
+        method.dataset.preferenceLoaded = 'true';
+    }
+    if (details && !details.value) details.value = localStorage.getItem('gens_invoice_payment_details') || '';
+    aggiornaRegimeFattura();
+}
+
+function aggiornaRegimeFattura() {
+    var regime = document.getElementById('xmlRegimeFiscale');
+    var refGroup = document.getElementById('xmlRiferimentoIVAGroup');
+    var refInput = document.getElementById('xmlRiferimentoIVA');
+    var note = document.getElementById('xmlNotaRegime');
+    if (!regime) return;
+    var forfettario = regime.value === 'RF19';
+    if (refGroup) refGroup.classList.toggle('hidden', forfettario);
+    if (refInput) refInput.required = !forfettario;
+    if (note) note.textContent = forfettario
+        ? 'Operazione in franchigia da IVA ai sensi della Legge 190/2014 e successive modificazioni. Bollo virtuale automatico oltre € 77,47.'
+        : 'Per IVA a zero indica la norma esatta applicabile alla natura N4. Il bollo virtuale si applica automaticamente oltre € 77,47.';
+}
+
 function cambiaTipoFattura() {
     var tipo = document.getElementById("xmlTipoCliente").value;
     if (tipo === "socio") {
@@ -3160,6 +3195,11 @@ function avviaCreazioneXML() {
 
     var payload = {
         tipoCliente: document.getElementById("xmlTipoCliente").value,
+        regimeFiscale: document.getElementById("xmlRegimeFiscale").value,
+        riferimentoIVA: document.getElementById("xmlRiferimentoIVA").value.trim(),
+        scadenzaPagamento: document.getElementById("xmlScadenza").value,
+        metodoPagamento: document.getElementById("xmlMetodoPagamento").value,
+        datiPagamento: document.getElementById("xmlDatiPagamento").value.trim(),
         numero: document.getElementById("xmlNumero").value,
         importo: document.getElementById("xmlImporto").value,
         causale: document.getElementById("xmlCausale").value,
@@ -3178,15 +3218,22 @@ function avviaCreazioneXML() {
     if (!payload.numero || !payload.importo || !payload.causale) {
         return showToast("Compila Numero, Importo e Causale", "error");
     }
+    if (payload.causale.trim().length < 12) return showToast('Descrivi con precisione il bene o servizio (almeno 12 caratteri).', 'error');
+    if (payload.causale.trim().length < 12) return showToast('Inserisci una descrizione dettagliata della prestazione (almeno 12 caratteri).', 'error');
+    if (payload.regimeFiscale === 'RF01' && !payload.riferimentoIVA) return showToast('Inserisci il riferimento normativo esatto per l’IVA a zero.', 'error');
+    if (!payload.scadenzaPagamento || !payload.datiPagamento) return showToast('Inserisci scadenza e coordinate di pagamento.', 'error');
     if (payload.tipoCliente === 'socio' && !payload.email) {
         return showToast('Cerca e seleziona il socio destinatario dalla lista.', 'error');
     }
 
-    btn.disabled = true; btn.innerText = "Generazione in corso..."; btn.style.opacity = "0.7";
+    localStorage.setItem('gens_invoice_payment_method', payload.metodoPagamento);
+    localStorage.setItem('gens_invoice_payment_details', payload.datiPagamento);
+
+    btn.disabled = true; btn.innerText = "Generazione e invio in corso..."; btn.style.opacity = "0.7";
     showToast("Creazione XML e PDF in corso...", "info");
 
     chiamaServer("generaFatturaXML", payload).then(function (res) {
-        btn.disabled = false; btn.innerText = "SCARICA FATTURA (XML + PDF)"; btn.style.opacity = "1";
+        btn.disabled = false; btn.innerText = "GENERA, INVIA E SCARICA FATTURA"; btn.style.opacity = "1";
 
         // Ora il server ci risponde con un oggetto strutturato, controlliamo se c'è un errore
         if (!res) {

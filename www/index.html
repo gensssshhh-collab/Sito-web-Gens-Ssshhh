@@ -1664,6 +1664,23 @@
                                     </div>
                                 </div>
 
+                                <div class="invoice-tax-settings">
+                                    <label for="xmlRegimeFiscale" class="invoice-field-label">Regime fiscale della
+                                        fattura</label>
+                                    <select id="xmlRegimeFiscale" class="form-input" onchange="aggiornaRegimeFattura()">
+                                        <option value="RF01" selected>RF01 · Ordinario</option>
+                                        <option value="RF19">RF19 · Forfettario</option>
+                                    </select>
+                                    <div id="xmlRiferimentoIVAGroup">
+                                        <label for="xmlRiferimentoIVA" class="invoice-field-label">Riferimento normativo
+                                            IVA a zero (N4)</label>
+                                        <input type="text" id="xmlRiferimentoIVA" class="form-input"
+                                            placeholder="Inserisci la norma esatta applicabile">
+                                    </div>
+                                    <p id="xmlNotaRegime" class="invoice-help-text">Con RF01 indica il riferimento
+                                        normativo esatto per la natura N4.</p>
+                                </div>
+
                                 <div style="display:flex; gap:15px; margin-top:5px;">
                                     <div style="flex:1;">
                                         <label style="font-size:12px; font-weight:bold; color:#475569;">Numero
@@ -1680,15 +1697,40 @@
                                 </div>
 
                                 <div>
-                                    <label style="font-size:12px; font-weight:bold; color:#475569;">Causale</label>
+                                    <label style="font-size:12px; font-weight:bold; color:#475569;">Descrizione
+                                        dettagliata del bene o servizio</label>
                                     <input type="text" id="xmlCausale" class="form-input"
-                                        placeholder="es. Sponsorizzazione Evento" style="width:100%;">
+                                        placeholder="Es. Quota associativa annuale 2026" minlength="12" maxlength="250"
+                                        style="width:100%;">
+                                </div>
+
+                                <div class="invoice-payment-settings">
+                                    <h4>Pagamento</h4>
+                                    <div class="invoice-payment-grid">
+                                        <label>Scadenza
+                                            <input type="date" id="xmlScadenza" class="form-input" required>
+                                        </label>
+                                        <label>Metodo
+                                            <select id="xmlMetodoPagamento" class="form-input">
+                                                <option value="BONIFICO" selected>Bonifico bancario</option>
+                                                <option value="PAYPAL">PayPal</option>
+                                                <option value="SATISPAY">Satispay</option>
+                                                <option value="CONTANTI">Contanti</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                    <label for="xmlDatiPagamento" class="invoice-field-label">IBAN o riferimento per il
+                                        pagamento</label>
+                                    <input type="text" id="xmlDatiPagamento" class="form-input"
+                                        placeholder="IBAN / indirizzo PayPal / riferimento Satispay" required>
+                                    <p class="invoice-help-text">Metodo e coordinate vengono stampati nel PDF e inclusi
+                                        nella mail.</p>
                                 </div>
 
                                 <button id="btnGeneraXML" class="btn-primary"
                                     style="background:#10b981; margin-top:10px; padding:12px; font-weight:bold;"
                                     onclick="avviaCreazioneXML()">
-                                    SCARICA FILE XML
+                                    GENERA, INVIA E SCARICA FATTURA
                                 </button>
                             </div>
                         </div>
@@ -1726,785 +1768,769 @@
                                 </div>
                             </div>
 
-                            <div id="manualSelector" class="hidden"
-                                style="margin-bottom:20px; border:1px solid #cbd5e1; border-radius:8px; padding:15px; background:#f8fafc;">
-                                <div style="font-size:12px; font-weight:bold; color:#64748b; margin-bottom:10px;">
-                                    SELEZIONA I SOCI DA ELENCO</div>
+                            <div style="font-size:12px; font-weight:bold; color:#64748b; margin-bottom:10px;">
+                                SELEZIONA I SOCI DA ELENCO</div>
 
-                                <input type="text" id="searchManualSocio" class="form-input" placeholder="Cerca nome..."
-                                    onkeyup="filtraTabellaManuale()"
-                                    style="margin-bottom:10px; font-size:12px; padding:8px;">
-
-                                <div
-                                    style="max-height:200px; overflow-y:auto; background:white; border:1px solid #e2e8f0; border-radius:6px;">
-                                    <table style="width:100%; border-collapse:collapse; font-size:12px;"
-                                        id="tableManualSign">
-                                    </table>
-                                </div>
-                                <div style="margin-top:5px; font-size:11px; color:#64748b; text-align:right;">
-                                    Selezionati: <b id="countSelected">0</b>
-                                </div>
-                            </div>
+                            <input type="text" id="searchManualSocio" class="form-input" placeholder="Cerca nome..."
+                                onkeyup="filtraTabellaManuale()"
+                                style="margin-bottom:10px; font-size:12px; padding:8px;">
 
                             <div
-                                style="border:2px dashed #cbd5e1; padding:20px; text-align:center; border-radius:8px; margin-bottom:15px; background:#f8fafc;">
-                                <input type="file" id="signFileInput" accept="application/pdf">
-                                <p style="font-size:12px; color:#64748b; margin-top:5px;">Solo file PDF</p>
+                                style="max-height:200px; overflow-y:auto; background:white; border:1px solid #e2e8f0; border-radius:6px;">
+                                <table style="width:100%; border-collapse:collapse; font-size:12px;"
+                                    id="tableManualSign">
+                                </table>
                             </div>
-
-                            <button class="btn-primary" onclick="adminInviaFirma()">INVIA RICHIESTA</button>
+                            <div style="margin-top:5px; font-size:11px; color:#64748b; text-align:right;">
+                                Selezionati: <b id="countSelected">0</b>
+                            </div>
                         </div>
 
                         <div
-                            style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border);">
-                            <div
-                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                                <h3 style="margin:0; font-size:16px;">📊 Stato Avanzamento</h3>
-                                <button class="btn-secondary" style="width:auto; padding:5px 10px; font-size:11px;"
-                                    onclick="caricaStatsFirme()">🔄 Aggiorna</button>
-                            </div>
-
-                            <div id="containerStatsFirme">
-                                <div class="loader"></div>
-                            </div>
+                            style="border:2px dashed #cbd5e1; padding:20px; text-align:center; border-radius:8px; margin-bottom:15px; background:#f8fafc;">
+                            <input type="file" id="signFileInput" accept="application/pdf">
+                            <p style="font-size:12px; color:#64748b; margin-top:5px;">Solo file PDF</p>
                         </div>
 
+                        <button class="btn-primary" onclick="adminInviaFirma()">INVIA RICHIESTA</button>
                     </div>
 
-                    <div id="tabSoci" class="admin-tab-content hidden">
+                    <div style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border);">
                         <div
-                            style="background:#fff; padding:15px; border-radius:10px; border:1px solid var(--border); margin-bottom:15px; position:sticky; top:0; z-index:10; box-shadow:0 5px 15px rgba(0,0,0,0.05);">
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <span style="font-size:20px;">🔎</span>
-                                <input type="text" id="searchSocio" class="form-input"
-                                    placeholder="Cerca socio per nome, tessera o email..." onkeyup="filtraSoci()"
-                                    style="margin:0; border:none; background:transparent; font-size:16px;">
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0; font-size:16px;">📊 Stato Avanzamento</h3>
+                            <button class="btn-secondary" style="width:auto; padding:5px 10px; font-size:11px;"
+                                onclick="caricaStatsFirme()">🔄 Aggiorna</button>
+                        </div>
+
+                        <div id="containerStatsFirme">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="tabSoci" class="admin-tab-content hidden">
+                    <div
+                        style="background:#fff; padding:15px; border-radius:10px; border:1px solid var(--border); margin-bottom:15px; position:sticky; top:0; z-index:10; box-shadow:0 5px 15px rgba(0,0,0,0.05);">
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <span style="font-size:20px;">🔎</span>
+                            <input type="text" id="searchSocio" class="form-input"
+                                placeholder="Cerca socio per nome, tessera o email..." onkeyup="filtraSoci()"
+                                style="margin:0; border:none; background:transparent; font-size:16px;">
+                        </div>
+                    </div>
+
+                    <div style="overflow-x:auto; background:white; border-radius:10px; border:1px solid var(--border);">
+                        <table style="width:100%; border-collapse:collapse; font-size:13px;" id="tabellaSoci">
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ================= NUOVO TAB ADMIN ELEZIONI (MULTI-CAMPAGNA) ================= -->
+                <div id="tabElez" class="admin-tab-content hidden">
+
+                    <!-- INTESTATURA E BOTTONE CREA -->
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:white; padding:20px; border-radius:12px; border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                        <div>
+                            <h3 style="margin:0; font-size:18px; color:#0f172a;">🗳️ Gestione Consultazioni</h3>
+                            <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Crea referendum o votazioni
+                                per cariche sociali indipendenti.</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <button type="button" class="compact-action" onclick="configuraTriggerAmmissioniUI()">Attiva
+                                automazioni iscrizioni</button>
+                            <button class="btn-primary"
+                                style="width:auto; padding:10px 20px; background:#10b981; font-weight:bold; font-size:13px;"
+                                onclick="apriModaleCreaElezione()">
+                                + NUOVA CONSULTAZIONE
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- LISTA DELLE ELEZIONI CREATE -->
+                    <div style="background:white; padding:20px; border-radius:12px; border:1px solid var(--border);">
+                        <h4 style="margin-top:0; font-size:14px; color:#334155; margin-bottom:15px;">Campagne
+                            Elettorali e Referendum</h4>
+
+                        <div id="listaCampagneAdmin" style="display:grid; gap:15px;">
+                            <!-- Qui il JS inserirà le "Card" delle elezioni -->
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+
+
+
+
+                    <!-- GESTIONE AMMISSIONI (Mantenuto) -->
+                    <div id="boxGestioneAmmissioni"
+                        style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border); margin-top:20px; display:none;">
+                        <div
+                            style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; border-bottom:1px solid #f1f5f9; padding-bottom:15px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span style="font-size:24px;">⚖️</span>
+                                <div>
+                                    <h3 style="margin:0; font-size:16px; color:#c2410c;">Richieste di iscrizione
+                                    </h3>
+                                    <p style="margin:0; font-size:12px; color:#64748b;">Avvalli, scadenze e
+                                        votazioni programmate.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="listaAmmissioniAdmin" style="display:grid; gap:10px;"></div>
+                    </div>
+
+
+
+                    <!-- GESTIONE CANDIDATURE A RUOLI SOCIALI -->
+                    <div
+                        style="background:white; padding:20px; border-radius:12px; border:1px solid var(--border); margin-bottom: 25px;">
+                        <h4 style="margin-top:0; font-size:15px; color:#0f172a; margin-bottom:15px;">👔 Candidature
+                            a Cariche Sociali in Attesa</h4>
+                        <div id="listaCandidaturePendentiAdmin">
+                            <p style="font-size:12px; color:#64748b;">Nessuna candidatura in attesa di approvazione.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <!-- ================= FINE TAB ADMIN ELEZIONI ================= -->
+
+
+                <div id="tabBilancioAdmin" class="admin-tab-content hidden">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <div>
+                            <h3 style="margin:0; color:#0f172a; font-size:18px;">Contabilità & Prima Nota</h3>
+                            <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Registrazione movimenti a
+                                partita doppia con quadratura automatica.</p>
+                        </div>
+                        <button class="btn-secondary"
+                            style="width:auto; font-size:12px; padding:8px 16px; background:#fff;"
+                            onclick="scaricaExcel()">📥 EXPORT CSV/EXCEL</button>
+                    </div>
+
+                    <!-- BOX PRINCIPALE DI INSERIMENTO -->
+                    <div
+                        style="background:white; padding:25px; border-radius:12px; border:1px solid var(--border); margin-bottom:25px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.02);">
+
+                        <!-- RIGA 1: DATI GENERALI -->
+                        <div
+                            style="display:grid; grid-template-columns: 1.2fr 1.2fr 1.5fr; gap:15px; margin-bottom:15px;">
+                            <div>
+                                <label class="form-label" style="font-weight:600; font-size:11px; color:#475569;">DATA
+                                    OPERAZIONE</label>
+                                <input type="date" id="pdData" class="form-input" style="font-weight:500;">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-weight:600; font-size:11px; color:#475569;">N.
+                                    DOCUMENTO (Opzionale)</label>
+                                <input type="text" id="pdDoc" class="form-input" placeholder="Es. Fatt. 12/A">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-weight:600; font-size:11px; color:#475569;">REGIME
+                                    FISCALE</label>
+                                <select id="pdTipoAtt" class="form-input" style="font-weight:500;">
+                                    <option value="Istituzionale">🏛️ Istituzionale (No Tasse)</option>
+                                    <option value="Commerciale">💼 Commerciale (Sì IVA)</option>
+                                </select>
                             </div>
                         </div>
 
+                        <!-- RIGA 2: DESCRIZIONE E CONTROPARTE CON AUTOCOMPLETAMENTO -->
                         <div
-                            style="overflow-x:auto; background:white; border-radius:10px; border:1px solid var(--border);">
-                            <table style="width:100%; border-collapse:collapse; font-size:13px;" id="tabellaSoci">
+                            style="display:grid; grid-template-columns: 2fr 1.5fr 1.2fr; gap:15px; margin-bottom:20px;">
+                            <div>
+                                <label class="form-label"
+                                    style="font-weight:600; font-size:11px; color:#475569;">DESCRIZIONE
+                                    GENERALE</label>
+                                <input type="text" id="pdDesc" class="form-input"
+                                    placeholder="Es. Pagamento utenze energia elettrica sede">
+                            </div>
+                            <div>
+                                <label class="form-label"
+                                    style="font-weight:600; font-size:11px; color:#475569;">FORNITORE / CLIENTE
+                                    (Controparte)</label>
+                                <!-- Input collegato alla datalist dinamica -->
+                                <input type="text" id="pdContro" class="form-input" list="listaFornitoriDatalist"
+                                    placeholder="Inizia a digitare il nome..." onchange="autocompilaCF(this.value)">
+                                <datalist id="listaFornitoriDatalist">
+                                    <!-- Popolato dinamicamente da JS -->
+                                </datalist>
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-weight:600; font-size:11px; color:#475569;">CF
+                                    / PARTITA IVA</label>
+                                <input type="text" id="pdCF" class="form-input" placeholder="Compilazione automatica">
+                            </div>
+                        </div>
+
+                        <!-- SEZIONE RIGHE DARE / AVERE -->
+                        <div
+                            style="background:#f8fafc; padding:20px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:20px;">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <span
+                                    style="font-weight:700; color:#334155; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">Dettaglio
+                                    Voci (Dare / Avere)</span>
+                                <button class="btn-secondary"
+                                    style="padding:6px 14px; font-size:12px; background:white; font-weight:600; color:#2563eb; border-color:#cbd5e1;"
+                                    onclick="aggiungiRigaPD()">➕ Aggiungi Riga Contabile</button>
+                            </div>
+
+                            <div
+                                style="display:grid; grid-template-columns: 3fr 1.2fr 2fr 40px; gap:12px; margin-bottom:8px; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">
+                                <div>Conto di Riferimento</div>
+                                <div>Sezione</div>
+                                <div>Importo (€)</div>
+                                <div></div>
+                            </div>
+
+                            <!-- Contenitore delle righe dinamiche -->
+                            <div id="contenitoreRighePD" style="display:flex; flex-direction:column; gap:10px;">
+                            </div>
+
+                            <!-- BARRA DEI TOTALI E QUADRATURA -->
+                            <div
+                                style="margin-top:18px; padding-top:15px; border-top:1px dashed #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
+                                <div id="boxSbilancio"
+                                    style="color:#b45309; font-weight:600; font-size:12px; display:none; background:#fef3c7; padding:6px 12px; border-radius:6px; border:1px solid #fcd34d;">
+                                    ⚠️ Sbilancio rilevato: <span id="valSbilancio" style="font-weight:bold;">0.00</span>
+                                    €
+                                </div>
+                                <div style="display:flex; gap:25px; margin-left:auto; font-size:13px;">
+                                    <div>Totale DARE: <b id="totDare" style="color:#dc2626; font-size:15px;">0.00
+                                            €</b></div>
+                                    <div>Totale AVERE: <b id="totAvere" style="color:#16a34a; font-size:15px;">0.00
+                                            €</b></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BOTTONE DI SALVATAGGIO -->
+                        <button id="btnSalvaPD" class="btn-primary" onclick="salvaMovimentoComposto()" disabled
+                            style="opacity:0.5; width:100%; padding:14px; font-size:14px; font-weight:bold; background:#94a3b8; transition:all 0.3s;">
+                            ⏳ INSERISCI GLI IMPORTI PER REGISTRARE
+                        </button>
+                    </div>
+
+                    <!-- ULTIME REGISTRAZIONI -->
+                    <div style="background:white; padding:20px; border-radius:12px; border:1px solid var(--border);">
+                        <h4 style="margin-top:0; color:#334155; font-size:15px; margin-bottom:15px;">Ultime
+                            Registrazioni in Contabilità</h4>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:12px;"
+                                id="tabellaMovimentiPD">
+                                <!-- Popolato via JS -->
                             </table>
                         </div>
                     </div>
-
-                    <!-- ================= NUOVO TAB ADMIN ELEZIONI (MULTI-CAMPAGNA) ================= -->
-                    <div id="tabElez" class="admin-tab-content hidden">
-
-                        <!-- INTESTATURA E BOTTONE CREA -->
-                        <div
-                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:white; padding:20px; border-radius:12px; border:1px solid var(--border); box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                            <div>
-                                <h3 style="margin:0; font-size:18px; color:#0f172a;">🗳️ Gestione Consultazioni</h3>
-                                <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Crea referendum o votazioni
-                                    per cariche sociali indipendenti.</p>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                                <button type="button" class="compact-action"
-                                    onclick="configuraTriggerAmmissioniUI()">Attiva automazioni iscrizioni</button>
-                                <button class="btn-primary"
-                                    style="width:auto; padding:10px 20px; background:#10b981; font-weight:bold; font-size:13px;"
-                                    onclick="apriModaleCreaElezione()">
-                                    + NUOVA CONSULTAZIONE
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- LISTA DELLE ELEZIONI CREATE -->
-                        <div
-                            style="background:white; padding:20px; border-radius:12px; border:1px solid var(--border);">
-                            <h4 style="margin-top:0; font-size:14px; color:#334155; margin-bottom:15px;">Campagne
-                                Elettorali e Referendum</h4>
-
-                            <div id="listaCampagneAdmin" style="display:grid; gap:15px;">
-                                <!-- Qui il JS inserirà le "Card" delle elezioni -->
-                                <div class="loader"></div>
-                            </div>
-                        </div>
-
-
-
-
-                        <!-- GESTIONE AMMISSIONI (Mantenuto) -->
-                        <div id="boxGestioneAmmissioni"
-                            style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border); margin-top:20px; display:none;">
-                            <div
-                                style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; border-bottom:1px solid #f1f5f9; padding-bottom:15px; flex-wrap:wrap;">
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <span style="font-size:24px;">⚖️</span>
-                                    <div>
-                                        <h3 style="margin:0; font-size:16px; color:#c2410c;">Richieste di iscrizione
-                                        </h3>
-                                        <p style="margin:0; font-size:12px; color:#64748b;">Avvalli, scadenze e
-                                            votazioni programmate.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="listaAmmissioniAdmin" style="display:grid; gap:10px;"></div>
-                        </div>
-
-
-
-                        <!-- GESTIONE CANDIDATURE A RUOLI SOCIALI -->
-                        <div
-                            style="background:white; padding:20px; border-radius:12px; border:1px solid var(--border); margin-bottom: 25px;">
-                            <h4 style="margin-top:0; font-size:15px; color:#0f172a; margin-bottom:15px;">👔 Candidature
-                                a Cariche Sociali in Attesa</h4>
-                            <div id="listaCandidaturePendentiAdmin">
-                                <p style="font-size:12px; color:#64748b;">Nessuna candidatura in attesa di approvazione.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- ================= FINE TAB ADMIN ELEZIONI ================= -->
-
-
-                    <div id="tabBilancioAdmin" class="admin-tab-content hidden">
-                        <div
-                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                            <div>
-                                <h3 style="margin:0; color:#0f172a; font-size:18px;">Contabilità & Prima Nota</h3>
-                                <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Registrazione movimenti a
-                                    partita doppia con quadratura automatica.</p>
-                            </div>
-                            <button class="btn-secondary"
-                                style="width:auto; font-size:12px; padding:8px 16px; background:#fff;"
-                                onclick="scaricaExcel()">📥 EXPORT CSV/EXCEL</button>
-                        </div>
-
-                        <!-- BOX PRINCIPALE DI INSERIMENTO -->
-                        <div
-                            style="background:white; padding:25px; border-radius:12px; border:1px solid var(--border); margin-bottom:25px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.02);">
-
-                            <!-- RIGA 1: DATI GENERALI -->
-                            <div
-                                style="display:grid; grid-template-columns: 1.2fr 1.2fr 1.5fr; gap:15px; margin-bottom:15px;">
-                                <div>
-                                    <label class="form-label"
-                                        style="font-weight:600; font-size:11px; color:#475569;">DATA OPERAZIONE</label>
-                                    <input type="date" id="pdData" class="form-input" style="font-weight:500;">
-                                </div>
-                                <div>
-                                    <label class="form-label" style="font-weight:600; font-size:11px; color:#475569;">N.
-                                        DOCUMENTO (Opzionale)</label>
-                                    <input type="text" id="pdDoc" class="form-input" placeholder="Es. Fatt. 12/A">
-                                </div>
-                                <div>
-                                    <label class="form-label"
-                                        style="font-weight:600; font-size:11px; color:#475569;">REGIME FISCALE</label>
-                                    <select id="pdTipoAtt" class="form-input" style="font-weight:500;">
-                                        <option value="Istituzionale">🏛️ Istituzionale (No Tasse)</option>
-                                        <option value="Commerciale">💼 Commerciale (Sì IVA)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- RIGA 2: DESCRIZIONE E CONTROPARTE CON AUTOCOMPLETAMENTO -->
-                            <div
-                                style="display:grid; grid-template-columns: 2fr 1.5fr 1.2fr; gap:15px; margin-bottom:20px;">
-                                <div>
-                                    <label class="form-label"
-                                        style="font-weight:600; font-size:11px; color:#475569;">DESCRIZIONE
-                                        GENERALE</label>
-                                    <input type="text" id="pdDesc" class="form-input"
-                                        placeholder="Es. Pagamento utenze energia elettrica sede">
-                                </div>
-                                <div>
-                                    <label class="form-label"
-                                        style="font-weight:600; font-size:11px; color:#475569;">FORNITORE / CLIENTE
-                                        (Controparte)</label>
-                                    <!-- Input collegato alla datalist dinamica -->
-                                    <input type="text" id="pdContro" class="form-input" list="listaFornitoriDatalist"
-                                        placeholder="Inizia a digitare il nome..." onchange="autocompilaCF(this.value)">
-                                    <datalist id="listaFornitoriDatalist">
-                                        <!-- Popolato dinamicamente da JS -->
-                                    </datalist>
-                                </div>
-                                <div>
-                                    <label class="form-label" style="font-weight:600; font-size:11px; color:#475569;">CF
-                                        / PARTITA IVA</label>
-                                    <input type="text" id="pdCF" class="form-input"
-                                        placeholder="Compilazione automatica">
-                                </div>
-                            </div>
-
-                            <!-- SEZIONE RIGHE DARE / AVERE -->
-                            <div
-                                style="background:#f8fafc; padding:20px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:20px;">
-                                <div
-                                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                                    <span
-                                        style="font-weight:700; color:#334155; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">Dettaglio
-                                        Voci (Dare / Avere)</span>
-                                    <button class="btn-secondary"
-                                        style="padding:6px 14px; font-size:12px; background:white; font-weight:600; color:#2563eb; border-color:#cbd5e1;"
-                                        onclick="aggiungiRigaPD()">➕ Aggiungi Riga Contabile</button>
-                                </div>
-
-                                <div
-                                    style="display:grid; grid-template-columns: 3fr 1.2fr 2fr 40px; gap:12px; margin-bottom:8px; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">
-                                    <div>Conto di Riferimento</div>
-                                    <div>Sezione</div>
-                                    <div>Importo (€)</div>
-                                    <div></div>
-                                </div>
-
-                                <!-- Contenitore delle righe dinamiche -->
-                                <div id="contenitoreRighePD" style="display:flex; flex-direction:column; gap:10px;">
-                                </div>
-
-                                <!-- BARRA DEI TOTALI E QUADRATURA -->
-                                <div
-                                    style="margin-top:18px; padding-top:15px; border-top:1px dashed #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
-                                    <div id="boxSbilancio"
-                                        style="color:#b45309; font-weight:600; font-size:12px; display:none; background:#fef3c7; padding:6px 12px; border-radius:6px; border:1px solid #fcd34d;">
-                                        ⚠️ Sbilancio rilevato: <span id="valSbilancio"
-                                            style="font-weight:bold;">0.00</span> €
-                                    </div>
-                                    <div style="display:flex; gap:25px; margin-left:auto; font-size:13px;">
-                                        <div>Totale DARE: <b id="totDare" style="color:#dc2626; font-size:15px;">0.00
-                                                €</b></div>
-                                        <div>Totale AVERE: <b id="totAvere" style="color:#16a34a; font-size:15px;">0.00
-                                                €</b></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- BOTTONE DI SALVATAGGIO -->
-                            <button id="btnSalvaPD" class="btn-primary" onclick="salvaMovimentoComposto()" disabled
-                                style="opacity:0.5; width:100%; padding:14px; font-size:14px; font-weight:bold; background:#94a3b8; transition:all 0.3s;">
-                                ⏳ INSERISCI GLI IMPORTI PER REGISTRARE
-                            </button>
-                        </div>
-
-                        <!-- ULTIME REGISTRAZIONI -->
-                        <div
-                            style="background:white; padding:20px; border-radius:12px; border:1px solid var(--border);">
-                            <h4 style="margin-top:0; color:#334155; font-size:15px; margin-bottom:15px;">Ultime
-                                Registrazioni in Contabilità</h4>
-                            <div style="overflow-x:auto;">
-                                <table style="width:100%; border-collapse:collapse; font-size:12px;"
-                                    id="tabellaMovimentiPD">
-                                    <!-- Popolato via JS -->
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-
-
-
-                    <div id="tabNews" class="admin-tab-content hidden">
-                        <div
-                            style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border); margin-bottom:20px;">
-                            <h3 style="margin-top:0; font-size:16px;">Pubblica Nuovo Avviso</h3>
-                            <div class="input-group">
-                                <label class="form-label">Titolo (es. Cena Sociale)</label>
-                                <input type="text" id="newsTitolo" class="form-input" placeholder="Titolo breve...">
-                            </div>
-                            <div class="input-group">
-                                <label class="form-label">Messaggio</label>
-                                <textarea id="newsTesto" class="form-input" rows="3"
-                                    placeholder="Scrivi qui il contenuto dell'avviso..."></textarea>
-                            </div>
-                            <button class="btn-primary" onclick="pubblicaAvviso()">PUBBLICA IN BACHECA</button>
-                        </div>
-
-                        <div
-                            style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border);">
-                            <h4 style="margin-top:0; color:#64748b;">Avvisi attualmente visibili</h4>
-                            <div id="listaNewsAdmin"></div>
-                        </div>
-                    </div>
-
                 </div>
 
 
 
-                <div id="modalEditSocio" class="fullscreen-view hidden"
-                    style="background: rgba(0,0,0,0.6); z-index: 200;">
-                    <div class="auth-card" style="text-align:left; max-width:450px;">
 
-                        <div
-                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                            <h3 style="margin:0;">Modifica Socio</h3>
-                            <span style="cursor:pointer; font-size:20px;" onclick="chiudiModaleSocio()">✖</span>
-                        </div>
-
-                        <input type="hidden" id="modTessera">
-
+                <div id="tabNews" class="admin-tab-content hidden">
+                    <div
+                        style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border); margin-bottom:20px;">
+                        <h3 style="margin-top:0; font-size:16px;">Pubblica Nuovo Avviso</h3>
                         <div class="input-group">
-                            <label class="form-label">Nominativo</label>
-                            <input id="modNome" class="form-input" disabled
-                                style="background:#f1f5f9; font-weight:bold;">
+                            <label class="form-label">Titolo (es. Cena Sociale)</label>
+                            <input type="text" id="newsTitolo" class="form-input" placeholder="Titolo breve...">
                         </div>
-
                         <div class="input-group">
-                            <label class="form-label">Email</label>
-                            <input id="modEmail" class="form-input">
+                            <label class="form-label">Messaggio</label>
+                            <textarea id="newsTesto" class="form-input" rows="3"
+                                placeholder="Scrivi qui il contenuto dell'avviso..."></textarea>
                         </div>
+                        <button class="btn-primary" onclick="pubblicaAvviso()">PUBBLICA IN BACHECA</button>
+                    </div>
 
-                        <div class="input-group">
-                            <label class="form-label">Telefono</label>
-                            <input id="modTel" class="form-input">
-                        </div>
-
-                        <div class="input-group">
-                            <label class="form-label">Stato Iscrizione</label>
-                            <select id="modStato" class="form-input">
-                                <option value="attivo">✅ ATTIVO</option>
-                                <option value="non attivo">⛔ NON ATTIVO</option>
-                            </select>
-                        </div>
-
-                        <!-- NUOVO CAMPO: CARICA SOCIALE -->
-                        <div class="input-group" style="margin-top: 10px;">
-                            <label class="form-label">Carica Sociale</label>
-                            <select id="modRuolo" class="form-input">
-                                <option value="Socio semplice">Socio semplice</option>
-                                <option value="Presidente">Presidente</option>
-                                <option value="Vicepresidente">Vicepresidente</option>
-                                <option value="Segretario">Segretario</option>
-                                <option value="Tesoriere">Tesoriere</option>
-                                <option value="Consigliere">Consigliere</option>
-                            </select>
-                        </div>
-
-                        <div style="display:flex; gap:10px; margin-top:25px;">
-                            <button class="btn-secondary" onclick="chiudiModaleSocio()">Annulla</button>
-                            <button class="btn-primary" onclick="salvaModificheSocioAdmin()">SALVA</button>
-                        </div>
-
+                    <div style="background:white; padding:20px; border-radius:10px; border:1px solid var(--border);">
+                        <h4 style="margin-top:0; color:#64748b;">Avvisi attualmente visibili</h4>
+                        <div id="listaNewsAdmin"></div>
                     </div>
                 </div>
 
+            </div>
 
-                <div id="walletModal" class="wallet-modal">
-                    <div class="close-wallet" onclick="closeWallet()">✕</div>
 
-                    <div class="pass-card">
-                        <div class="pass-inner-border"></div>
 
-                        <div class="pass-header">
-                            <div class="pass-org-label">Associazione</div>
-                            <div class="pass-logo">Gens Ssshhh</div>
+            <div id="modalEditSocio" class="fullscreen-view hidden" style="background: rgba(0,0,0,0.6); z-index: 200;">
+                <div class="auth-card" style="text-align:left; max-width:450px;">
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0;">Modifica Socio</h3>
+                        <span style="cursor:pointer; font-size:20px;" onclick="chiudiModaleSocio()">✖</span>
+                    </div>
+
+                    <input type="hidden" id="modTessera">
+
+                    <div class="input-group">
+                        <label class="form-label">Nominativo</label>
+                        <input id="modNome" class="form-input" disabled style="background:#f1f5f9; font-weight:bold;">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="form-label">Email</label>
+                        <input id="modEmail" class="form-input">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="form-label">Telefono</label>
+                        <input id="modTel" class="form-input">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="form-label">Stato Iscrizione</label>
+                        <select id="modStato" class="form-input">
+                            <option value="attivo">✅ ATTIVO</option>
+                            <option value="non attivo">⛔ NON ATTIVO</option>
+                        </select>
+                    </div>
+
+                    <!-- NUOVO CAMPO: CARICA SOCIALE -->
+                    <div class="input-group" style="margin-top: 10px;">
+                        <label class="form-label">Carica Sociale</label>
+                        <select id="modRuolo" class="form-input">
+                            <option value="Socio semplice">Socio semplice</option>
+                            <option value="Presidente">Presidente</option>
+                            <option value="Vicepresidente">Vicepresidente</option>
+                            <option value="Segretario">Segretario</option>
+                            <option value="Tesoriere">Tesoriere</option>
+                            <option value="Consigliere">Consigliere</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:25px;">
+                        <button class="btn-secondary" onclick="chiudiModaleSocio()">Annulla</button>
+                        <button class="btn-primary" onclick="salvaModificheSocioAdmin()">SALVA</button>
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div id="walletModal" class="wallet-modal">
+                <div class="close-wallet" onclick="closeWallet()">✕</div>
+
+                <div class="pass-card">
+                    <div class="pass-inner-border"></div>
+
+                    <div class="pass-header">
+                        <div class="pass-org-label">Associazione</div>
+                        <div class="pass-logo">Gens Ssshhh</div>
+                    </div>
+
+                    <div class="pass-body">
+                        <div class="pass-field">
+                            <span class="pass-label">Socio</span>
+                            <span class="pass-value big" id="passNome" style="line-height:1.1;">-</span>
                         </div>
 
-                        <div class="pass-body">
+                        <div class="pass-row" style="margin-top:10px;">
                             <div class="pass-field">
-                                <span class="pass-label">Socio</span>
-                                <span class="pass-value big" id="passNome" style="line-height:1.1;">-</span>
+                                <span class="pass-label">Ruolo</span>
+                                <span class="pass-value" id="passRuolo" style="text-transform:uppercase;">-</span>
                             </div>
-
-                            <div class="pass-row" style="margin-top:10px;">
-                                <div class="pass-field">
-                                    <span class="pass-label">Ruolo</span>
-                                    <span class="pass-value" id="passRuolo" style="text-transform:uppercase;">-</span>
-                                </div>
-                                <div class="pass-field" style="text-align:right;">
-                                    <span class="pass-label">Stato</span>
-                                    <span class="pass-value" id="passStato" style="color:#4ade80;">ATTIVO</span>
-                                </div>
+                            <div class="pass-field" style="text-align:right;">
+                                <span class="pass-label">Stato</span>
+                                <span class="pass-value" id="passStato" style="color:#4ade80;">ATTIVO</span>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="pass-footer">
-                            <img id="passQr" class="pass-qrcode" src="" alt="QR">
+                    <div class="pass-footer">
+                        <img id="passQr" class="pass-qrcode" src="" alt="QR">
 
-                            <div class="pass-number-box">
-                                <div
-                                    style="font-size:10px; text-transform:uppercase; color:#64748b; font-weight:600; letter-spacing:1px;">
-                                    Tessera N.</div>
-                                <div id="passTessera"
-                                    style="font-family:monospace; font-size:18px; font-weight:bold; color:#0f172a;">
-                                    000000</div>
-                                <div style="font-size:10px; color:#94a3b8; margin-top:2px;">Scadenza <span
-                                        id="passScad">-</span></div>
-                            </div>
+                        <div class="pass-number-box">
+                            <div
+                                style="font-size:10px; text-transform:uppercase; color:#64748b; font-weight:600; letter-spacing:1px;">
+                                Tessera N.</div>
+                            <div id="passTessera"
+                                style="font-family:monospace; font-size:18px; font-weight:bold; color:#0f172a;">
+                                000000</div>
+                            <div style="font-size:10px; color:#94a3b8; margin-top:2px;">Scadenza <span
+                                    id="passScad">-</span></div>
                         </div>
-                        <button class="pass-download-btn" type="button" onclick="scaricaTesseraPDF()">Download tessera
-                            PDF</button>
                     </div>
-
-                    <div style="position:absolute; bottom:40px; color:rgba(255,255,255,0.5); font-size:12px;">
-                        Screenshot per salvare
-                    </div>
+                    <button class="pass-download-btn" type="button" onclick="scaricaTesseraPDF()">Download tessera
+                        PDF</button>
                 </div>
 
-                <!-- MODALE: CREAZIONE NUOVA ELEZIONE / ASSEMBLEA -->
-                <div id="modalCreaElezione" class="fullscreen-view hidden"
-                    style="background: rgba(15, 23, 42, 0.8); z-index: 9000;">
-                    <div class="auth-card"
-                        style="max-width: 600px; text-align: left; max-height: 90vh; overflow-y: auto;">
+                <div style="position:absolute; bottom:40px; color:rgba(255,255,255,0.5); font-size:12px;">
+                    Screenshot per salvare
+                </div>
+            </div>
 
-                        <div
-                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
-                            <h3 style="margin:0; font-size:18px; color:#0f172a;">Configura Consultazione o Assemblea
-                            </h3>
-                            <span style="cursor:pointer; font-size:20px; color:#64748b;"
-                                onclick="chiudiModaleCreaElezione()">✖</span>
-                        </div>
+            <!-- MODALE: CREAZIONE NUOVA ELEZIONE / ASSEMBLEA -->
+            <div id="modalCreaElezione" class="fullscreen-view hidden"
+                style="background: rgba(15, 23, 42, 0.8); z-index: 9000;">
+                <div class="auth-card" style="max-width: 600px; text-align: left; max-height: 90vh; overflow-y: auto;">
 
-                        <div class="input-group">
-                            <label class="form-label">Titolo (Es. "Assemblea Ordinaria Bilancio 2027")</label>
-                            <input type="text" id="nuovaElezioneTitolo" class="form-input"
-                                placeholder="Titolo chiaro e visibile a tutti...">
-                        </div>
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+                        <h3 style="margin:0; font-size:18px; color:#0f172a;">Configura Consultazione o Assemblea
+                        </h3>
+                        <span style="cursor:pointer; font-size:20px; color:#64748b;"
+                            onclick="chiudiModaleCreaElezione()">✖</span>
+                    </div>
 
-                        <div class="input-group">
-                            <label class="form-label">Tipo di Evento</label>
-                            <select id="nuovaElezioneTipo" class="form-input" onchange="toggleOpzioniElezione()">
-                                <option value="CANDIDATI">👔 Cariche Sociali (Usa le candidature dei soci)</option>
-                                <option value="REFERENDUM">📄 Referendum / Sondaggio (Scelte fisse: SI/NO ecc.)</option>
-                                <option value="ASSEMBLEA">📋 Assemblea / Ordine del Giorno (Punti multipli e Quorum)
-                                </option>
-                            </select>
-                        </div>
+                    <div class="input-group">
+                        <label class="form-label">Titolo (Es. "Assemblea Ordinaria Bilancio 2027")</label>
+                        <input type="text" id="nuovaElezioneTitolo" class="form-input"
+                            placeholder="Titolo chiaro e visibile a tutti...">
+                    </div>
 
-                        <!-- BLOCCO 1: Opzioni per Referendum -->
-                        <div id="bloccoOpzioniReferendum" class="input-group hidden"
-                            style="background:#f8fafc; padding:15px; border-radius:8px; border:1px dashed #cbd5e1;">
-                            <label class="form-label">Scrivi le opzioni di voto (Separate da virgola)</label>
-                            <input type="text" id="nuovaElezioneOpzioni" class="form-input"
-                                placeholder="Es. SI, NO, MI ASTENGO">
-                        </div>
+                    <div class="input-group">
+                        <label class="form-label">Tipo di Evento</label>
+                        <select id="nuovaElezioneTipo" class="form-input" onchange="toggleOpzioniElezione()">
+                            <option value="CANDIDATI">👔 Cariche Sociali (Usa le candidature dei soci)</option>
+                            <option value="REFERENDUM">📄 Referendum / Sondaggio (Scelte fisse: SI/NO ecc.)</option>
+                            <option value="ASSEMBLEA">📋 Assemblea / Ordine del Giorno (Punti multipli e Quorum)
+                            </option>
+                        </select>
+                    </div>
 
-                        <!-- BLOCCO 1-BIS: Punti OdG per Assemblea -->
-                        <div id="bloccoPuntiOdg" class="input-group hidden"
-                            style="background:#f8fafc; padding:15px; border-radius:8px; border:1px dashed #cbd5e1;">
-                            <label class="form-label">Punti all'Ordine del Giorno (Uno per riga)</label>
-                            <textarea id="nuovaElezioneOdg" class="form-input" style="height:90px; resize:vertical;"
-                                placeholder="1. Approvazione Bilancio Consuntivo&#10;2. Varie ed eventuali"></textarea>
-                        </div>
+                    <!-- BLOCCO 1: Opzioni per Referendum -->
+                    <div id="bloccoOpzioniReferendum" class="input-group hidden"
+                        style="background:#f8fafc; padding:15px; border-radius:8px; border:1px dashed #cbd5e1;">
+                        <label class="form-label">Scrivi le opzioni di voto (Separate da virgola)</label>
+                        <input type="text" id="nuovaElezioneOpzioni" class="form-input"
+                            placeholder="Es. SI, NO, MI ASTENGO">
+                    </div>
 
-                        <!-- BLOCCO 2: Date Candidature (Solo per Cariche) -->
-                        <div id="bloccoDateCandidature" class="input-group"
-                            style="background:#eff6ff; padding:15px; border-radius:8px; border:1px solid #bfdbfe; margin-top:10px;">
-                            <label class="form-label" style="color:#1e40af; margin-bottom:0;">Fase di
-                                Candidatura</label>
-                            <div style="font-size:11px; color:#64748b; margin-bottom:10px;">I soci potranno proporsi
-                                solo in questa finestra temporale.</div>
+                    <!-- BLOCCO 1-BIS: Punti OdG per Assemblea -->
+                    <div id="bloccoPuntiOdg" class="input-group hidden"
+                        style="background:#f8fafc; padding:15px; border-radius:8px; border:1px dashed #cbd5e1;">
+                        <label class="form-label">Punti all'Ordine del Giorno (Uno per riga)</label>
+                        <textarea id="nuovaElezioneOdg" class="form-input" style="height:90px; resize:vertical;"
+                            placeholder="1. Approvazione Bilancio Consuntivo&#10;2. Varie ed eventuali"></textarea>
+                    </div>
 
-                            <div style="display:flex; gap:15px; flex-wrap:wrap;">
-                                <div style="flex:1; min-width:150px;">
-                                    <label style="font-size:11px; color:#3b82f6; font-weight:bold;">Apertura
-                                        candidature</label>
-                                    <input type="datetime-local" id="nuovaElezioneCandInizio" class="form-input">
-                                </div>
-                                <div style="flex:1; min-width:150px;">
-                                    <label style="font-size:11px; color:#3b82f6; font-weight:bold;">Chiusura
-                                        candidature</label>
-                                    <input type="datetime-local" id="nuovaElezioneCandFine" class="form-input">
-                                </div>
-                            </div>
-                        </div>
-
-                        <hr style="border:none; border-top:1px solid #e2e8f0; margin: 20px 0;">
-
-                        <!-- GESTIONE QUORUM (Validi per tutti) -->
-                        <div style="display:flex; gap:15px; flex-wrap:wrap; margin-bottom:15px;">
-                            <div class="input-group" style="flex:1; min-width:140px; margin-bottom:0;">
-                                <label class="form-label">Quorum Costitutivo (%)</label>
-                                <input type="number" id="quorumCostitutivo" class="form-input" value="50" min="0"
-                                    max="100">
-                            </div>
-                            <div class="input-group" style="flex:1; min-width:140px; margin-bottom:0;">
-                                <label class="form-label">Quorum Deliberativo (%)</label>
-                                <input type="number" id="quorumDeliberativo" class="form-input" value="51" min="0"
-                                    max="100">
-                            </div>
-                        </div>
+                    <!-- BLOCCO 2: Date Candidature (Solo per Cariche) -->
+                    <div id="bloccoDateCandidature" class="input-group"
+                        style="background:#eff6ff; padding:15px; border-radius:8px; border:1px solid #bfdbfe; margin-top:10px;">
+                        <label class="form-label" style="color:#1e40af; margin-bottom:0;">Fase di
+                            Candidatura</label>
+                        <div style="font-size:11px; color:#64748b; margin-bottom:10px;">I soci potranno proporsi
+                            solo in questa finestra temporale.</div>
 
                         <div style="display:flex; gap:15px; flex-wrap:wrap;">
-                            <div class="input-group" style="flex:1; min-width:150px;">
-                                <label class="form-label">Inizio Votazione / Assemblea</label>
-                                <input type="datetime-local" id="nuovaElezioneInizio" class="form-input">
+                            <div style="flex:1; min-width:150px;">
+                                <label style="font-size:11px; color:#3b82f6; font-weight:bold;">Apertura
+                                    candidature</label>
+                                <input type="datetime-local" id="nuovaElezioneCandInizio" class="form-input">
                             </div>
-                            <div class="input-group" style="flex:1; min-width:150px;">
-                                <label class="form-label">Fine Votazione</label>
-                                <input type="datetime-local" id="nuovaElezioneFine" class="form-input">
+                            <div style="flex:1; min-width:150px;">
+                                <label style="font-size:11px; color:#3b82f6; font-weight:bold;">Chiusura
+                                    candidature</label>
+                                <input type="datetime-local" id="nuovaElezioneCandFine" class="form-input">
                             </div>
                         </div>
+                    </div>
 
-                        <div class="input-group" style="width: 50%;">
-                            <label class="form-label">Preferenze Esprimibili (Max)</label>
-                            <input type="number" id="nuovaElezioneMax" class="form-input" value="1" min="1">
+                    <hr style="border:none; border-top:1px solid #e2e8f0; margin: 20px 0;">
+
+                    <!-- GESTIONE QUORUM (Validi per tutti) -->
+                    <div style="display:flex; gap:15px; flex-wrap:wrap; margin-bottom:15px;">
+                        <div class="input-group" style="flex:1; min-width:140px; margin-bottom:0;">
+                            <label class="form-label">Quorum Costitutivo (%)</label>
+                            <input type="number" id="quorumCostitutivo" class="form-input" value="50" min="0" max="100">
+                        </div>
+                        <div class="input-group" style="flex:1; min-width:140px; margin-bottom:0;">
+                            <label class="form-label">Quorum Deliberativo (%)</label>
+                            <input type="number" id="quorumDeliberativo" class="form-input" value="51" min="0"
+                                max="100">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                        <div class="input-group" style="flex:1; min-width:150px;">
+                            <label class="form-label">Inizio Votazione / Assemblea</label>
+                            <input type="datetime-local" id="nuovaElezioneInizio" class="form-input">
+                        </div>
+                        <div class="input-group" style="flex:1; min-width:150px;">
+                            <label class="form-label">Fine Votazione</label>
+                            <input type="datetime-local" id="nuovaElezioneFine" class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="input-group" style="width: 50%;">
+                        <label class="form-label">Preferenze Esprimibili (Max)</label>
+                        <input type="number" id="nuovaElezioneMax" class="form-input" value="1" min="1">
+                    </div>
+
+                    <div style="margin-top:25px; display:flex; gap:10px; justify-content:flex-end;">
+                        <button class="btn-secondary" style="width:auto; padding:10px 20px;"
+                            onclick="chiudiModaleCreaElezione()">Annulla</button>
+                        <button class="btn-primary" style="width:auto; padding:10px 20px; background:#2563eb;"
+                            onclick="salvaNuovaElezione()">CREA CONSULTAZIONE</button>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="modalConsenso" class="fullscreen-view hidden"
+                style="background: rgba(15, 23, 42, 0.95); z-index: 9999;">
+                <div class="auth-card" style="max-width: 500px; text-align: left; border-left: 5px solid #eab308;">
+
+                    <div style="text-align:center; margin-bottom:20px;">
+                        <div style="font-size:40px;">⚠️</div>
+                        <h2 style="margin:10px 0; color:#0f172a;">Azione Richiesta</h2>
+                        <p style="color:#64748b; font-size:14px;">Per continuare a utilizzare il portale è
+                            necessario leggere e accettare l'ultimo aggiornamento documentale.</p>
+                    </div>
+
+                    <div
+                        style="background:#f8fafc; padding:20px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:20px; text-align:center;">
+                        <div
+                            style="font-size:12px; text-transform:uppercase; color:#94a3b8; font-weight:bold; margin-bottom:5px;">
+                            Documento da revisionare</div>
+                        <div style="font-weight:bold; font-size:18px; color:#2563eb; margin-bottom:15px;">Nuovo
+                            Regolamento <span id="lblVersione"
+                                style="font-size:12px; background:#e0f2fe; padding:2px 6px; border-radius:4px;"></span>
                         </div>
 
-                        <div style="margin-top:25px; display:flex; gap:10px; justify-content:flex-end;">
-                            <button class="btn-secondary" style="width:auto; padding:10px 20px;"
-                                onclick="chiudiModaleCreaElezione()">Annulla</button>
-                            <button class="btn-primary" style="width:auto; padding:10px 20px; background:#2563eb;"
-                                onclick="salvaNuovaElezione()">CREA CONSULTAZIONE</button>
-                        </div>
+                        <a id="btnLeggiDoc" href="#" target="_blank" class="btn-secondary"
+                            style="display:inline-block; text-decoration:none; color:#0f172a;">📄 CLICCA QUI PER
+                            LEGGERE IL PDF</a>
+                    </div>
 
+                    <label
+                        style="display:flex; gap:15px; align-items:flex-start; cursor:pointer; background:#fff; padding:10px; border-radius:6px;">
+                        <input type="checkbox" id="checkConsenso" style="margin-top:4px; transform:scale(1.3);"
+                            onchange="toggleBtnConsenso()">
+                        <span style="font-size:13px; color:#334155; line-height:1.4;">
+                            Dichiaro di aver scaricato, letto e compreso il documento sopra indicato. Accetto
+                            integralmente le condizioni e il regolamento in esso contenuti.
+                        </span>
+                    </label>
+
+                    <button id="btnAccettaDoc" class="btn-primary"
+                        style="margin-top:20px; opacity:0.5; pointer-events:none;" onclick="inviaAccettazione()">HO
+                        LETTO E ACCETTO</button>
+
+                    <div style="margin-top:15px; text-align:center;">
+                        <span style="font-size:12px; color:#ef4444; cursor:pointer; text-decoration:underline;"
+                            onclick="location.href = location.href.split('?')[0]">Non accetto (Esci)</span>
                     </div>
                 </div>
+            </div>
 
-                <div id="modalConsenso" class="fullscreen-view hidden"
-                    style="background: rgba(15, 23, 42, 0.95); z-index: 9999;">
-                    <div class="auth-card" style="max-width: 500px; text-align: left; border-left: 5px solid #eab308;">
 
-                        <div style="text-align:center; margin-bottom:20px;">
-                            <div style="font-size:40px;">⚠️</div>
-                            <h2 style="margin:10px 0; color:#0f172a;">Azione Richiesta</h2>
-                            <p style="color:#64748b; font-size:14px;">Per continuare a utilizzare il portale è
-                                necessario leggere e accettare l'ultimo aggiornamento documentale.</p>
+            <div id="modalFirma" class="fullscreen-view hidden" style="background:rgba(0,0,0,0.8); z-index:9999;">
+                <div class="auth-card" style="max-width:400px;">
+                    <h3 style="margin-top:0;">🔐 Firma Sicura</h3>
+                    <p style="font-size:13px; color:#64748b;">
+                        Stai per firmare digitalmente il documento: <br><b id="signDocName">...</b>
+                    </p>
+
+                    <div id="signStep1">
+                        <p style="font-size:12px;">Per garantire la tua identità, invieremo un codice OTP alla tua
+                            email.</p>
+                        <button id="btnRichiediOTP" class="btn-primary" onclick="richiediOTP()">INVIA CODICE
+                            OTP</button>
+                    </div>
+
+                    <div id="signStep2" class="hidden">
+                        <p style="font-size:12px; color:#10b981;">Codice inviato! Controlla la posta.</p>
+                        <input type="text" id="otpInput" class="form-input" placeholder="Codice a 6 cifre (es. 123456)"
+                            style="text-align:center; letter-spacing:5px; font-size:20px; font-weight:bold;">
+                        <button id="btnConfermaFirma" class="btn-primary" style="margin-top:15px;"
+                            onclick="confermaFirma()">FIRMA DOCUMENTO</button>
+                    </div>
+
+                    <button class="btn-secondary" style="margin-top:10px;"
+                        onclick="document.getElementById('modalFirma').classList.add('hidden')">Annulla</button>
+                </div>
+            </div>
+
+            <!-- ================= MODAL DASHBOARD AVANZATA ================= -->
+            <div id="modalDashboard" class="modal-dashboard">
+                <div class="modal-content-dash" id="areaDaEsportare">
+
+                    <!-- INTESTAZIONE CORRETTA E COMPATTA -->
+                    <div class="dashboard-modal-header">
+
+                        <h2 style="margin: 0; color: #0f172a; font-size: 18px;">📈 Dashboard Analitica Globale</h2>
+
+                        <div class="dashboard-modal-controls">
+
+                            <label
+                                style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; background: #f1f5f9; padding: 0 12px; border-radius: 8px; margin: 0; height: 36px; box-sizing: border-box;">
+                                <input type="checkbox" id="toggleProCapite" onchange="disegnaGraficiAvanzati()"
+                                    style="margin: 0;"> Quota Pro Capite
+                            </label>
+
+                            <select id="filtroAnnoDash" class="form-input"
+                                style="padding: 0 12px; font-size: 13px; width: auto !important; min-width: 130px; margin: 0; height: 36px; box-sizing: border-box;"
+                                onchange="disegnaGraficiAvanzati()">
+                                <option value="ALL">Tutti</option>
+                                <option value="2027">2027</option>
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                            </select>
+
+                            <button class="btn-primary dashboard-save-button" onclick="esportaDashboard(this)">📸
+                                Salva PNG</button>
+                            <button class="dashboard-close-button" aria-label="Chiudi dashboard"
+                                onclick="chiudiDashboard()">×</button>
+
+                        </div>
+                    </div>
+
+                    <div style="padding: 25px; overflow-y: auto; background: #f8fafc;">
+
+                        <!-- CARD DI SINTESI (KPI) -->
+                        <div id="kpiDashboard" class="dashboard-kpi-grid">
+                            <!-- Generate dal Javascript -->
                         </div>
 
-                        <div
-                            style="background:#f8fafc; padding:20px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:20px; text-align:center;">
-                            <div
-                                style="font-size:12px; text-transform:uppercase; color:#94a3b8; font-weight:bold; margin-bottom:5px;">
-                                Documento da revisionare</div>
-                            <div style="font-weight:bold; font-size:18px; color:#2563eb; margin-bottom:15px;">Nuovo
-                                Regolamento <span id="lblVersione"
-                                    style="font-size:12px; background:#e0f2fe; padding:2px 6px; border-radius:4px;"></span>
+                        <!-- GRAFICI -->
+                        <div class="dashboard-charts-grid">
+                            <div class="dashboard-chart-card">
+                                <h3 style="margin: 0 0 15px 0; font-size: 15px; color: #334155;">Confronto Costo
+                                    Eventi (Trend)</h3>
+                                <canvas id="chartTrendEventi"></canvas>
                             </div>
-
-                            <a id="btnLeggiDoc" href="#" target="_blank" class="btn-secondary"
-                                style="display:inline-block; text-decoration:none; color:#0f172a;">📄 CLICCA QUI PER
-                                LEGGERE IL PDF</a>
+                            <div class="dashboard-chart-card">
+                                <h3 style="margin: 0 0 15px 0; font-size: 15px; color: #334155;">Distribuzione
+                                    Categorie</h3>
+                                <div
+                                    style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
+                                    <canvas id="chartCategorieGlobali"></canvas>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                </div>
+            </div>
 
+            <nav id="bottomNavBar" class="bottom-nav">
+                <a href="#" class="bottom-nav-item active" onclick="nav('viewDash', this); return false;">
+                    <span class="bottom-nav-icon">🏠</span>
+                    <span>Home</span>
+                </a>
+
+                <a href="#" class="bottom-nav-item" onclick="nav('viewElezioni', this); return false;">
+                    <span class="bottom-nav-icon">🗳️</span>
+                    <span>Votazioni</span>
+                </a>
+
+                <a href="#" class="bottom-nav-item" onclick="nav('viewFirma', this); return false;">
+                    <span class="bottom-nav-icon">🖋️</span>
+                    <span>Firma</span>
+                </a>
+
+                <a href="#" class="bottom-nav-item" onclick="nav('viewDocs', this); return false;">
+                    <span class="bottom-nav-icon">📁</span>
+                    <span>Archivio</span>
+                </a>
+
+                <a href="#" class="bottom-nav-item" onclick="nav('viewProf', this); return false;">
+                    <span class="bottom-nav-icon">👤</span>
+                    <span>Profilo</span>
+                </a>
+            </nav>
+
+            <!-- MODALE DI CONFERMA ELEGANTE -->
+            <div id="customConfirmModal" class="fullscreen-view hidden"
+                style="background: rgba(15, 23, 42, 0.6); z-index: 9999; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+                <div
+                    style="background: white; padding: 25px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🤔</div>
+                    <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 18px;">Conferma Azione</h3>
+                    <p id="customConfirmMessage" style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Sei
+                        sicuro?</p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn-secondary" onclick="closeCustomConfirm()"
+                            style="padding: 10px 20px;">Annulla</button>
+                        <button id="customConfirmBtn" class="btn-primary"
+                            style="padding: 10px 20px; background: #2563eb; border: none;">Conferma</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODALE RISULTATI LIVE ADMIN -->
+            <div id="modalRisultatiLive" class="fullscreen-view hidden"
+                style="background: rgba(15, 23, 42, 0.8); z-index: 9600; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                <div
+                    style="background: white; padding: 25px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+
+                    <!-- Intestazione -->
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+                        <div>
+                            <h3 id="risultatiTitolo" style="margin: 0; color: #0f172a; font-size: 18px;">Risultati
+                                Live</h3>
+                            <p id="risultatiSottotitolo" style="margin: 4px 0 0 0; color: #64748b; font-size: 12px;">
+                                Caricamento...</p>
+                        </div>
+                        <button onclick="chiudiRisultatiLive()"
+                            style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b;">✖</button>
+                    </div>
+
+                    <!-- Box Statistiche (Affluenza e Quorum) -->
+                    <div id="risultatiStats" style="display: flex; gap: 10px; margin-bottom: 25px;">
+                        <!-- Riempito da JS -->
+                    </div>
+
+                    <!-- Barre dei Voti -->
+                    <h4 style="font-size: 14px; margin-bottom: 15px; color: #334155;">Dettaglio Preferenze</h4>
+                    <div id="risultatiBars" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div class="loader"></div>
+                    </div>
+
+                    <!-- Chiusura -->
+                    <div style="margin-top: 25px; text-align: right; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                        <button class="btn-primary" onclick="chiudiRisultatiLive()"
+                            style="width: auto; padding: 8px 16px;">Chiudi Finestra</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODALE PROPOSTA ORDINE DEL GIORNO -->
+            <div id="modalProponiOdG" class="fullscreen-view hidden"
+                style="background: rgba(15, 23, 42, 0.8); z-index: 9600; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                <div
+                    style="background: white; padding: 25px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                    <h3 style="margin: 0 0 15px 0; color: #0f172a; font-size: 18px;">✍️ Aggiungi all'Ordine del
+                        Giorno</h3>
+                    <p style="color: #64748b; font-size: 13px; margin-bottom: 20px;">La tua proposta verrà aggiunta
+                        automaticamente al programma dell'assemblea e sarà visibile a tutti i soci.</p>
+
+                    <input type="hidden" id="odgIdElezione">
+
+                    <div style="margin-bottom: 15px;">
                         <label
-                            style="display:flex; gap:15px; align-items:flex-start; cursor:pointer; background:#fff; padding:10px; border-radius:6px;">
-                            <input type="checkbox" id="checkConsenso" style="margin-top:4px; transform:scale(1.3);"
-                                onchange="toggleBtnConsenso()">
-                            <span style="font-size:13px; color:#334155; line-height:1.4;">
-                                Dichiaro di aver scaricato, letto e compreso il documento sopra indicato. Accetto
-                                integralmente le condizioni e il regolamento in esso contenuti.
-                            </span>
-                        </label>
+                            style="display:block; margin-bottom:5px; font-size:12px; font-weight:bold; color:#334155;">Titolo
+                            della Proposta (Sintetico)</label>
+                        <input type="text" id="odgTitolo"
+                            style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;"
+                            placeholder="Es: Proposta acquisto nuove attrezzature">
+                    </div>
 
-                        <button id="btnAccettaDoc" class="btn-primary"
-                            style="margin-top:20px; opacity:0.5; pointer-events:none;" onclick="inviaAccettazione()">HO
-                            LETTO E ACCETTO</button>
+                    <div style="margin-bottom: 20px;">
+                        <label
+                            style="display:block; margin-bottom:5px; font-size:12px; font-weight:bold; color:#334155;">Spiegazione
+                            e Dettagli</label>
+                        <textarea id="odgDettaglio" rows="4"
+                            style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; resize:vertical;"
+                            placeholder="Spiega brevemente il motivo o i dettagli della tua proposta..."></textarea>
+                    </div>
 
-                        <div style="margin-top:15px; text-align:center;">
-                            <span style="font-size:12px; color:#ef4444; cursor:pointer; text-decoration:underline;"
-                                onclick="location.href = location.href.split('?')[0]">Non accetto (Esci)</span>
-                        </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button class="btn-secondary" onclick="chiudiModaleOdG()"
+                            style="padding: 10px 20px;">Annulla</button>
+                        <button class="btn-primary" onclick="inviaPropostaOdG()"
+                            style="padding: 10px 20px; background: #2563eb; border: none;">Invia Proposta</button>
                     </div>
                 </div>
+            </div>
 
-
-                <div id="modalFirma" class="fullscreen-view hidden" style="background:rgba(0,0,0,0.8); z-index:9999;">
-                    <div class="auth-card" style="max-width:400px;">
-                        <h3 style="margin-top:0;">🔐 Firma Sicura</h3>
-                        <p style="font-size:13px; color:#64748b;">
-                            Stai per firmare digitalmente il documento: <br><b id="signDocName">...</b>
-                        </p>
-
-                        <div id="signStep1">
-                            <p style="font-size:12px;">Per garantire la tua identità, invieremo un codice OTP alla tua
-                                email.</p>
-                            <button id="btnRichiediOTP" class="btn-primary" onclick="richiediOTP()">INVIA CODICE
-                                OTP</button>
-                        </div>
-
-                        <div id="signStep2" class="hidden">
-                            <p style="font-size:12px; color:#10b981;">Codice inviato! Controlla la posta.</p>
-                            <input type="text" id="otpInput" class="form-input"
-                                placeholder="Codice a 6 cifre (es. 123456)"
-                                style="text-align:center; letter-spacing:5px; font-size:20px; font-weight:bold;">
-                            <button id="btnConfermaFirma" class="btn-primary" style="margin-top:15px;"
-                                onclick="confermaFirma()">FIRMA DOCUMENTO</button>
-                        </div>
-
-                        <button class="btn-secondary" style="margin-top:10px;"
-                            onclick="document.getElementById('modalFirma').classList.add('hidden')">Annulla</button>
-                    </div>
-                </div>
-
-                <!-- ================= MODAL DASHBOARD AVANZATA ================= -->
-                <div id="modalDashboard" class="modal-dashboard">
-                    <div class="modal-content-dash" id="areaDaEsportare">
-
-                        <!-- INTESTAZIONE CORRETTA E COMPATTA -->
-                        <div class="dashboard-modal-header">
-
-                            <h2 style="margin: 0; color: #0f172a; font-size: 18px;">📈 Dashboard Analitica Globale</h2>
-
-                            <div class="dashboard-modal-controls">
-
-                                <label
-                                    style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; background: #f1f5f9; padding: 0 12px; border-radius: 8px; margin: 0; height: 36px; box-sizing: border-box;">
-                                    <input type="checkbox" id="toggleProCapite" onchange="disegnaGraficiAvanzati()"
-                                        style="margin: 0;"> Quota Pro Capite
-                                </label>
-
-                                <select id="filtroAnnoDash" class="form-input"
-                                    style="padding: 0 12px; font-size: 13px; width: auto !important; min-width: 130px; margin: 0; height: 36px; box-sizing: border-box;"
-                                    onchange="disegnaGraficiAvanzati()">
-                                    <option value="ALL">Tutti</option>
-                                    <option value="2027">2027</option>
-                                    <option value="2026">2026</option>
-                                    <option value="2025">2025</option>
-                                    <option value="2024">2024</option>
-                                </select>
-
-                                <button class="btn-primary dashboard-save-button" onclick="esportaDashboard(this)">📸
-                                    Salva PNG</button>
-                                <button class="dashboard-close-button" aria-label="Chiudi dashboard"
-                                    onclick="chiudiDashboard()">×</button>
-
-                            </div>
-                        </div>
-
-                        <div style="padding: 25px; overflow-y: auto; background: #f8fafc;">
-
-                            <!-- CARD DI SINTESI (KPI) -->
-                            <div id="kpiDashboard" class="dashboard-kpi-grid">
-                                <!-- Generate dal Javascript -->
-                            </div>
-
-                            <!-- GRAFICI -->
-                            <div class="dashboard-charts-grid">
-                                <div class="dashboard-chart-card">
-                                    <h3 style="margin: 0 0 15px 0; font-size: 15px; color: #334155;">Confronto Costo
-                                        Eventi (Trend)</h3>
-                                    <canvas id="chartTrendEventi"></canvas>
-                                </div>
-                                <div class="dashboard-chart-card">
-                                    <h3 style="margin: 0 0 15px 0; font-size: 15px; color: #334155;">Distribuzione
-                                        Categorie</h3>
-                                    <div
-                                        style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
-                                        <canvas id="chartCategorieGlobali"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <nav id="bottomNavBar" class="bottom-nav">
-                    <a href="#" class="bottom-nav-item active" onclick="nav('viewDash', this); return false;">
-                        <span class="bottom-nav-icon">🏠</span>
-                        <span>Home</span>
-                    </a>
-
-                    <a href="#" class="bottom-nav-item" onclick="nav('viewElezioni', this); return false;">
-                        <span class="bottom-nav-icon">🗳️</span>
-                        <span>Votazioni</span>
-                    </a>
-
-                    <a href="#" class="bottom-nav-item" onclick="nav('viewFirma', this); return false;">
-                        <span class="bottom-nav-icon">🖋️</span>
-                        <span>Firma</span>
-                    </a>
-
-                    <a href="#" class="bottom-nav-item" onclick="nav('viewDocs', this); return false;">
-                        <span class="bottom-nav-icon">📁</span>
-                        <span>Archivio</span>
-                    </a>
-
-                    <a href="#" class="bottom-nav-item" onclick="nav('viewProf', this); return false;">
-                        <span class="bottom-nav-icon">👤</span>
-                        <span>Profilo</span>
-                    </a>
-                </nav>
-
-                <!-- MODALE DI CONFERMA ELEGANTE -->
-                <div id="customConfirmModal" class="fullscreen-view hidden"
-                    style="background: rgba(15, 23, 42, 0.6); z-index: 9999; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-                    <div
-                        style="background: white; padding: 25px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-                        <div style="font-size: 40px; margin-bottom: 10px;">🤔</div>
-                        <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 18px;">Conferma Azione</h3>
-                        <p id="customConfirmMessage" style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Sei
-                            sicuro?</p>
-                        <div style="display: flex; gap: 10px; justify-content: center;">
-                            <button class="btn-secondary" onclick="closeCustomConfirm()"
-                                style="padding: 10px 20px;">Annulla</button>
-                            <button id="customConfirmBtn" class="btn-primary"
-                                style="padding: 10px 20px; background: #2563eb; border: none;">Conferma</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MODALE RISULTATI LIVE ADMIN -->
-                <div id="modalRisultatiLive" class="fullscreen-view hidden"
-                    style="background: rgba(15, 23, 42, 0.8); z-index: 9600; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                    <div
-                        style="background: white; padding: 25px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-
-                        <!-- Intestazione -->
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
-                            <div>
-                                <h3 id="risultatiTitolo" style="margin: 0; color: #0f172a; font-size: 18px;">Risultati
-                                    Live</h3>
-                                <p id="risultatiSottotitolo"
-                                    style="margin: 4px 0 0 0; color: #64748b; font-size: 12px;">Caricamento...</p>
-                            </div>
-                            <button onclick="chiudiRisultatiLive()"
-                                style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b;">✖</button>
-                        </div>
-
-                        <!-- Box Statistiche (Affluenza e Quorum) -->
-                        <div id="risultatiStats" style="display: flex; gap: 10px; margin-bottom: 25px;">
-                            <!-- Riempito da JS -->
-                        </div>
-
-                        <!-- Barre dei Voti -->
-                        <h4 style="font-size: 14px; margin-bottom: 15px; color: #334155;">Dettaglio Preferenze</h4>
-                        <div id="risultatiBars" style="display: flex; flex-direction: column; gap: 12px;">
-                            <div class="loader"></div>
-                        </div>
-
-                        <!-- Chiusura -->
-                        <div
-                            style="margin-top: 25px; text-align: right; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                            <button class="btn-primary" onclick="chiudiRisultatiLive()"
-                                style="width: auto; padding: 8px 16px;">Chiudi Finestra</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MODALE PROPOSTA ORDINE DEL GIORNO -->
-                <div id="modalProponiOdG" class="fullscreen-view hidden"
-                    style="background: rgba(15, 23, 42, 0.8); z-index: 9600; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                    <div
-                        style="background: white; padding: 25px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-                        <h3 style="margin: 0 0 15px 0; color: #0f172a; font-size: 18px;">✍️ Aggiungi all'Ordine del
-                            Giorno</h3>
-                        <p style="color: #64748b; font-size: 13px; margin-bottom: 20px;">La tua proposta verrà aggiunta
-                            automaticamente al programma dell'assemblea e sarà visibile a tutti i soci.</p>
-
-                        <input type="hidden" id="odgIdElezione">
-
-                        <div style="margin-bottom: 15px;">
-                            <label
-                                style="display:block; margin-bottom:5px; font-size:12px; font-weight:bold; color:#334155;">Titolo
-                                della Proposta (Sintetico)</label>
-                            <input type="text" id="odgTitolo"
-                                style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;"
-                                placeholder="Es: Proposta acquisto nuove attrezzature">
-                        </div>
-
-                        <div style="margin-bottom: 20px;">
-                            <label
-                                style="display:block; margin-bottom:5px; font-size:12px; font-weight:bold; color:#334155;">Spiegazione
-                                e Dettagli</label>
-                            <textarea id="odgDettaglio" rows="4"
-                                style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; resize:vertical;"
-                                placeholder="Spiega brevemente il motivo o i dettagli della tua proposta..."></textarea>
-                        </div>
-
-                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                            <button class="btn-secondary" onclick="chiudiModaleOdG()"
-                                style="padding: 10px 20px;">Annulla</button>
-                            <button class="btn-primary" onclick="inviaPropostaOdG()"
-                                style="padding: 10px 20px; background: #2563eb; border: none;">Invia Proposta</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Collegamento Script App -->
-                <script src="app.js"></script>
+            <!-- Collegamento Script App -->
+            <script src="app.js"></script>
 
 </body>
 

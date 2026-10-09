@@ -155,10 +155,11 @@ test('ammissione: crea account solo dopo esito favorevole dei 2/3', () => {
 
 test('fatture: admin cerca soci attivi e invia XML/PDF con sollecito pagamento', () => {
   const rows = [
-    ['Nome', 'Password', 'Email', '', 'Cognome', '', '', '', '', '', '', 'Stato Socio'],
+    ['Nome', 'Password', 'Email', '', 'Cognome', '', '', '', '', '', '', 'Stato Socio', 'Carica sociale'],
     ['Mario', 'hash', 'mario@example.it', '', 'Rossi', '', '', '', '', '', '', 'ATTIVO'],
     ['Anna', 'hash', 'anna@example.it', '', 'Bianchi', '', '', '', '', '', '', 'attivo'],
-    ['Paolo', 'hash', 'paolo@example.it', '', 'Blu', '', '', '', '', '', '', 'non attivo']
+    ['Paolo', 'hash', 'paolo@example.it', '', 'Blu', '', '', '', '', '', '', 'non attivo'],
+    ['Admin', 'hash', 'admin@example.it', '', 'Zed', '', '', '', '', '', '', 'ATTIVO', 'Tesoriere']
   ];
   const sociSheet = {
     getLastRow: () => rows.length,
@@ -167,14 +168,13 @@ test('fatture: admin cerca soci attivi e invia XML/PDF con sollecito pagamento',
   let sent = null;
   const context = {
     SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: name => name === 'soci' ? sociSheet : null }) },
-    getDatiUtente: email => email === 'admin@example.it' ? { ruolo: 'Tesoriere' } : null,
     isRuoloAmministrativo: ruolo => String(ruolo).toLowerCase() === 'tesoriere',
     verificaLogin: dati => dati.password === 'pw' ? 'OK_LOGIN' : 'ERR_AUTH',
     MailApp: { sendEmail: message => { sent = message; } }
   };
   loadScript('Finance.js', context);
 
-  assert.deepEqual(JSON.parse(JSON.stringify(context.getSociPerFattura('admin@example.it', 'pw'))).map(socio => socio.nomeCompleto), ['Anna Bianchi', 'Mario Rossi']);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.getSociPerFattura('admin@example.it', 'pw'))).map(socio => socio.nomeCompleto), ['Anna Bianchi', 'Mario Rossi', 'Admin Zed']);
   assert.equal(context.getSociPerFattura('admin@example.it', 'bad').length, 0);
   assert.equal(context.getSociPerFattura('mario@example.it', 'pw').length, 0);
 
@@ -183,7 +183,105 @@ test('fatture: admin cerca soci attivi e invia XML/PDF con sollecito pagamento',
   assert.equal(sent.attachments.length, 2);
   assert.match(sent.body, /45\.00/);
   assert.match(sent.body, /Quota associativa/);
-  assert.match(sent.body, /procedere al pagamento/);
+  assert.match(sent.body, /saldare entro la data indicata/);
+});
+
+test('fatture: XML e PDF riportano regime, bollo, scadenza e pagamento', () => {
+  const sociRows = [
+    ['Nome', 'Password', 'Email', '', 'Cognome', '', 'Indirizzo', '', '', 'Numero Tessera', 'Data Scadenza', 'Stato Socio', 'Carica sociale', '', 'Codice Fiscale', '', '', '', 'ID_Univoco', 'CAP res', 'Comune res'],
+    ['Mario', 'hash', 'mario@example.it', '', 'Rossi', '', 'Via Roma 1', '', '', 12, '', 'ATTIVO', 'Socio semplice', '', 'RSSMRA80A01F205X', '', '', '', 'uuid-mario', '40100', 'Bologna'],
+    ['Admin', 'hash', 'admin@example.it', '', 'Admin', '', '', '', '', '', '', 'ATTIVO', 'Tesoriere']
+  ];
+  const sociSheet = { getDataRange: () => ({ getValues: () => sociRows }) };
+  const invoiceRows = [];
+  const invoiceSheet = { appendRow: row => invoiceRows.push(row) };
+  const configSheet = { getRange: () => ({ getValue: () => 'segreteria@example.it' }) };
+  const archiveSpreadsheet = { getSheetByName: name => name === 'Fatture Emesse' ? invoiceSheet : null };
+  const sent = [];
+  let blobId = 0;
+  const context = {
+    SpreadsheetApp: {
+      getActiveSpreadsheet: () => ({ getSheetByName: name => name === 'soci' ? sociSheet : name === 'Config' ? configSheet : null }),
+      openById: () => archiveSpreadsheet
+    },
+    getDatiUtente: email => email === 'admin@example.it' ? { ruolo: 'Tesoriere' } : null,
+    isRuoloAmministrativo: ruolo => String(ruolo).toLowerCase() === 'tesoriere',
+    verificaLogin: data => data.password === 'pw' ? 'OK_LOGIN' : 'ERR_AUTH',
+    DriveApp: { getFolderById: () => ({ createFile: blob => ({ getUrl: () => 'https://drive.example/' + blob.name }) }) },
+    MailApp: { sendEmail: mail => sent.push(mail) },
+    MimeType: { HTML: 'text/html', PDF: 'application/pdf' },
+    Utilities: {
+      formatDate: (date, zone, format) => {
+        const parsedDate = date instanceof Date ? date : new Date(date);
+        const year = parsedDate.getFullYear();
+        const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(parsedDate.getDate()).padStart(2, '0');
+        if (format === 'yyyy-MM-dd') return `${year}-${month}-${day}`;
+        if (format === 'dd/MM/yyyy') return `${day}/${month}/${year}`;
+        if (format === 'yyyy') return String(year);
+        return `${day}/${month}/${year} 12:00:00`;
+      },
+      newBlob: (content, type, name) => ({
+        content: String(content), type, name: name || 'generated',
+        setName(value) { this.name = value; },
+        getAs: mime => ({ content: String(content), type: mime, name: 'pdf-' + (++blobId), setName(value) { this.name = value; }, getBytes() { return Buffer.from(String(content)); } }),
+        getBytes() { return Buffer.from(String(content)); }
+      }),
+      base64Encode: bytes => Buffer.from(bytes).toString('base64')
+    }
+  };
+  loadScript('Finance.js', context);
+
+  const fattura = context.generaFatturaXML({
+    adminEmail: 'admin@example.it', password: 'pw', tipoCliente: 'socio', email: 'mario@example.it',
+    numero: '1', importo: '100.00', causale: 'Quota associativa annuale 2026', regimeFiscale: 'RF19',
+    scadenzaPagamento: '2026-10-24', metodoPagamento: 'BONIFICO', datiPagamento: 'IT60X0542811101000000123456'
+  });
+  const xml = Buffer.from(fattura.xmlBase64.split(',')[1], 'base64').toString();
+  const pdfHtml = Buffer.from(fattura.pdfBase64.split(',')[1], 'base64').toString();
+  assert.equal(fattura.emailInviata, true);
+  assert.match(xml, /<Numero>1\/2026<\/Numero>/);
+  assert.match(xml, /<RegimeFiscale>RF19<\/RegimeFiscale>/);
+  assert.match(xml, /<Natura>N2\.2<\/Natura>/);
+  assert.match(xml, /Legge 190\/2014/);
+  assert.match(xml, /<ImportoBollo>2\.00<\/ImportoBollo>/);
+  assert.match(xml, /<ImportoTotaleDocumento>102\.00<\/ImportoTotaleDocumento>/);
+  assert.match(xml, /<ModalitaPagamento>MP05<\/ModalitaPagamento>/);
+  assert.match(xml, /<DataScadenzaPagamento>2026-10-24<\/DataScadenzaPagamento>/);
+  assert.match(xml, /<ImportoPagamento>102\.00<\/ImportoPagamento>/);
+  assert.match(xml, /<IBAN>IT60X0542811101000000123456<\/IBAN>/);
+  assert.match(pdfHtml, /Imposta di bollo di 2,00 € assolta sull'originale informatico/);
+  assert.match(pdfHtml, /Scadenza:<\/strong> 24\/10\/2026/);
+  assert.match(pdfHtml, /IT60X0542811101000000123456/);
+  assert.match(pdfHtml, /segreteria@example\.it/);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].attachments.length, 2);
+  assert.match(sent[0].body, /Totale da pagare: € 102\.00/);
+  assert.equal(invoiceRows.length, 1);
+
+  const senzaRiferimento = context.generaFatturaXML({
+    adminEmail: 'admin@example.it', password: 'pw', tipoCliente: 'socio', email: 'mario@example.it',
+    numero: '2/2026', importo: '50', causale: 'Quota associativa annuale 2026', regimeFiscale: 'RF01',
+    scadenzaPagamento: '2026-10-24', metodoPagamento: 'BONIFICO', datiPagamento: 'IT60X0542811101000000123456'
+  });
+  assert.match(senzaRiferimento.errore, /riferimento normativo/);
+
+  const datiBase = {
+    adminEmail: 'admin@example.it', password: 'pw', tipoCliente: 'socio', email: 'mario@example.it',
+    causale: 'Quota associativa annuale 2026', regimeFiscale: 'RF01', riferimentoIVA: 'Articolo 4 & normativa',
+    scadenzaPagamento: '2026-10-24', metodoPagamento: 'BONIFICO', datiPagamento: 'IT60X0542811101000000123456'
+  };
+  const fatturaSoglia = context.generaFatturaXML({ ...datiBase, numero: '3/2026', importo: '77.47' });
+  const xmlSoglia = Buffer.from(fatturaSoglia.xmlBase64.split(',')[1], 'base64').toString();
+  assert.match(xmlSoglia, /<Natura>N4<\/Natura>/);
+  assert.match(xmlSoglia, /Articolo 4 &amp; normativa/);
+  assert.doesNotMatch(xmlSoglia, /<DatiBollo>/);
+  assert.match(xmlSoglia, /<ImportoTotaleDocumento>77\.47<\/ImportoTotaleDocumento>/);
+
+  const fatturaOltreSoglia = context.generaFatturaXML({ ...datiBase, numero: '4/2026', importo: '77.48' });
+  const xmlOltreSoglia = Buffer.from(fatturaOltreSoglia.xmlBase64.split(',')[1], 'base64').toString();
+  assert.match(xmlOltreSoglia, /<DatiBollo><BolloVirtuale>SI<\/BolloVirtuale><ImportoBollo>2\.00<\/ImportoBollo><\/DatiBollo>/);
+  assert.match(xmlOltreSoglia, /<ImportoTotaleDocumento>79\.48<\/ImportoTotaleDocumento>/);
 });
 
 test('notifiche: registra un token una sola volta e invia il canale Android', () => {

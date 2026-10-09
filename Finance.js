@@ -1,5 +1,16 @@
 /// FINANCE
 
+function escapeXmlFattura_(value) {
+  return String(value == null ? "" : value).replace(/[<>&"']/g, function (character) {
+    return { "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;", "'": "&apos;" }[character];
+  });
+}
+
+function escapeHtmlFattura_(value) {
+  return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[character];
+  });
+}
 
 function exportBilancioExcel(email, anno) {
   var user = getDatiUtente(email);
@@ -392,12 +403,12 @@ function getCostiVacanzeDashboard() {
 }
 
 function getSociPerFattura(adminEmail, password) {
-  var admin = getDatiUtente(adminEmail);
-  if (!admin || !isRuoloAmministrativo(admin.ruolo) || verificaLogin({ email: adminEmail, password: password }) !== "OK_LOGIN") return [];
-
+  var emailAdmin = String(adminEmail || "").trim().toLowerCase();
+  if (!emailAdmin || verificaLogin({ email: emailAdmin, password: password }) !== "OK_LOGIN") return [];
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("soci");
-  if (!sheet || sheet.getLastRow() < 2) return [];
+  if (!sheet) return [];
   var rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
   var headers = rows[0].map(function (value) { return String(value || "").trim().toLowerCase(); });
   function index(name, fallback) {
     var found = headers.indexOf(name.toLowerCase());
@@ -407,6 +418,12 @@ function getSociPerFattura(adminEmail, password) {
   var firstNameIndex = index("nome", 0);
   var lastNameIndex = index("cognome", 4);
   var statusIndex = index("stato socio", 11);
+  var roleIndex = index("carica sociale", 12);
+  var adminRow = rows.slice(1).find(function (row) {
+    return String(row[emailIndex] || "").trim().toLowerCase() === emailAdmin;
+  });
+  if (!adminRow || !isRuoloAmministrativo(adminRow[roleIndex])) return [];
+
   return rows.slice(1).filter(function (row) {
     return String(row[emailIndex] || "").trim() && String(row[statusIndex] || "").trim().toLowerCase() === "attivo";
   }).map(function (row) {
@@ -421,10 +438,11 @@ function getSociPerFattura(adminEmail, password) {
 function inviaFatturaSocio_(dati, nomeSocio, allegatoPdf, allegatoXml) {
   var causale = String(dati.causale || "").trim();
   var importo = Number(dati.importo).toFixed(2);
+  var totale = (Number(dati.importo) + Number(dati.impostaBollo || 0)).toFixed(2);
   MailApp.sendEmail({
     to: dati.email,
     subject: "Fattura " + dati.numero + " - " + nomeSocio + " - Gens Ssshhh",
-    body: "Gentile " + nomeSocio + ",\n\nIn allegato trovi la fattura di cortesia in PDF e il relativo file XML.\n\nImporto da pagare: € " + importo + "\nCausale: " + causale + "\nNumero fattura: " + dati.numero + "\n\nTi chiediamo di procedere al pagamento secondo le modalità comunicate dall’associazione. Se hai già effettuato il pagamento, puoi ignorare questo promemoria.\n\nGens Ssshhh",
+    body: "Gentile " + nomeSocio + ",\n\nIn allegato trovi la fattura di cortesia in PDF e il relativo file XML.\n\nImponibile: € " + importo + (Number(dati.impostaBollo || 0) ? "\nImposta di bollo: € " + Number(dati.impostaBollo).toFixed(2) : "") + "\nTotale da pagare: € " + totale + "\nScadenza: " + dati.scadenzaPagamentoFmt + "\nMetodo: " + dati.metodoPagamentoFmt + "\nCoordinate: " + dati.datiPagamento + "\nCausale: " + causale + "\nNumero fattura: " + dati.numero + "\n\nTi chiediamo di saldare entro la data indicata. Se hai già effettuato il pagamento, puoi ignorare questo promemoria.\n\nGens Ssshhh",
     attachments: [allegatoPdf, allegatoXml],
     name: "Gens Ssshhh"
   });
@@ -440,6 +458,20 @@ function generaFatturaXML(datiInput) {
   if (!datiInput.numero || !datiInput.importo || Number(datiInput.importo) <= 0 || !datiInput.causale) {
     return { errore: "Numero, importo positivo e causale sono obbligatori." };
   }
+  if (String(datiInput.causale).trim().length < 12) return { errore: "Inserisci una descrizione dettagliata del bene o servizio (almeno 12 caratteri)." };
+  var regimeFiscale = String(datiInput.regimeFiscale || "RF01").toUpperCase();
+  if (["RF01", "RF19"].indexOf(regimeFiscale) < 0) return { errore: "Regime fiscale non supportato." };
+  var naturaIva = regimeFiscale === "RF19" ? "N2.2" : "N4";
+  var notaIva = regimeFiscale === "RF19"
+    ? "Operazione in franchigia da IVA ai sensi della Legge 190/2014 e successive modificazioni"
+    : String(datiInput.riferimentoIVA || "").trim();
+  if (!notaIva) return { errore: "Per RF01 inserisci il riferimento normativo esatto per l’IVA a zero." };
+  var metodiPagamento = ["BONIFICO", "PAYPAL", "SATISPAY", "CONTANTI"];
+  var metodoPagamento = String(datiInput.metodoPagamento || "BONIFICO").toUpperCase();
+  if (metodiPagamento.indexOf(metodoPagamento) < 0 || !String(datiInput.datiPagamento || "").trim()) {
+    return { errore: "Inserisci un metodo e i relativi dati di pagamento." };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(datiInput.scadenzaPagamento || ""))) return { errore: "Inserisci una data di scadenza valida." };
 
   // --- LE TUE CONNESSIONI ---
   var idArchivioEsterno = "1zYVYOg8nlASjbzIKIHtVbaoEhK5949ctqQemVENfSow";
@@ -448,7 +480,7 @@ function generaFatturaXML(datiInput) {
   // Dati Associazione
   var ass_piva = "01234567890";
   var ass_denominazione = "Gens Ssshhh";
-  var ass_regime = "RF01";
+  var ass_regime = regimeFiscale;
   var ass_indirizzo = "Via dello Sport, 7";
   var ass_cap = "40065";
   var ass_comune = "Pianoro";
@@ -513,14 +545,14 @@ function generaFatturaXML(datiInput) {
     xmlCessionario = `
     <CessionarioCommittente>
       <DatiAnagrafici>
-        <CodiceFiscale>${socioCF}</CodiceFiscale>
-        <Anagrafica><Nome>${socioNome}</Nome><Cognome>${socioCognome}</Cognome></Anagrafica>
+        <CodiceFiscale>${escapeXmlFattura_(socioCF)}</CodiceFiscale>
+        <Anagrafica><Nome>${escapeXmlFattura_(socioNome)}</Nome><Cognome>${escapeXmlFattura_(socioCognome)}</Cognome></Anagrafica>
       </DatiAnagrafici>
       <Sede>
-        <Indirizzo>${socioIndirizzo}</Indirizzo>
-        <CAP>${socioCAP.toString().padStart(5, '0')}</CAP>
-        <Comune>${socioComune}</Comune>
-        <Provincia>${socioProv}</Provincia>
+        <Indirizzo>${escapeXmlFattura_(socioIndirizzo)}</Indirizzo>
+        <CAP>${escapeXmlFattura_(socioCAP.toString().padStart(5, '0'))}</CAP>
+        <Comune>${escapeXmlFattura_(socioComune)}</Comune>
+        <Provincia>${escapeXmlFattura_(socioProv)}</Provincia>
         <Nazione>IT</Nazione>
       </Sede>
     </CessionarioCommittente>`;
@@ -537,20 +569,51 @@ function generaFatturaXML(datiInput) {
     xmlCessionario = `
     <CessionarioCommittente>
       <DatiAnagrafici>
-        <IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>${datiInput.piva.replace(/\s/g, "")}</IdCodice></IdFiscaleIVA>
-        <Anagrafica><Denominazione>${datiInput.ragioneSociale}</Denominazione></Anagrafica>
+        <IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>${escapeXmlFattura_(datiInput.piva.replace(/\s/g, ""))}</IdCodice></IdFiscaleIVA>
+        <Anagrafica><Denominazione>${escapeXmlFattura_(datiInput.ragioneSociale)}</Denominazione></Anagrafica>
       </DatiAnagrafici>
-      <Sede><Indirizzo>${datiInput.indirizzo}</Indirizzo><CAP>${datiInput.cap}</CAP><Comune>${datiInput.comune}</Comune><Provincia>${datiInput.prov.toUpperCase()}</Provincia><Nazione>IT</Nazione></Sede>
+      <Sede><Indirizzo>${escapeXmlFattura_(datiInput.indirizzo)}</Indirizzo><CAP>${escapeXmlFattura_(datiInput.cap)}</CAP><Comune>${escapeXmlFattura_(datiInput.comune)}</Comune><Provincia>${escapeXmlFattura_(datiInput.prov.toUpperCase())}</Provincia><Nazione>IT</Nazione></Sede>
     </CessionarioCommittente>`;
   }
 
   var dataOdierna = new Date();
   var oggiFormatoXML = Utilities.formatDate(dataOdierna, "Europe/Rome", "yyyy-MM-dd");
   var oggiFormatoPDF = Utilities.formatDate(dataOdierna, "Europe/Rome", "dd/MM/yyyy");
-
+  var annoFattura = Utilities.formatDate(dataOdierna, "Europe/Rome", "yyyy");
+  datiInput.numero = String(datiInput.numero).trim();
+  if (datiInput.numero.indexOf("/") < 0) datiInput.numero += "/" + annoFattura;
+  var dataScadenzaPagamento = new Date(String(datiInput.scadenzaPagamento) + "T12:00:00");
+  if (isNaN(dataScadenzaPagamento.getTime())) return { errore: "La data di scadenza non è valida." };
+  var scadenzaPagamentoFmt = Utilities.formatDate(dataScadenzaPagamento, "Europe/Rome", "dd/MM/yyyy");
+  var scadenzaPagamentoXML = Utilities.formatDate(dataScadenzaPagamento, "Europe/Rome", "yyyy-MM-dd");
+  var metodoPagamentoFmt = metodoPagamento === "BONIFICO" ? "Bonifico bancario" : metodoPagamento;
+  var emailAssociazione = "gens.ssshhh@gmail.com";
+  try {
+    emailAssociazione = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Config").getRange("B19").getValue() || emailAssociazione;
+  } catch (e) { }
   var importoFmt = Number(datiInput.importo).toFixed(2);
+  var impostaBollo = Number(datiInput.importo) > 77.47 ? 2 : 0;
+  var bolloFmt = impostaBollo.toFixed(2);
+  var totaleFmt = (Number(datiInput.importo) + impostaBollo).toFixed(2);
+  datiInput.impostaBollo = impostaBollo;
+  datiInput.scadenzaPagamentoFmt = scadenzaPagamentoFmt;
+  datiInput.metodoPagamentoFmt = metodoPagamentoFmt;
+  datiInput.datiPagamento = String(datiInput.datiPagamento).trim();
+  datiInput.emailAssociazione = emailAssociazione;
   var progInvio = datiInput.numero.replace(/\D/g, "");
   var nomeFileBase = "IT" + ass_piva + "_" + progInvio.padStart(5, '0');
+  var xmlBollo = impostaBollo > 0
+    ? "<DatiBollo><BolloVirtuale>SI</BolloVirtuale><ImportoBollo>" + bolloFmt + "</ImportoBollo></DatiBollo>"
+    : "";
+  var modalitaPagamentoXML = { BONIFICO: "MP05", CONTANTI: "MP01", PAYPAL: "MP24", SATISPAY: "MP08" }[metodoPagamento];
+  var ibanPagamento = metodoPagamento === "BONIFICO"
+    ? datiInput.datiPagamento.replace(/\s/g, "").toUpperCase()
+    : "";
+  var xmlIbanPagamento = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(ibanPagamento)
+    ? "<IBAN>" + escapeXmlFattura_(ibanPagamento) + "</IBAN>"
+    : "";
+  var xmlDatiPagamento = "<DatiPagamento><CondizioniPagamento>TP02</CondizioniPagamento><DettaglioPagamento><ModalitaPagamento>" + modalitaPagamentoXML + "</ModalitaPagamento><DataScadenzaPagamento>" + scadenzaPagamentoXML + "</DataScadenzaPagamento><ImportoPagamento>" + totaleFmt + "</ImportoPagamento>" + xmlIbanPagamento + "</DettaglioPagamento></DatiPagamento>";
+  var xmlRiferimentoNormativo = "<AltriDatiGestionali><TipoDato>RIFERIMENTO_IVA</TipoDato><RiferimentoTesto>" + escapeXmlFattura_(notaIva) + "</RiferimentoTesto></AltriDatiGestionali>";
 
   // ==========================================
   // 1. COSTRUZIONE STRINGA XML
@@ -566,11 +629,12 @@ function generaFatturaXML(datiInput) {
     ${xmlCessionario}
   </FatturaElettronicaHeader>
   <FatturaElettronicaBody>
-    <DatiGenerali><DatiGeneraliDocumento><TipoDocumento>TD01</TipoDocumento><Divisa>EUR</Divisa><Data>${oggiFormatoXML}</Data><Numero>${datiInput.numero}</Numero></DatiGeneraliDocumento></DatiGenerali>
+    <DatiGenerali><DatiGeneraliDocumento><TipoDocumento>TD01</TipoDocumento><Divisa>EUR</Divisa><Data>${oggiFormatoXML}</Data><Numero>${escapeXmlFattura_(datiInput.numero)}</Numero>${xmlBollo}<ImportoTotaleDocumento>${totaleFmt}</ImportoTotaleDocumento></DatiGeneraliDocumento></DatiGenerali>
     <DatiBeniServizi>
-      <DettaglioLinee><NumeroLinea>1</NumeroLinea><Descrizione>${datiInput.causale}</Descrizione><PrezzoUnitario>${importoFmt}</PrezzoUnitario><PrezzoTotale>${importoFmt}</PrezzoTotale><AliquotaIVA>0.00</AliquotaIVA><Natura>N4</Natura></DettaglioLinee>
-      <DatiRiepilogo><AliquotaIVA>0.00</AliquotaIVA><Natura>N4</Natura><ImponibileImporto>${importoFmt}</ImponibileImporto><Imposta>0.00</Imposta></DatiRiepilogo>
+      <DettaglioLinee><NumeroLinea>1</NumeroLinea><Descrizione>${escapeXmlFattura_(datiInput.causale)}</Descrizione><PrezzoUnitario>${importoFmt}</PrezzoUnitario><PrezzoTotale>${importoFmt}</PrezzoTotale><AliquotaIVA>0.00</AliquotaIVA><Natura>${naturaIva}</Natura>${xmlRiferimentoNormativo}</DettaglioLinee>
+      <DatiRiepilogo><AliquotaIVA>0.00</AliquotaIVA><Natura>${naturaIva}</Natura><ImponibileImporto>${importoFmt}</ImponibileImporto><Imposta>0.00</Imposta></DatiRiepilogo>
     </DatiBeniServizi>
+    ${xmlDatiPagamento}
   </FatturaElettronicaBody>
 </p:FatturaElettronica>`;
 
@@ -592,28 +656,33 @@ function generaFatturaXML(datiInput) {
         .totale-box { float: right; margin-top: 30px; border: 2px solid #0f172a; padding: 15px; border-radius: 8px; width: 300px; }
         .totale-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
         .totale-big { font-weight: bold; font-size: 20px; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 10px; }
+        .payment-box { clear: both; margin-top: 30px; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; }
+        .payment-box h3 { margin: 0 0 10px; color: #0f172a; font-size: 15px; }
+        .payment-box p { margin: 5px 0; font-size: 13px; overflow-wrap: anywhere; }
         .note { clear: both; margin-top: 100px; font-size: 11px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 15px; text-align: justify; }
       </style>
     </head>
     <body>
       <div class="header">
+        <div style="display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; margin-bottom:8px; border:1px solid #d5b06a; border-radius:50%; color:#1a2945; font-family:Georgia,serif; font-size:20px; font-weight:bold;">GS</div>
         <h1 style="margin:0; color:#0f172a;">${ass_denominazione}</h1>
         <div class="dati-societa">
           ${ass_indirizzo} - ${ass_cap} ${ass_comune} (${ass_provincia})<br>
-          P.IVA/C.F.: ${ass_piva}
+          P.IVA/C.F.: ${ass_piva}<br>
+          E-mail: <a href="mailto:${escapeHtmlFattura_(emailAssociazione)}">${escapeHtmlFattura_(emailAssociazione)}</a>
         </div>
       </div>
       
       <div class="box-cliente">
         <strong style="color:#0f172a; font-size:16px;">Spett.le</strong><br><br>
-        <span style="font-size:15px; font-weight:bold;">${nomeArchivio}</span><br>
-        ${indCompleto}<br>
-        C.F. / P.IVA: ${identificativoArchivio}
+        <span style="font-size:15px; font-weight:bold;">${escapeHtmlFattura_(nomeArchivio)}</span><br>
+        ${escapeHtmlFattura_(indCompleto)}<br>
+        C.F. / P.IVA: ${escapeHtmlFattura_(identificativoArchivio)}
       </div>
       
       <div class="titolo-fattura">FATTURA DI CORTESIA</div>
       <div style="font-size:14px;">
-        <strong>Documento N°:</strong> ${datiInput.numero}<br>
+        <strong>Documento N°:</strong> ${escapeHtmlFattura_(datiInput.numero)}<br>
         <strong>Data di emissione:</strong> ${oggiFormatoPDF}
       </div>
       
@@ -623,20 +692,30 @@ function generaFatturaXML(datiInput) {
           <th style="text-align:right;">Importo</th>
         </tr>
         <tr>
-          <td>${datiInput.causale}</td>
+          <td>${escapeHtmlFattura_(datiInput.causale)}</td>
           <td style="text-align:right;">€ ${importoFmt}</td>
         </tr>
+        ${impostaBollo > 0 ? '<tr><td>Imposta di bollo</td><td style="text-align:right;">€ ' + bolloFmt + '</td></tr>' : ''}
       </table>
       
       <div class="totale-box">
         <div class="totale-row"><span>Imponibile:</span> <span>€ ${importoFmt}</span></div>
         <div class="totale-row"><span>IVA:</span> <span>€ 0.00</span></div>
-        <div class="totale-row totale-big"><span>TOTALE DA PAGARE:</span> <span>€ ${importoFmt}</span></div>
+        ${impostaBollo > 0 ? '<div class="totale-row"><span>Bollo:</span> <span>€ ' + bolloFmt + '</span></div>' : ''}
+        <div class="totale-row totale-big"><span>TOTALE DA PAGARE:</span> <span>€ ${totaleFmt}</span></div>
+      </div>
+
+      <div class="payment-box">
+        <h3>Pagamento</h3>
+        <p><strong>Scadenza:</strong> ${scadenzaPagamentoFmt}</p>
+        <p><strong>Metodo:</strong> ${escapeHtmlFattura_(metodoPagamentoFmt)}</p>
+        <p><strong>Coordinate / riferimento:</strong> ${escapeHtmlFattura_(datiInput.datiPagamento)}</p>
+        <p><strong>Causale da indicare:</strong> ${escapeHtmlFattura_(datiInput.causale)}</p>
       </div>
       
       <div class="note">
         Il presente documento costituisce copia di cortesia della fattura elettronica trasmessa al Sistema di Interscambio (SdI).<br>
-        In caso di regime forfettario o agevolato, l'operazione è effettuata ai sensi della normativa vigente.
+        ${escapeHtmlFattura_(notaIva)}.${impostaBollo > 0 ? "<br>Imposta di bollo di 2,00 € assolta sull'originale informatico." : ''}
       </div>
     </body>
   </html>`;
