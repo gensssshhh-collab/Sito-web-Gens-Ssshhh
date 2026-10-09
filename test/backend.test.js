@@ -413,12 +413,12 @@ test('eventi: aggiunge opzioni e crea Calendar di due ore per soli interessati',
       getCalendarById: calendarId => {
         assert.equal(calendarId, 'gens.ssshhh@gmail.com');
         return {
-        createEvent: (title, start, end, options) => {
-          calendarStart = start;
-          calendarEnd = end;
-          calendarOptions = options;
-          return { getId: () => 'calendar-event-1', setGuestsCanSeeGuests(value) { this.guestsVisible = value; } };
-        }
+          createEvent: (title, start, end, options) => {
+            calendarStart = start;
+            calendarEnd = end;
+            calendarOptions = options;
+            return { getId: () => 'calendar-event-1', setGuestsCanSeeGuests(value) { this.guestsVisible = value; } };
+          }
         };
       }
     }
@@ -438,13 +438,17 @@ test('eventi: aggiunge opzioni e crea Calendar di due ore per soli interessati',
   assert.equal(context.votaPropostaEvento('', 'evento-calendar', {
     nome: 'Lucia', email: 'lucia@example.net', interesse: 'no', opzioni: []
   }).ok, true);
-  assert.equal(context.confermaEventoProposto({ email: 'anna@example.it', password: 'pw', propostaId: 'evento-calendar', opzione: {
-    data: '21/11/2026', ora: '14:30', luogo: 'Centro'
-  } }).messaggio, 'Solo il creatore può confermare l’evento.');
+  assert.equal(context.confermaEventoProposto({
+    email: 'anna@example.it', password: 'pw', propostaId: 'evento-calendar', opzione: {
+      data: '21/11/2026', ora: '14:30', luogo: 'Centro'
+    }
+  }).messaggio, 'Solo il creatore può confermare l’evento.');
 
-  const conferma = context.confermaEventoProposto({ email: 'mario@example.it', password: 'pw', propostaId: 'evento-calendar', opzione: {
-    data: '21/11/2026', ora: '14:30', luogo: 'Centro'
-  } });
+  const conferma = context.confermaEventoProposto({
+    email: 'mario@example.it', password: 'pw', propostaId: 'evento-calendar', opzione: {
+      data: '21/11/2026', ora: '14:30', luogo: 'Centro'
+    }
+  });
   assert.equal(conferma.ok, true);
   assert.equal(conferma.invitati, 2);
   assert.equal(calendarEnd.getTime() - calendarStart.getTime(), 2 * 60 * 60 * 1000);

@@ -4894,6 +4894,9 @@ async function salvaOpzioneAggiuntaEvento_(button) {
     var ora = editor.querySelector('[data-role="nuova-ora"]').value.trim();
     var luogo = (editor.querySelector('[data-role="nuovo-luogo"]') || {}).value || '';
     if (!data || !ora) return showToast('Inserisci data e ora per la nuova opzione.', 'error');
+    if (!data.match(/^(\d{2})\/(\d{2})\/(\d{4})$/) || !ora.match(/^(\d{2}):(\d{2})$/)) {
+        return showToast('Formato non valido: usa gg/mm/aaaa per la data e hh:mm per l’ora.', 'error');
+    }
 
     var datiOspite = formEsterno ? {
         nome: formEsterno.elements.nome.value.trim(),
@@ -5072,31 +5075,46 @@ async function inviaPropostaEvento() {
     var testo = descrizione ? descrizione.value.trim() : '';
     var optionsList = document.getElementById('eventOptionsList');
     var rows = optionsList ? Array.prototype.slice.call(optionsList.querySelectorAll('.event-option-row')) : [];
-    var opzioniIncomplete = rows.some(function (row) {
-        var data = row.querySelector('[data-role="data"]');
-        var ora = row.querySelector('[data-role="ora"]');
-        return Boolean((data && data.value.trim()) !== (ora && ora.value.trim()));
-    });
-    if (opzioniIncomplete) {
-        showToast('Completa sia la data sia l’ora di ogni riga, oppure rimuovi la riga incompleta.', 'error');
+
+    var opzioni = [];
+    for (var i = 0; i < rows.length; i++) {
+        var dataEl = rows[i].querySelector('[data-role="data"]');
+        var oraEl = rows[i].querySelector('[data-role="ora"]');
+        var luogoEl = rows[i].querySelector('[data-role="luogo"]');
+        var dataVal = dataEl ? dataEl.value.trim() : '';
+        var oraVal = oraEl ? oraEl.value.trim() : '';
+        var luogoVal = luogoEl ? luogoEl.value.trim() : '';
+
+        // Se entrambi i campi sono vuoti, ignora la riga (es. aggiunta per sbaglio e non compilata)
+        if (!dataVal && !oraVal) continue;
+
+        // Se uno solo dei due è compilato, avvisa l'utente
+        if (!dataVal || !oraVal) {
+            showToast('Completa sia la data sia l’ora di ogni riga, oppure rimuovi la riga incompleta.', 'error');
+            return;
+        }
+
+        var matchData = dataVal.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        var matchOra = oraVal.match(/^(\d{2}):(\d{2})$/);
+        if (!matchData || !matchOra) {
+            showToast('Formato non valido: usa gg/mm/aaaa per la data e hh:mm per l’ora.', 'error');
+            return;
+        }
+
+        opzioni.push({
+            data: dataVal,
+            ora: oraVal,
+            luogo: luogoVal
+        });
+    }
+
+    if (!titolo) {
+        showToast('Inserisci il titolo dell’evento.', 'error');
         return;
     }
-    var opzioni = rows.map(function (row) {
-        var data = row.querySelector('[data-role="data"]');
-        var ora = row.querySelector('[data-role="ora"]');
-        var luogo = row.querySelector('[data-role="luogo"]');
 
-        return {
-            data: data ? data.value.trim() : '',
-            ora: ora ? ora.value.trim() : '',
-            luogo: luogo ? luogo.value.trim() : ''
-        };
-    }).filter(function (opzione) {
-        return opzione.data && opzione.ora;
-    });
-
-    if (!titolo || opzioni.length === 0) {
-        showToast('Inserisci il titolo e almeno una proposta di data/ora/luogo.', 'error');
+    if (opzioni.length === 0) {
+        showToast('Inserisci almeno una data e un orario per la proposta.', 'error');
         return;
     }
 
