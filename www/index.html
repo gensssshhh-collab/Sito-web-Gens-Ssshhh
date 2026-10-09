@@ -213,8 +213,8 @@
                 </div>
 
                 <div class="nav-section-label nav-section-secondary">Documenti e contabilità</div>
-                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewArchivio', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewArchivio', this); }">
+                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDocs', this)"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocs', this); }">
                     <span class="nav-icon" aria-hidden="true">▣</span><span>Archivio</span>
                 </div>
                 <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewListinoPrezzi', this)"
@@ -233,11 +233,6 @@
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewSpese', this); }">
                     <span class="nav-icon" aria-hidden="true">◌</span><span>Spese condivise</span>
                 </div>
-                <div class="nav-item compact" role="button" tabindex="0" onclick="nav('viewDocumenti', this)"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewDocumenti', this); }">
-                    <span class="nav-icon" aria-hidden="true">▤</span><span>Documenti</span>
-                </div>
-
                 <div class="nav-section-label nav-section-secondary">Gestione</div>
                 <div class="nav-item" role="button" tabindex="0" onclick="nav('viewFirma', this)"
                     onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); nav('viewFirma', this); }">
@@ -1016,40 +1011,6 @@
                     </div>
                 </div>
 
-                <div id="viewArchivio" class="page-section hidden">
-                    <div class="club-page-header">
-                        <div>
-                            <span class="section-kicker">Archivio</span>
-                            <h2>Archivio</h2>
-                            <p>Overview dei documenti, dei report e dei file principali dell’associazione.</p>
-                        </div>
-                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Catalogo centrale</div>
-                    </div>
-
-                    <div class="club-summary-grid">
-                        <div class="club-summary-card">
-                            <span>File totali</span>
-                            <strong id="archivioTotale">0</strong>
-                        </div>
-                        <div class="club-summary-card">
-                            <span>In evidenza</span>
-                            <strong id="archivioEvidenza">0</strong>
-                        </div>
-                        <div class="club-summary-card">
-                            <span>Recenti</span>
-                            <strong id="archivioRecenti">0</strong>
-                        </div>
-                    </div>
-
-                    <div class="calendar-panel">
-                        <div class="calendar-header-row">
-                            <h3>Documenti principali</h3>
-                            <button class="compact-action" onclick="renderArchivioView()">Aggiorna</button>
-                        </div>
-                        <div id="archivioList" class="calendar-list"></div>
-                    </div>
-                </div>
-
                 <div id="viewDocs" class="page-section">
 
                     <!-- BANNER RISERVATEZZA STATUTARIA (Art. 24) -->
@@ -1118,41 +1079,6 @@
                     </div>
                 </div>
 
-
-                <div id="viewDocumenti" class="page-section hidden">
-                    <div class="club-page-header">
-                        <div>
-                            <span class="section-kicker">Documenti</span>
-                            <h2>Documenti</h2>
-                            <p>Archivio dei file principali, aggiornamenti e documenti da esaminare in ogni momento.</p>
-                        </div>
-                        <div class="club-status-badge"><span class="sidebar-status-dot"></span> Archivio consultabile
-                        </div>
-                    </div>
-
-                    <div class="club-summary-grid">
-                        <div class="club-summary-card">
-                            <span>Totale file</span>
-                            <strong id="documentiTotali">0</strong>
-                        </div>
-                        <div class="club-summary-card">
-                            <span>Pubblici</span>
-                            <strong id="documentiPubblici">0</strong>
-                        </div>
-                        <div class="club-summary-card">
-                            <span>Recenti</span>
-                            <strong id="documentiRecenti">0</strong>
-                        </div>
-                    </div>
-
-                    <div class="calendar-panel">
-                        <div class="calendar-header-row">
-                            <h3>Elenco documenti</h3>
-                            <button class="compact-action" onclick="renderDocumentiView()">Aggiorna</button>
-                        </div>
-                        <div id="documentiList" class="calendar-list"></div>
-                    </div>
-                </div>
 
                 <div id="viewFirma" class="page-section">
                     <h2 style="margin-top:0; color:#0f172a;">Firma Digitale</h2>
@@ -2406,7 +2332,7 @@
                         <span>Firma</span>
                     </a>
 
-                    <a href="#" class="bottom-nav-item" onclick="nav('viewArchivio', this); return false;">
+                    <a href="#" class="bottom-nav-item" onclick="nav('viewDocs', this); return false;">
                         <span class="bottom-nav-icon">📁</span>
                         <span>Archivio</span>
                     </a>

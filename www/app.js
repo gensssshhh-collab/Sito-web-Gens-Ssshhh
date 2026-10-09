@@ -247,9 +247,7 @@ function nav(viewId, el) {
         'viewReport': 'Report',
         'viewConfigurazione': 'Configurazione',
         'viewElezioni': 'Centro Elettorale',
-        'viewArchivio': 'Archivio',
-        'viewDocs': 'Archivio Documenti',
-        'viewDocumenti': 'Documenti',
+        'viewDocs': 'Archivio',
         'viewFirma': 'Firma Digitale',
         'viewSpese': 'Spese Condivise',
         'viewProf': 'Profilo Utente',
@@ -267,23 +265,21 @@ function nav(viewId, el) {
         var mapping = {
             'viewDash': 0,
             'viewHome': 1,
-            'viewClub': 2,
-            'viewCalendario': 3,
-            'viewComunicazioni': 5,
-            'viewSociVolontari': 6,
-            'viewFornitoriClienti': 7,
-            'viewListinoPrezzi': 8,
-            'viewMovimenti': 9,
-            'viewReport': 17,
-            'viewConfigurazione': 17,
-            'viewElezioni': 4,
-            'viewArchivio': 7,
-            'viewDocs': 12,
-            'viewDocumenti': 12,
+            'viewAdmin': 2,
+            'viewClub': 3,
+            'viewCalendario': 4,
+            'viewElezioni': 5,
+            'viewComunicazioni': 6,
+            'viewSociVolontari': 7,
+            'viewDocs': 8,
+            'viewListinoPrezzi': 9,
+            'viewFornitoriClienti': 10,
+            'viewMovimenti': 11,
+            'viewSpese': 12,
             'viewFirma': 13,
-            'viewSpese': 11,
-            'viewProf': 16,
-            'viewAdmin': 17
+            'viewConfigurazione': 14,
+            'viewReport': 15,
+            'viewProf': 16
         };
         var items = document.querySelectorAll('.nav-item');
         items.forEach(x => x.classList.remove('active'));
@@ -296,9 +292,7 @@ function nav(viewId, el) {
             'viewDash': 0,
             'viewElezioni': 1,
             'viewFirma': 2,
-            'viewArchivio': 3,
             'viewDocs': 3,
-            'viewDocumenti': 3,
             'viewProf': 4
         };
         document.querySelectorAll('.bottom-nav-item').forEach(x => x.classList.remove('active'));
@@ -324,13 +318,11 @@ function nav(viewId, el) {
 
     }
 
-    if (viewId === 'viewArchivio') renderArchivioView();
     if (viewId === 'viewDocs') {
         document.getElementById('filterContainer').classList.remove('hidden');
         document.getElementById('uploadArea').classList.remove('hidden');
         loadDocs('PUBBLICO');
     }
-    if (viewId === 'viewDocumenti') renderDocumentiView();
 
     if (viewId === 'viewHome') renderHomeView();
     if (viewId === 'viewProf') caricaProfilo();
@@ -638,62 +630,6 @@ function renderAdminView() {
         var el = document.getElementById(item.id);
         if (el && el.innerText.trim() === '') el.innerText = item.value;
     });
-}
-
-function renderArchivioView() {
-    var list = document.getElementById('archivioList');
-    if (!list) return;
-
-    var archivio = [
-        { titolo: 'Statuto e regolamenti', categoria: 'Normativa', data: '2026-10-01' },
-        { titolo: 'Bilancio consuntivo', categoria: 'Economia', data: '2026-09-18' },
-        { titolo: 'Verbale assemblea', categoria: 'Interno', data: '2026-09-12' },
-        { titolo: 'Agenda eventi', categoria: 'Comunicazioni', data: '2026-09-02' },
-        { titolo: 'Report attività', categoria: 'Gestione', data: '2026-08-28' }
-    ];
-
-    document.getElementById('archivioTotale').innerText = String(archivio.length);
-    document.getElementById('archivioEvidenza').innerText = String(archivio.filter(function (item) { return item.categoria === 'Normativa' || item.categoria === 'Economia'; }).length);
-    document.getElementById('archivioRecenti').innerText = String(archivio.filter(function (item) { return item.data >= '2026-09-10'; }).length);
-
-    list.innerHTML = archivio.map(function (item) {
-        return '<article class="calendar-item">' +
-            '<div class="calendar-date-pill"><span>AR</span><strong>' + item.categoria.charAt(0).toUpperCase() + '</strong></div>' +
-            '<div class="calendar-item-body">' +
-            '<span class="calendar-tag">' + item.categoria + '</span>' +
-            '<h4>' + item.titolo + '</h4>' +
-            '<p>' + item.data + '</p>' +
-            '</div>' +
-            '</article>';
-    }).join('') || '<p class="notification-empty">Nessun archivio disponibile.</p>';
-}
-
-function renderDocumentiView() {
-    var list = document.getElementById('documentiList');
-    if (!list) return;
-
-    var documenti = [
-        { titolo: 'Statuto e regolamenti', categoria: 'Pubblico', data: '2026-10-01' },
-        { titolo: 'Bilancio consuntivo', categoria: 'Pubblico', data: '2026-09-18' },
-        { titolo: 'Verbale assemblea', categoria: 'Privato', data: '2026-09-12' },
-        { titolo: 'Modello rinnovo tessera', categoria: 'Privato', data: '2026-09-08' },
-        { titolo: 'Agenda eventi', categoria: 'Pubblico', data: '2026-09-02' }
-    ];
-
-    document.getElementById('documentiTotali').innerText = String(documenti.length);
-    document.getElementById('documentiPubblici').innerText = String(documenti.filter(function (item) { return item.categoria === 'Pubblico'; }).length);
-    document.getElementById('documentiRecenti').innerText = String(documenti.filter(function (item) { return item.data >= '2026-09-15'; }).length);
-
-    list.innerHTML = documenti.map(function (item) {
-        return '<article class="calendar-item">' +
-            '<div class="calendar-date-pill"><span>DOC</span><strong>' + item.categoria.charAt(0).toUpperCase() + '</strong></div>' +
-            '<div class="calendar-item-body">' +
-            '<span class="calendar-tag">' + item.categoria + '</span>' +
-            '<h4>' + item.titolo + '</h4>' +
-            '<p>' + item.data + '</p>' +
-            '</div>' +
-            '</article>';
-    }).join('') || '<p class="notification-empty">Nessun documento disponibile.</p>';
 }
 
 function renderComunicazioniView() {
